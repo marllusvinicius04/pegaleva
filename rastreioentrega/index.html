@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro do Pedido - PegaLeva</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="loader" id="loader"><div><div class="spinner"></div><h2 id="loaderText">Carregando...</h2></div></div>
+<div class="card">
+  <div class="logo"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"></div>
+
+  <div class="success" id="successBox">
+    <i class="fa-solid fa-circle-check"></i>
+    <h1>Pedido salvo!</h1>
+    <p>Suas informações foram registradas para a empresa. Agora ela poderá localizar esse pedido no painel em <b>Meus pedidos</b>.</p>
+  </div>
+
+  <div id="formBox">
+    <div class="step active" id="stepCodigo">
+      <h1>Informe o código do pedido</h1>
+      <p>Digite o código de 4 caracteres enviado pela empresa. Exemplo: <b>M9M3</b>.</p>
+      <label>Código do pedido</label>
+      <input id="pedidoCodigo" maxlength="4" placeholder="M9M3" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4)">
+      <button class="btn green" onclick="checkPedido()">Localizar pedido</button>
+    </div>
+
+    <div class="step" id="stepEndereco">
+      <h1 id="pedidoTitulo">Cadastro para entrega</h1>
+      <p>Preencha os dados de entrega para a empresa finalizar sua solicitação.</p>
+      <div class="notice" id="empresaInfo">Pedido localizado.</div>
+      <label>Rua/Avenida, endereço</label><input id="rua">
+      <label>Número</label><input id="numero" placeholder="Se não tiver número, coloque 0">
+      <label>Ponto de referência</label><input id="referencia" placeholder="Ex: portão branco, ao lado disso...">
+      <label>Cidade</label><select id="cidade" onchange="updateBairros()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
+      <label>Bairro</label><select id="bairro"><option value="">Selecione</option></select>
+      <div class="grid2"><button class="btn gray" onclick="goStep('stepCodigo')">Voltar</button><button class="btn" onclick="nextEndereco()">Continuar</button></div>
+    </div>
+
+    <div class="step" id="stepRecebedor">
+      <h1>Quem vai receber</h1>
+      <label>Nome de quem vai receber</label><input id="nomeDestino">
+      <label>DDD + WhatsApp de quem vai receber</label><input id="whatsappDestino">
+      <div class="grid2"><button class="btn gray" onclick="goStep('stepEndereco')">Voltar</button><button class="btn" onclick="loadFrete()">Escolher frete</button></div>
+    </div>
+
+    <div class="step" id="stepFrete">
+      <h1>Escolha o valor do frete</h1>
+      <p>Escolha uma das opções de entrega disponíveis para este pedido.</p>
+      <div class="offers">
+        <button class="offer active" id="offerNormal" onclick="selectFrete('normal')"><strong>Entrega normal</strong><small>Opção padrão</small><b id="valorNormal">R$ 0,00</b></button>
+        <button class="offer promo" id="offerPromo" onclick="selectFrete('promocional')"><strong>Entrega econômica</strong><small>Melhor valor disponível</small><b id="valorPromo">R$ 0,00</b></button>
+      </div>
+      <div class="grid2"><button class="btn gray" onclick="goStep('stepRecebedor')">Voltar</button><button class="btn green" onclick="submitSaved()">Salvar pedido</button></div>
+    </div>
+
+    <div class="step" id="stepAcompanhar">
+      <h1>Acompanhar pedido</h1>
+      <p>Esse pedido já foi solicitado pela empresa. Você pode acompanhar o andamento por aqui.</p>
+      <div class="track-box" id="trackBox">Carregando acompanhamento...</div>
+      <button class="btn green" onclick="checkPedido()">Atualizar acompanhamento</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
