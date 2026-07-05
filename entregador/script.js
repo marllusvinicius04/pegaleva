@@ -546,7 +546,6 @@ function deliveryHtml(d,available,modalOnly){
       actionHtml=`<div class="delivery-actions-pro">
         <button class="btn light" onclick="openChatModal('${d.ID}')"><i class="fa-solid fa-message"></i> Mensagem${Number(d.EntregadorNaoLidas||0)>0?` <span class="chat-badge">${d.EntregadorNaoLidas}</span>`:""}</button>
         <button class="btn light" onclick="openPaymentModal('${d.ID}')"><i class="fa-solid fa-qrcode"></i> Pagar</button>
-        <button class="btn green wide" onclick="finalizeDeliveryChecked('${d.ID}')"><i class="fa-solid fa-circle-check"></i> Entrega finalizada</button>
         <a class="btn route wide" href="${mapsUrlLimpo(d)}" target="_blank"><i class="fa-solid fa-map-location-dot"></i> Abrir rota online</a>
       </div>`;
     } else {
