@@ -1,6 +1,6 @@
 
 const PIX_KEY="57293143000156";
-const API_URL="https://script.google.com/macros/s/AKfycbxm2FcG0bODe7v0g86E1i3iXjzSeOxk7lkLWhDsYsQP_OSnWY-c7ABLnSWbgdVAOppg/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbyqeugeCr2xhK96ucylAez0-zpS1zJ1vzEb3qRVuA4rNEiGa6iTcwVTrkTF3Qr6RrGQ/exec";
 
 let openDeliveryDetails=JSON.parse(localStorage.getItem("pegaleva_open_delivery_details")||"[]"),
 session=JSON.parse(localStorage.getItem("pegaleva_driver")||"null"),
