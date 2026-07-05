@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entregador - PegaLeva</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+
+  <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
+</head>
+<body>
+<div class="loader" id="loader"><div><div class="spinner" id="loaderSpinner"></div><div class="loader-bike" id="loaderBike" style="display:none"><i class="fa-solid fa-motorcycle"></i><div class="loader-road"></div></div><h2 id="loaderText">Carregando...</h2></div></div>
+
+<section class="screen login active" id="loginScreen">
+  <div class="login-card">
+    <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
+    <h1>Painel do Entregador</h1>
+    <p>Entre com seu código de acesso.</p>
+    <input id="driverCode" placeholder="Código do entregador">
+    <button class="btn" onclick="loginDriver()"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+  </div>
+</section>
+
+<section class="screen app" id="appScreen">
+  <div class="top">
+    <button class="top-icon-btn refresh" onclick="forceInvisibleRefresh()" title="Atualizar">
+<i class="fa-solid fa-rotate-right"></i>
+</button>
+    <button class="top-icon-btn menu" onclick="openSideMenu()" title="Menu">
+<i class="fa-solid fa-bars"></i>
+</button>
+<div class="head">
+      <div class="brand">
+        <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
+        <div><strong id="driverName">Entregador</strong><span id="driverPlate">Placa</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <aside>
+
+      <div class="saldo">
+        <small>Saldo</small>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+          <h1 id="saldoText">R$0,00</h1>
+          <button id="toggleSaldoBtn" onclick="toggleSaldoVisibility()" style="width:auto;margin:0;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);color:white;border-radius:14px;padding:10px 12px;font-size:18px;box-shadow:none"><i class="fa-solid fa-eye"></i></button>
+        </div>
+        <p class="muted" style="color:white;opacity:.88">Valor total já descontado das entregas.</p>
+        <button class="btn green" onclick="openWithdrawModal()"><i class="fa-solid fa-money-bill-transfer"></i> Sacar <span class="chat-badge" id="withdrawBadge" style="display:none">0</span></button>
+      </div>
+
+
+      <div class="card">
+        <h3>Status do entregador</h3>
+        <p class="muted">Ative para receber pedidos.</p>
+        <div class="switch">
+          <button id="btnOn" class="on" onclick="toggleActive(true)"><i class="fa-solid fa-toggle-on"></i> ON</button>
+          <button id="btnOff" class="off" onclick="toggleActive(false)"><i class="fa-solid fa-toggle-off"></i> OFF</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h2>Minhas entregas</h2>
+        <div id="myBox"></div>
+      </div>
+    </aside>
+
+    <main class="available-main">
+      <div class="available-backdrop" id="availableBackdrop" onclick="closeAvailableDrawer()"></div>
+      <button class="available-handle" id="availableHandle" title="Novas entregas">
+        <span class="available-count" id="availableCount">0</span>
+        <i class="fa-solid fa-motorcycle"></i>
+      </button>
+      <div class="available-drawer" id="availableDrawer">
+        <button class="available-close" onclick="closeAvailableDrawer()"><i class="fa-solid fa-xmark"></i></button>
+        <div class="card">
+          <h2>Novas entregas disponíveis</h2>
+          <p class="muted">Arraste a moto da direita para a esquerda para abrir esta lista.</p>
+          <div id="availableBox"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<div class="bottom-offer" id="bottomOfferBar">
+  <div id="bottomOfferBody"></div>
+</div>
+
+<div class="side-menu-backdrop" id="sideMenuBackdrop" onclick="closeSideMenu()"></div>
+<nav class="side-menu" id="sideMenu">
+  <button class="side-close" onclick="closeSideMenu()"><i class="fa-solid fa-xmark"></i></button>
+  <div class="side-profile">
+    <div class="side-avatar"><i class="fa-solid fa-circle-user"></i></div>
+    <div>
+      <strong id="sideDriverName">Entregador</strong>
+      <span id="sideDriverPlate">Placa: -</span>
+    </div>
+  </div>
+  <div class="side-balance">
+    <small>Meu saldo</small>
+    <h2 id="sideSaldoText">R$0,00</h2>
+  </div>
+  <button class="side-menu-btn" onclick="openPaymentsModal()"><i class="fa-solid fa-wallet"></i> Meus pagamentos</button>
+  <button class="side-menu-btn" onclick="openDriverHistoryModal()"><i class="fa-solid fa-clock-rotate-left"></i> Meu histórico</button>
+  <button class="side-menu-btn" onclick="cancelDriverRegistration()"><i class="fa-solid fa-user-slash"></i> Cancelar entregador</button>
+  <button class="side-menu-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+</nav>
+
+<div class="modal" id="paymentsModal">
+  <div class="modal-content" style="position:relative">
+    <button class="side-close" onclick="closePaymentsModal()"><i class="fa-solid fa-xmark"></i></button>
+    <h2>Meus pagamentos</h2>
+    <p class="muted">Histórico de saques solicitados.</p>
+    <div id="paymentsHistoryBox"></div>
+  </div>
+</div>
+
+<div class="modal" id="driverHistoryModal">
+  <div class="modal-content" style="position:relative">
+    <button class="side-close" onclick="closeDriverHistoryModal()"><i class="fa-solid fa-xmark"></i></button>
+    <h2>Meu histórico</h2>
+    <p class="muted">Corridas finalizadas, rotas e valores.</p>
+    <div id="driverHistoryListBox"></div>
+  </div>
+</div>
+
+
+<div class="modal" id="statusModal">
+  <div class="modal-content" style="text-align:center">
+    <h2 id="statusTitle">Status</h2>
+    <p class="muted" id="statusText"></p>
+    <button class="btn green" onclick="closeStatusModal()"><i class="fa-solid fa-check"></i> OK</button>
+  </div>
+</div>
+
+
+<div class="modal" id="paymentModal">
+  <div class="modal-content">
+    <h2>Pagamento da entrega</h2>
+    <div id="paymentBody"></div>
+    <div class="actions">
+      <button class="btn green" onclick="registerPayment('Pago')"><i class="fa-solid fa-circle-check"></i> Pagamento realizado com sucesso</button>
+      <button class="btn red" onclick="registerPayment('Pendente')"><i class="fa-solid fa-clock"></i> Pagamento pendente</button>
+    </div>
+    <button class="btn gray" onclick="closePaymentModal()"><i class="fa-solid fa-xmark"></i> Fechar</button>
+  </div>
+</div>
+
+<div class="modal" id="withdrawModal">
+  <div class="modal-content">
+    <h2>Solicitar saque</h2>
+    <p class="muted">Bem transparente: a cada entrega finalizada é descontada a taxa de sistema/serviço de R$1,98. O valor abaixo é o total que será transferido via PIX já com esse desconto.</p>
+    <div class="pix-box" style="text-align:left">
+      <small>Valor total para transferência via PIX</small>
+      <h2 id="withdrawAvailable">R$0,00</h2>
+      <p class="pay-note" id="withdrawTransparentNote">Pagamento do valor total já descontado da taxa de sistema/serviço de cada entrega. Saque disponível somente a partir de R$50,00. Pagamentos são feitos quarta e sábado em horário comercial.</p>
+    </div>
+    <input id="withdrawPix" placeholder="Chave PIX">
+    <input id="withdrawName" placeholder="Nome do destinatário da chave PIX">
+    <button class="btn green" onclick="requestWithdraw()"><i class="fa-solid fa-check-circle"></i> Sacar meu saldo</button>
+    <button class="btn gray" onclick="closeWithdrawModal()"><i class="fa-solid fa-xmark"></i> Fechar</button>
+  </div>
+</div>
+
+<div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> Enviar</button></div><button class="btn gray" onclick="closeChatModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div></div>
+
+<script src="script.js"></script>
+</body>
+</html>
