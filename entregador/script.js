@@ -8,7 +8,7 @@ chatDeliveryId="",
 lastAvailableIds=JSON.parse(localStorage.getItem("pegaleva_seen_deliveries")||"[]"),
 finalizedShown=JSON.parse(localStorage.getItem("pegaleva_finalized_driver")||"[]"),
 showAllDriverDeliveries=false,
-showAllHistory=false, saldoHidden=false, refusedDeliveries=JSON.parse(localStorage.getItem("pegaleva_refused_temp")||"{}"), currentModalDeliveryId="", modalQueue=[], pendingAvailableQueue=[], queueProcessing=false, refreshTimer=null, refreshBusy=false, deliveryAudioCtx=null, deliveryAudioUnlocked=false, fallbackBeepAudio=null, deliveryAlertLoopTimer=null;
+showAllHistory=false, saldoHidden=false, refusedDeliveries=JSON.parse(localStorage.getItem("pegaleva_refused_temp")||"{}"), currentModalDeliveryId="", modalQueue=[], pendingAvailableQueue=[], queueProcessing=false, refreshTimer=null, refreshBusy=false, deliveryAudioCtx=null, deliveryAudioUnlocked=false, fallbackBeepAudio=null;
 
 if(session)openPanel();
 
@@ -118,28 +118,6 @@ function playDeliveryAlert(){
     }else startSound();
     if(navigator.vibrate)navigator.vibrate([260,90,260,90,260,90,260]);
   }catch(e){try{if(navigator.vibrate)navigator.vibrate([260,90,260,90,260])}catch(x){}}
-}
-
-
-function startDeliveryAlertLoop(){
-  stopDeliveryAlertLoop();
-  playDeliveryAlert();
-  deliveryAlertLoopTimer=setInterval(()=>{
-    const bar=document.getElementById("bottomOfferBar");
-    const hasOffer=bar&&bar.classList.contains("active")&&currentModalDeliveryId;
-    if(hasOffer){
-      playDeliveryAlert();
-    }else{
-      stopDeliveryAlertLoop();
-    }
-  },2500);
-}
-
-function stopDeliveryAlertLoop(){
-  if(deliveryAlertLoopTimer){
-    clearInterval(deliveryAlertLoopTimer);
-    deliveryAlertLoopTimer=null;
-  }
 }
 
 async function loginDriver(){
@@ -645,7 +623,7 @@ function detectNewDelivery(list){
 
   if(newOnes.length){
     modalQueue=modalQueue.concat(newOnes.filter(d=>!modalQueue.some(q=>q.ID===d.ID)));
-    startDeliveryAlertLoop();
+    playDeliveryAlert();
     browserNotify("Nova entrega disponível",newOnes.length===1?`${newOnes[0].BairroColeta} para ${newOnes[0].BairroDestino}`:`${newOnes.length} novas entregas disponíveis`);
     if(!document.getElementById("bottomOfferBar").classList.contains("active"))showNextModalDelivery();
   }
@@ -673,7 +651,6 @@ function showNewModal(d){
   document.getElementById("bottomOfferBody").innerHTML=bottomDeliveryHtml(d);
   initSwipeButtons(document.getElementById("bottomOfferBar"));
   document.getElementById("bottomOfferBar").classList.add("active");
-  startDeliveryAlertLoop();
 }
 
 function refuseDelivery(id){
@@ -694,7 +671,7 @@ function refuseModalDelivery(){
   }
 }
 
-function closeModal(){stopDeliveryAlertLoop();document.getElementById("bottomOfferBar").classList.remove("active");currentModalDeliveryId=""}
+function closeModal(){document.getElementById("bottomOfferBar").classList.remove("active");currentModalDeliveryId=""}
 
 async function acceptDelivery(id){
   pendingAvailableQueue.push({ID:id});
