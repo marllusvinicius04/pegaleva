@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pega & Leva Empresas | Entregas em Uruçuí - PI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a href="#inicio" class="brand">
+        <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="Logo Pega & Leva">
+        <div><span>Pega & Leva</span><small>Entregas para empresas</small></div>
+      </a>
+      <nav class="menu" id="menu">
+        <a href="#problema">O desafio</a>
+        <a href="#solucao">O que fazemos</a>
+        <a href="#planos">Planos</a>
+        <a href="#mapa">Uruçuí - PI</a>
+        <a href="#contato">Contato</a>
+      </nav>
+      <button class="btn green" onclick="openSignupModal('Plano Start - R$129,90')"><i class="fa-solid fa-store"></i> Seja parceiro</button>
+      <button class="mobile-toggle" onclick="toggleMenu()" aria-label="Abrir menu"><i class="fa-solid fa-bars"></i></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="container hero-grid">
+        <div class="reveal">
+          <span class="badge green"><i class="fa-solid fa-motorcycle"></i> Frota própria em Uruçuí - Piauí</span>
+          <h1>Sua empresa vendendo mais, com entregas mais rápidas e organizadas.</h1>
+          <p>O Pega & Leva conecta sua empresa a uma operação local de entregas, feita para ajudar empreendedores que não querem perder vendas por falta de logística, atraso, improviso ou dificuldade de levar o pedido até o cliente.</p>
+          <div class="hero-actions">
+            <a class="btn green" href="#planos"><i class="fa-solid fa-crown"></i> Ver planos para empresas</a>
+            <a class="btn light" href="#problema"><i class="fa-solid fa-arrow-down"></i> Entender a solução</a>
+          </div>
+        </div>
+        <div class="hero-card reveal">
+          <div class="hero-card-top">
+            <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="Logo Pega & Leva">
+            <div>
+              <h3>Entrega local com cara de empresa grande.</h3>
+              <p style="margin-top:8px">Mais praticidade para você e mais vantagem para seu cliente.</p>
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat"><strong>20%</strong><span>de desconto em fretes para seus clientes</span></div>
+            <div class="stat"><strong>Quantas desejar!</strong><span>entregas mensais com desconto</span></div>
+            <div class="stat"><strong>Online</strong><span>suporte para empresas parceiras</span></div>
+            <div class="stat"><strong>Local</strong><span>frota própria em Uruçuí - PI</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="problema">
+      <div class="container">
+        <div class="section-title reveal">
+          <h2>O problema não é vender. Muitas vezes, é entregar.</h2>
+          <p>Todo empreendedor conhece essa dor: o cliente quer receber rápido, mas a empresa nem sempre tem entregador, moto disponível, rota organizada ou tempo para cuidar da logística.</p>
+        </div>
+        <div class="pain-grid">
+          <div class="pain-card reveal">
+            <div class="icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h3>Entregas improvisadas travam seu crescimento</h3>
+            <p>Quando a entrega depende de “dar um jeito”, o pedido atrasa, o atendimento fica confuso e o cliente pode desistir da compra. Isso pesa ainda mais para lojas, mercados, farmácias, restaurantes, deliverys e negócios locais.</p>
+          </div>
+          <div class="solution-card reveal">
+            <div class="icon green"><i class="fa-solid fa-circle-check"></i></div>
+            <h3>O Pega & Leva chega para resolver</h3>
+            <p>Nós assumimos a parte da entrega para que sua empresa foque no que sabe fazer: vender, atender bem e crescer. Com frota própria em Uruçuí, seus pedidos ganham mais velocidade, organização e confiança.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="solucao" style="background:white">
+      <div class="container">
+        <div class="section-title reveal">
+          <h2>O que fazemos pela sua empresa</h2>
+          <p>Levamos seus produtos até seus clientes com uma operação pensada para negócios que precisam de entrega recorrente, preço competitivo e atendimento profissional.</p>
+        </div>
+        <div class="features">
+          <div class="feature-card reveal">
+            <div class="icon"><i class="fa-solid fa-truck-fast"></i></div>
+            <h3>Entrega sob demanda</h3>
+            <p>Sua empresa solicita a entrega e nossa equipe cuida da coleta e do destino.</p>
+            <ul><li><i class="fa-solid fa-check"></i> Coleta no seu estabelecimento</li><li><i class="fa-solid fa-check"></i> Rota para o cliente final</li><li><i class="fa-solid fa-check"></i> Mais agilidade no dia a dia</li></ul>
+          </div>
+          <div class="feature-card reveal">
+            <div class="icon"><i class="fa-solid fa-percent"></i></div>
+            <h3>Vantagem para seu cliente</h3>
+            <p>Empresas parceiras podem oferecer desconto no frete, aumentando a chance de fechar pedidos.</p>
+            <ul><li><i class="fa-solid fa-check"></i> 20% de desconto em fretes</li><li><i class="fa-solid fa-check"></i> Mais argumento de venda</li><li><i class="fa-solid fa-check"></i> Cliente compra com menos resistência</li></ul>
+          </div>
+          <div class="feature-card reveal">
+            <div class="icon"><i class="fa-solid fa-headset"></i></div>
+            <h3>Suporte e prioridade</h3>
+            <p>Planos para empresas oferecem prioridade e suporte online para uma rotina mais segura.</p>
+            <ul><li><i class="fa-solid fa-check"></i> Atendimento online</li><li><i class="fa-solid fa-check"></i> Prioridade em entregas</li><li><i class="fa-solid fa-check"></i> Perfil premium parceiro</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="planos">
+      <div class="container">
+        <div class="section-title reveal">
+          <span class="badge"><i class="fa-solid fa-crown"></i> Planos para empresas</span>
+          <h2 style="margin-top:14px">Escolha o plano ideal para o ritmo do seu negócio</h2>
+          <p>Todos os planos oferecem 20% de desconto em fretes para seus clientes, ajudando sua empresa a vender com uma entrega mais atrativa.</p>
+        </div>
+        <div class="plans">
+          <article class="plan reveal">
+            <h3>Plano Iniciante</h3>
+            <p>Para empresas que estão começando a organizar suas entregas.</p>
+            <div class="price">R$79,90 <small>/mês</small></div>
+            <div class="pay-tomorrow"><i class="fa-solid fa-bolt"></i> Comece a usar hoje, pague amanhã!</div>
+            <ul>
+              <li><i class="fa-solid fa-check"></i> 20% de desconto em fretes para seus clientes</li>
+              <li><i class="fa-solid fa-check"></i> 10 entregas mensais com desconto</li>
+              <li><i class="fa-solid fa-check"></i> Prioridade em entregas</li>
+              <li><i class="fa-solid fa-check"></i> Suporte online</li>
+              <li><i class="fa-solid fa-check"></i> Seja Premium no Pega & Leva</li>
+            </ul>
+            <button class="btn" onclick="openSignupModal('Plano Iniciante - R$79,90')">Contratar Iniciante</button>
+          </article>
+
+          <article class="plan popular reveal">
+            <span class="ribbon">Mais escolhido</span>
+            <h3>Plano Start</h3>
+            <p>Para empresas com rotina maior de pedidos e entregas recorrentes.</p>
+            <div class="price">R$129,90 <small>/mês</small></div>
+            <div class="pay-tomorrow"><i class="fa-solid fa-bolt"></i> Comece a usar hoje, pague amanhã!</div>
+            <ul>
+              <li><i class="fa-solid fa-check"></i> 20% de desconto em fretes para seus clientes</li>
+              <li><i class="fa-solid fa-check"></i> 20 entregas mensais com desconto</li>
+              <li><i class="fa-solid fa-check"></i> Prioridade em entregas</li>
+              <li><i class="fa-solid fa-check"></i> Suporte online</li>
+              <li><i class="fa-solid fa-check"></i> Mais competitividade no frete</li>
+            </ul>
+            <button class="btn green" onclick="openSignupModal('Plano Start - R$129,90')">Contratar Start</button>
+          </article>
+
+          <article class="plan reveal">
+            <h3>Plano Premium</h3>
+            <p>Para empresas que querem volume, presença e mais força de venda.</p>
+            <div class="price">R$200,00 <small>/mês</small></div>
+            <div class="pay-tomorrow"><i class="fa-solid fa-bolt"></i> Comece a usar hoje, pague amanhã!</div>
+            <ul>
+              <li><i class="fa-solid fa-check"></i> 20% de desconto em fretes para seus clientes</li>
+              <li><i class="fa-solid fa-check"></i> Até 50 entregas mensais com desconto</li>
+              <li><i class="fa-solid fa-check"></i> Prioridade em entregas</li>
+              <li><i class="fa-solid fa-check"></i> Suporte online</li>
+              <li><i class="fa-solid fa-check"></i> Maior destaque como empresa parceira</li>
+            </ul>
+            <button class="btn" onclick="openSignupModal('Plano Premium - R$200,00')">Contratar Premium</button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="mapa" style="background:white">
+      <div class="container map-wrap">
+        <div class="city-card reveal">
+          <span class="badge"><i class="fa-solid fa-location-dot"></i> Atuação local</span>
+          <h2>Frota própria em Uruçuí, Piauí</h2>
+          <p>Somos uma solução pensada para a realidade local. Conhecemos a cidade, os bairros, a rotina dos empreendedores e a importância de entregar bem para manter o cliente satisfeito.</p>
+          <p>Com presença em Uruçuí - PI, o Pega & Leva ajuda empresas a profissionalizar o delivery e transformar entrega em vantagem competitiva.</p>
+          <div class="hero-actions" style="margin-top:24px">
+            <a class="btn light" target="_blank" href="https://www.google.com/maps/search/?api=1&query=Uru%C3%A7u%C3%AD%20Piau%C3%AD"><i class="fa-solid fa-map-location-dot"></i> Abrir no Maps</a>
+          </div>
+        </div>
+        <div class="map-box reveal">
+          <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=Uru%C3%A7u%C3%AD%20Piau%C3%AD&output=embed"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="cta reveal">
+          <div>
+            <h2>Quer transformar entrega em vantagem para sua empresa?</h2>
+            <p>Entre para o Pega & Leva Empresas e ofereça mais facilidade para seus clientes comprarem de você.</p>
+          </div>
+          <button class="btn" onclick="openSignupModal('Plano Start - R$129,90')"><i class="fa-solid fa-store"></i> Cadastrar empresa</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="contato" style="padding-top:20px">
+      <div class="container contact-grid">
+        <div class="contact-card reveal">
+          <span class="badge green"><i class="fa-solid fa-paper-plane"></i> Cadastro empresarial</span>
+          <h2 style="font-size:34px;margin:16px 0 10px">Cadastre sua empresa pelo WhatsApp</h2>
+          <p style="color:var(--muted);line-height:1.7;margin-bottom:18px">Escolha um plano e preencha o cadastro. Ao finalizar, será aberta uma notinha organizada no WhatsApp com todos os dados do cadastro.</p>
+          <div style="display:grid;gap:12px">
+            <button class="btn" onclick="openSignupModal('Plano Iniciante - R$79,90')"><i class="fa-solid fa-crown"></i> Cadastrar no Plano Iniciante</button>
+            <button class="btn green" onclick="openSignupModal('Plano Start - R$129,90')"><i class="fa-solid fa-crown"></i> Cadastrar no Plano Start</button>
+            <button class="btn" onclick="openSignupModal('Plano Premium - R$200,00')"><i class="fa-solid fa-crown"></i> Cadastrar no Plano Premium</button>
+          </div>
+        </div>
+        <div class="contact-card reveal">
+          <div class="icon"><i class="fa-solid fa-store"></i></div>
+          <h2 style="font-size:34px;margin-bottom:10px">Para quem é?</h2>
+          <p style="color:var(--muted);line-height:1.7">O Pega & Leva Empresas é ideal para negócios que vendem por canais digitais, balcão, telefone ou delivery e precisam entregar com mais controle.</p>
+          <div class="contact-list">
+            <div class="contact-item"><i class="fa-solid fa-check"></i><span>Lojas, boutiques e variedades</span></div>
+            <div class="contact-item"><i class="fa-solid fa-check"></i><span>Mercados, conveniências e mercearias</span></div>
+            <div class="contact-item"><i class="fa-solid fa-check"></i><span>Farmácias, restaurantes e lanchonetes</span></div>
+            <div class="contact-item"><i class="fa-solid fa-check"></i><span>Empreendedores locais que querem vender mais</span></div>
+          </div>
+          <div style="margin-top:24px;padding:18px;border-radius:22px;background:#eef4ff;color:var(--blue);font-weight:900;line-height:1.5">
+            <i class="fa-solid fa-lightbulb"></i> Com frete mais atrativo, seu cliente tem mais um motivo para finalizar a compra.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+
+  <div class="modal-overlay" id="signupModal" aria-hidden="true">
+    <div class="signup-modal">
+      <button class="modal-close" onclick="closeSignupModal()" aria-label="Fechar cadastro"><i class="fa-solid fa-xmark"></i></button>
+
+      <div id="signupFormBox">
+        <div class="signup-head">
+          <span class="badge green"><i class="fa-solid fa-store"></i> Cadastro empresarial</span>
+          <h2>Comece a usar hoje, pague amanhã!</h2>
+          <p>Preencha os dados da sua empresa por etapas. Ao finalizar, será aberta uma notinha organizada no WhatsApp solicitando o cadastro do cliente empresarial.</p>
+        </div>
+
+        <div class="steps">
+          <div class="step-dot active" id="stepDot1"></div>
+          <div class="step-dot" id="stepDot2"></div>
+          <div class="step-dot" id="stepDot3"></div>
+        </div>
+
+        <div class="step-loading" id="stepLoading"><span class="mini-spinner"></span> Carregando próxima etapa...</div>
+
+        <form id="signupForm" onsubmit="finishSignup(event)">
+          <input type="hidden" id="cadPlano">
+
+          <div class="form-step active" id="formStep1">
+            <div class="form-note"><i class="fa-solid fa-circle-info"></i> Primeiro, informe quem será o responsável pelo cadastro da empresa.</div>
+            <input class="field" id="cadResponsavel" placeholder="Nome do responsável" required>
+            <div class="form-row">
+              <input class="field" id="cadDDD" placeholder="DDD" maxlength="2" required>
+              <input class="field" id="cadWhatsapp" placeholder="WhatsApp" required>
+            </div>
+            <input class="field" id="cadEmail" type="email" placeholder="E-mail" required>
+            <div class="form-actions">
+              <button class="btn green" type="button" onclick="nextSignupStep()">Continuar</button>
+            </div>
+          </div>
+
+          <div class="form-step" id="formStep2">
+            <div class="form-note"><i class="fa-solid fa-location-dot"></i> Informe o endereço comercial para usar nas suas entregas. Ele poderá ser alterado ao solicitar uma entrega.</div>
+            <input class="field" id="cadDocumento" placeholder="CPF ou CNPJ" required>
+            <input class="field" id="cadRua" placeholder="Rua" required>
+            <input class="field" id="cadNumero" placeholder="Número" required>
+            <input class="field" id="cadReferencia" placeholder="Ponto de referência" required>
+            <select class="field" id="cadCidade" required>
+              <option value="">Selecione a cidade</option>
+              <option>Uruçuí</option>
+              <option>Benedito Leite</option>
+            </select>
+            <div class="form-actions">
+              <button class="btn light" type="button" onclick="prevSignupStep()">Voltar</button>
+              <button class="btn green" type="button" onclick="nextSignupStep()">Continuar</button>
+            </div>
+          </div>
+
+          <div class="form-step" id="formStep3">
+            <div class="form-note"><i class="fa-solid fa-key"></i> Crie seu código de acesso. Esse código será usado para acessar o sistema toda vez que for solicitar um entregador.</div>
+            <input class="field" id="cadCodigo" placeholder="Crie um código de acesso" minlength="4" required>
+            <div class="access-preview">
+              Plano escolhido: <span id="planoPreview">-</span><br>
+              Seu código será sua chave de entrada no sistema Pega & Leva.
+            </div>
+            <div class="form-actions">
+              <button class="btn light" type="button" onclick="prevSignupStep()">Voltar</button>
+              <button class="btn green" type="submit"><i class="fa-solid fa-circle-check"></i> Finalizar cadastro</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="success-box" id="signupSuccess">
+        <div class="icon green"><i class="fa-solid fa-circle-check"></i></div>
+        <h2>Cadastro pronto para envio!</h2>
+        <p style="color:var(--muted);line-height:1.7;margin:10px 0 18px">A notinha do cadastro foi aberta no WhatsApp. Confira os dados e envie para concluir a solicitação.</p>
+        <button class="btn" onclick="closeSignupModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <footer>
+    <div class="container footer-flex">
+      <div class="brand" style="color:white">
+        <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="Logo Pega & Leva">
+        <div><span>Pega & Leva</span><small style="color:rgba(255,255,255,.7)">Empresas parceiras em Uruçuí - PI</small></div>
+      </div>
+      <p>© <span id="year"></span> Pega & Leva. Entregas locais com agilidade.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
