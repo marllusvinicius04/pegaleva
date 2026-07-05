@@ -526,10 +526,11 @@ function deliveryHtml(d,available,modalOnly){
         msg=encodeURIComponent("Olá, sou entregador do Pega e Leva. Estou na sua residência!"),
         waDestUrl=waDest?`https://wa.me/55${waDest}?text=${msg}`:"#",
         waSendUrl=waSend?`https://wa.me/55${waSend}`:"#",
-        finalized=d.Status==="Entrega finalizada",
-        canceled=d.Status==="Cancelada",
-        collected=d.Status==="Coletado",
-        going=d.Status==="Estou a caminho",
+        statusAtual=String(d.Status||"").trim().toLowerCase(),
+        finalized=statusAtual==="entrega finalizada",
+        canceled=statusAtual==="cancelada",
+        collected=statusAtual==="coletado"||statusAtual==="coletada"||statusAtual==="coleta",
+        going=statusAtual==="estou a caminho",
         refColeta=referenciaEntrega(d,"Coleta"),
         refDestino=referenciaEntrega(d,"Destino");
 
