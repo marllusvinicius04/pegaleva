@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbxm2FcG0bODe7v0g86E1i3iXjzSeOxk7lkLWhDsYsQP_OSnWY-c7ABLnSWbgdVAOppg/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbyqeugeCr2xhK96ucylAez0-zpS1zJ1vzEb3qRVuA4rNEiGa6iTcwVTrkTF3Qr6RrGQ/exec";
 const BAIRROS_URUCUÍ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
 const BAIRROS_BENEDITO=["Centro","Benedito Leite"];
 let pedidoAtual=null,freteEscolhido="normal",precos={valorNormal:0,valorPromocional:0};
