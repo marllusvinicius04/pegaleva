@@ -6,11 +6,11 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Entregador - PegaLeva</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=20260706-cache">
+  <link rel="stylesheet" href="style.css?v=20260706-impecavel">
 
   <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
   <script>
-    const APP_VERSION = "20260706-cache";
+    const APP_VERSION = "20260706-impecavel";
     async function clearAppCache(){
       try{
         if("caches" in window){
@@ -21,6 +21,7 @@
           const regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map(r => r.update().catch(()=>{})));
         }
+        localStorage.setItem("pegaleva_last_version", APP_VERSION);
       }catch(e){}
     }
     function forceAppUpdate(){
@@ -194,6 +195,6 @@
 
 <div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> Enviar</button></div><button class="btn gray" onclick="closeChatModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div></div>
 
-<script src="script.js?v=20260706-cache"></script>
+<script src="script.js?v=20260706-impecavel"></script>
 </body>
 </html>
