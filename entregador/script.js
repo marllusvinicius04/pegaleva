@@ -1000,16 +1000,36 @@ function showStatus(title,text){
 function closeStatusModal(){document.getElementById("statusModal").classList.remove("active")}
 
 function logout(){
-closeSideMenu&&closeSideMenu();
-showLoader("Saindo...");
-setTimeout(()=>{
-if(refreshTimer) clearTimeout(refreshTimer);
-localStorage.removeItem("pegaleva_driver");
-clearAppCache&&clearAppCache();
-session=null;
-hideLoader();
-document.getElementById("appScreen").classList.remove("active");
-document.getElementById("loginScreen").classList.add("active");
-document.getElementById("driverCode").value="";
-},2000);
+  try{
+    if(typeof closeSideMenu === "function") closeSideMenu();
+    if(refreshTimer){
+      clearTimeout(refreshTimer);
+      refreshTimer=null;
+    }
+    refreshBusy=false;
+    session=null;
+    localStorage.removeItem("pegaleva_driver");
+    localStorage.removeItem("pegaleva_open_delivery_details");
+    localStorage.removeItem("pegaleva_refused_temp");
+    localStorage.removeItem("pegaleva_seen_deliveries");
+
+    document.querySelectorAll(".modal.active").forEach(el=>el.classList.remove("active"));
+    const bottom=document.getElementById("bottomOfferBar");
+    if(bottom)bottom.classList.remove("active");
+
+    const app=document.getElementById("appScreen");
+    const login=document.getElementById("loginScreen");
+    const code=document.getElementById("driverCode");
+    if(app)app.classList.remove("active");
+    if(login)login.classList.add("active");
+    if(code){
+      code.value="";
+      setTimeout(()=>code.focus(),100);
+    }
+
+    if(typeof hideLoader === "function") hideLoader();
+  }catch(e){
+    localStorage.removeItem("pegaleva_driver");
+    window.location.href=window.location.pathname+"?logout="+Date.now();
+  }
 }
