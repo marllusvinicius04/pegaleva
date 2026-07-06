@@ -90,8 +90,67 @@ function cidadeRota(cidade){cidade=String(cidade||"").trim();if(cidade==="Uruçu
 function limparEnderecoRota(endereco,cidade){let partes=String(endereco||"").split(",").map(p=>p.trim()).filter(Boolean);const rua=partes[0]||"";const numero=partes[1]||"0";const cid=cidadeRota(cidade||partes[partes.length-1]||"");return [rua,numero,cid].filter(Boolean).join(", ")}
 function mapsUrlLimpo(d){const origem=limparEnderecoRota(d.EnderecoColeta,d.ColetaCidade||d.coletaCidade),destino=limparEnderecoRota(d.EnderecoDestino,d.DestinoCidade||d.destinoCidade);return "https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origem)+"&destination="+encodeURIComponent(destino)}
 function referenciaEntrega(d,tipo){return d["Referencia"+tipo]||d["referencia"+tipo]||d["Referência"+tipo]||d["referência"+tipo]||d["PontoReferencia"+tipo]||d["pontoReferencia"+tipo]||d["PontoReferência"+tipo]||d["pontoReferência"+tipo]||""}
+
+let slowLoaderTimer=null;
+let slowLoaderStartedAt=0;
+const SLOW_LOADER_MS=12000;
+
+function ensureSlowLoaderNotice(){
+  let box=document.getElementById("slowLoaderNotice");
+  if(box)return box;
+  const loader=document.getElementById("loader");
+  if(!loader)return null;
+  const holder=loader.querySelector("div")||loader;
+  box=document.createElement("div");
+  box.id="slowLoaderNotice";
+  box.className="slow-loader-notice";
+  box.innerHTML='<p><b>Ops, parece que está demorando mais que o esperado.</b><br>Você pode tentar atualizar sem perder o que estava em progresso.</p><button type="button" onclick="retrySlowLoadingWithoutLosingProgress()"><i class="fa-solid fa-rotate-right"></i> Clique aqui para atualizar</button>';
+  holder.appendChild(box);
+  return box;
+}
+
+function scheduleSlowLoaderNotice(){
+  clearTimeout(slowLoaderTimer);
+  slowLoaderStartedAt=Date.now();
+  slowLoaderTimer=setTimeout(()=>{
+    const loader=document.getElementById("loader");
+    if(loader&&loader.classList.contains("active")){
+      const box=ensureSlowLoaderNotice();
+      if(box)box.classList.add("active");
+    }
+  },SLOW_LOADER_MS);
+}
+
+function hideSlowLoaderNotice(){
+  clearTimeout(slowLoaderTimer);
+  const box=document.getElementById("slowLoaderNotice");
+  if(box)box.classList.remove("active");
+}
+
+async function retrySlowLoadingWithoutLosingProgress(){
+  hideSlowLoaderNotice();
+  const box=document.getElementById("slowLoaderNotice");
+  const btn=box?box.querySelector("button"):null;
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Atualizando...';}
+  try{
+    refreshBusy=false;
+    lastRefreshAt=0;
+    if(session){
+      await refreshPanel();
+      renderDriverHeader();
+      initSwipeButtons(document);
+      initAvailableHandle();
+    }
+  }catch(e){}finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-rotate-right"></i> Clique aqui para atualizar';}
+    hideLoader();
+  }
+}
+
 function showLoader(t,mode){
   document.getElementById("loaderText").innerText=t||"Carregando...";
+  hideSlowLoaderNotice();
+  scheduleSlowLoaderNotice();
   const spin=document.getElementById("loaderSpinner");
   const bike=document.getElementById("loaderBike");
   if(spin)spin.style.display=mode==="bike"?"none":"block";
@@ -99,6 +158,7 @@ function showLoader(t,mode){
   document.getElementById("loader").classList.add("active");
 }
 function hideLoader(){
+  hideSlowLoaderNotice();
   document.getElementById("loader").classList.remove("active");
   const spin=document.getElementById("loaderSpinner");
   const bike=document.getElementById("loaderBike");
