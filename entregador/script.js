@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260706-cache";
+const APP_CACHE_VERSION="20260706-impecavel";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -35,7 +35,55 @@ showAllHistory=false, saldoHidden=false, refusedDeliveries=JSON.parse(localStora
 
 if(session)openPanel();
 
-async function api(action,data={}){try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify({action,...data})});return await r.json()}catch(err){return {ok:false,error:"Falha de conexão com o servidor. Confira a implantação do Apps Script e tente novamente."}}}
+const API_TIMEOUT_MS=22000;
+const API_RETRY_DELAY_MS=1800;
+let lastConnectionWarningAt=0;
+let lastRefreshAt=0;
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+function isTemporaryApiError(msg){
+  msg=String(msg||"").toLowerCase();
+  return msg.includes("tempo limite")||msg.includes("bloqueio")||msg.includes("lock")||msg.includes("manteve o bloqueio")||msg.includes("timeout")||msg.includes("failed to fetch")||msg.includes("networkerror")||msg.includes("falha de conexão");
+}
+async function api(action,data={},options={}){
+  const retries=Number(options.retries??1);
+  const timeoutMs=Number(options.timeoutMs??API_TIMEOUT_MS);
+  let last={ok:false,error:"Conexão instável. Tentando novamente."};
+  for(let attempt=0;attempt<=retries;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeoutMs);
+    try{
+      const r=await fetch(API_URL,{method:"POST",body:JSON.stringify({action,...data,_clientVersion:APP_CACHE_VERSION,_t:Date.now()}),signal:controller.signal,cache:"no-store"});
+      clearTimeout(timer);
+      const text=await r.text();
+      let json={};
+      try{json=JSON.parse(text)}catch(e){json={ok:false,error:"Resposta inválida do servidor."}}
+      if(json&&json.ok)return json;
+      last=json||last;
+      if(!isTemporaryApiError(last.error)||attempt>=retries)break;
+    }catch(err){
+      clearTimeout(timer);
+      last={ok:false,error:"Conexão instável com a planilha. Tentando novamente."};
+      if(attempt>=retries)break;
+    }
+    await sleep(API_RETRY_DELAY_MS*(attempt+1));
+  }
+  return last;
+}
+function friendlyError(msg){
+  msg=String(msg||"");
+  if(isTemporaryApiError(msg))return "O sistema está sincronizando com a planilha. Aguarde alguns segundos e tente novamente.";
+  return msg||"Não foi possível concluir agora. Tente novamente.";
+}
+function silentConnectionWarning(){
+  const now=Date.now();
+  if(now-lastConnectionWarningAt<60000)return;
+  lastConnectionWarningAt=now;
+  console.warn("PegaLeva:","consulta temporariamente ignorada para evitar bloqueio da planilha");
+}
+function primeiroNome(nome){
+  const n=String(nome||"Entregador").trim().replace(/\s+/g," ");
+  return n?n.split(" ")[0]:"Entregador";
+}
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function onlyDigits(v){return String(v||"").replace(/\D/g,"")}
 function cidadeRota(cidade){cidade=String(cidade||"").trim();if(cidade==="Uruçuí"||cidade==="Urucui"||cidade==="URUCUI")return "Uruçuí-PI";if(cidade==="Benedito Leite")return "Benedito Leite-MA";return cidade}
@@ -149,7 +197,7 @@ async function loginDriver(){
   showLoader("Entrando...");
   const res=await api("loginDriver",{codigo});
   hideLoader();
-  if(!res.ok)return alert(res.error||"Código inválido.");
+  if(!res.ok)return alert(friendlyError(res.error||"Código inválido."));
   session=res;
   localStorage.setItem("pegaleva_driver",JSON.stringify(session));
   openPanel();
@@ -174,28 +222,29 @@ function startAutoRefresh(){
 function scheduleAutoRefresh(){
   if(refreshTimer)clearTimeout(refreshTimer);
   refreshTimer=setTimeout(async()=>{
-    await refreshPanel();
+    if(document.visibilityState!=="hidden")await refreshPanel();
     scheduleAutoRefresh();
-  },1000);
+  },5000);
 }
 
 document.addEventListener("visibilitychange",()=>{
   if(!session)return;
   scheduleAutoRefresh();
-  refreshPanel();
+  if(document.visibilityState!=="hidden")refreshPanel();
 });
-window.addEventListener("focus",()=>{if(session)refreshPanel()});
-window.addEventListener("pageshow",()=>{if(session)refreshPanel()});
+window.addEventListener("focus",()=>{if(session&&Date.now()-lastRefreshAt>3500)refreshPanel()});
+window.addEventListener("pageshow",()=>{if(session&&Date.now()-lastRefreshAt>3500)refreshPanel()});
 
 function renderDriverHeader(){
   const p=session.profile;
-  const name=p.Nome||"Entregador";
+  const fullName=p.Nome||"Entregador";
+  const name=primeiroNome(fullName);
   const plate="Placa: "+(p.PlacaMoto||"-");
   document.getElementById("driverName").innerText=name;
   document.getElementById("driverPlate").innerText=plate;
   const sideName=document.getElementById("sideDriverName");
   const sidePlate=document.getElementById("sideDriverPlate");
-  if(sideName)sideName.innerText=name;
+  if(sideName)sideName.innerText=fullName;
   if(sidePlate)sidePlate.innerText=plate;
   renderSaldoText();
   document.getElementById("btnOn").classList.toggle("active",String(p.Ativo).toLowerCase()==="ativo");
@@ -223,6 +272,7 @@ function toggleSaldoVisibility(){
 async function manualRefreshPanel(){
   if(!session)return;
   refreshBusy=false;
+  lastRefreshAt=0;
   await refreshPanel();
 }
 async function forceInvisibleRefresh(){
@@ -230,6 +280,7 @@ async function forceInvisibleRefresh(){
   showLoader("Atualizando...");
   try{
     refreshBusy=false;
+    lastRefreshAt=0;
     await refreshPanel();
     renderDriverHeader();
     initSwipeButtons(document);
@@ -241,10 +292,12 @@ async function forceInvisibleRefresh(){
 
 async function refreshPanel(){
   if(!session||refreshBusy)return;
+  if(Date.now()-lastRefreshAt<2500)return;
+  lastRefreshAt=Date.now();
   refreshBusy=true;
   try{
-  const res=await api("getDriverPanel",{codigo:session.profile.CodigoAcesso,_t:Date.now()});
-  if(!res.ok)return;
+  const res=await api("getDriverPanel",{codigo:session.profile.CodigoAcesso},{retries:1,timeoutMs:20000});
+  if(!res.ok){silentConnectionWarning();return;}
 
   session={ok:true,type:"entregador",profile:res.profile,saques:res.saques||[]};
   localStorage.setItem("pegaleva_driver",JSON.stringify(session));
@@ -328,7 +381,7 @@ async function requestWithdraw(){
   showLoader("Enviando solicitação...");
   const res=await api("requestDriverWithdraw",{codigo:session.profile.CodigoAcesso,pix,nomeDestinatario:nome});
   hideLoader();
-  if(!res.ok)return showStatus("Erro ao solicitar saque",res.error||"Tente novamente.");
+  if(!res.ok)return showStatus("Não foi possível solicitar agora",friendlyError(res.error||"Tente novamente."));
   closeWithdrawModal();
   showStatus("Saque solicitado","Sua solicitação foi enviada com o valor total do saldo já descontado da taxa de sistema/serviço de R$1,98 por entrega. Pagamentos são feitos quarta e sábado em horário comercial.");
   refreshPanel();
@@ -707,7 +760,7 @@ async function acceptDelivery(id){
   showLoader("Aceitando entrega...","bike");
   const res=await api("acceptDelivery",{deliveryId:id,codigoEntregador:session.profile.CodigoAcesso});
   hideLoader();
-  if(!res.ok){alert(res.error||"Não foi possível aceitar.");refreshPanel();showNextModalDelivery();return}
+  if(!res.ok){alert(friendlyError(res.error||"Não foi possível aceitar."));refreshPanel();showNextModalDelivery();return}
   await refreshPanel();
   showNextModalDelivery();
 }
@@ -744,7 +797,7 @@ async function registerPayment(status){
   showLoader("Registrando pagamento...");
   const res=await api("registerPaymentStatus",{deliveryId:paidId,status});
   hideLoader();
-  if(!res.ok)return alert(res.error||"Erro ao registrar pagamento.");
+  if(!res.ok)return alert(friendlyError(res.error||"Erro ao registrar pagamento."));
   (window.lastDriverDeliveries||[]).forEach(d=>{if(d.ID===paidId)d.StatusPagamento=status});
   closePaymentModal();
   showStatus(status==="Pago"?"Pagamento registrado com sucesso":"Pagamento pendente","Agora a opção Entrega finalizada está liberada para essa entrega.");
@@ -768,7 +821,7 @@ async function updateStatus(id,status){
   showLoader("Atualizando...");
   const res=await api("updateDeliveryStatus",{deliveryId:id,status});
   hideLoader();
-  if(!res.ok)return alert(res.error||"Erro ao atualizar.");
+  if(!res.ok)return alert(friendlyError(res.error||"Erro ao atualizar."));
   if(status==="Entrega finalizada")showStatus("Entrega finalizada com sucesso","Saldo atualizado e entrega registrada no histórico.");
   refreshPanel();
 }
@@ -777,7 +830,7 @@ async function cancelDelivery(id){
   showLoader("Cancelando...");
   const res=await api("cancelDelivery",{deliveryId:id});
   hideLoader();
-  if(!res.ok)return alert(res.error||"Erro ao cancelar.");
+  if(!res.ok)return alert(friendlyError(res.error||"Erro ao cancelar."));
   showStatus("Entrega devolvida","A entrega voltou para novas entregas disponíveis e procurará outro entregador.");
   refreshPanel();
 }
@@ -786,7 +839,7 @@ async function toggleActive(active){
   showLoader(active?"Ativando...":"Desativando...");
   const res=await api("toggleDriver",{codigo:session.profile.CodigoAcesso,ativo:active});
   hideLoader();
-  if(!res.ok)return alert(res.error||"Erro ao alterar status.");
+  if(!res.ok)return alert(friendlyError(res.error||"Erro ao alterar status."));
   session.profile.Ativo=res.ativo;
   localStorage.setItem("pegaleva_driver",JSON.stringify(session));
   refreshPanel();
@@ -815,7 +868,7 @@ async function sendChatMessage(){
   if(!chatDeliveryId||!texto)return;
   input.value="";
   const res=await api("sendMessage",{deliveryId:chatDeliveryId,from:"entregador",mensagem:texto});
-  if(!res.ok)return alert(res.error||"Erro ao enviar mensagem.");
+  if(!res.ok)return alert(friendlyError(res.error||"Erro ao enviar mensagem."));
   loadChatMessages(true);
   refreshPanel();
 }
