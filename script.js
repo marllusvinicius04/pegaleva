@@ -46,6 +46,7 @@ function hideSlowLoaderWarning(){
 }
 async function updateWithoutLosingProgress(){
   hideSlowLoaderWarning();
+  hideSystemSyncNotice&&hideSystemSyncNotice();
   try{
     if(currentSearchingId){
       await tryAgainCurrentSearch();
@@ -72,7 +73,62 @@ let session=JSON.parse(localStorage.getItem("pegaleva_client")||"null"),
 chatDeliveryId="",currentStep=0,lastPrice=0,currentSearchingId="",showAllClientDeliveries=false,knownStatuses=JSON.parse(localStorage.getItem("pegaleva_status_client")||"{}"),refreshTimer=null,refreshBusy=false,clientCoupons=[],clientAnnouncements=[],clientSavedContacts=[];
 const steps=()=>document.querySelectorAll(".step"),dots=()=>document.querySelectorAll(".dot");
 if(session)openPanel();
-async function api(action,data={}){try{const r=await fetch(API_URL,{method:"POST",cache:"no-store",body:JSON.stringify({action,...data})});return await r.json()}catch(err){return {ok:false,error:"Falha de conexão com o servidor. Confira a implantação do Apps Script e tente novamente."}}}
+function isSystemSpreadsheetError(msg){
+  msg=String(msg||"").toLowerCase();
+  return msg.includes("planilha")||
+         msg.includes("apps script")||
+         msg.includes("script")||
+         msg.includes("bloqueio")||
+         msg.includes("lock")||
+         msg.includes("tempo limite")||
+         msg.includes("timeout")||
+         msg.includes("failed to fetch")||
+         msg.includes("networkerror")||
+         msg.includes("falha de conexão")||
+         msg.includes("servidor")||
+         msg.includes("sistema ocupado")||
+         msg.includes("sincronizando");
+}
+
+function showSystemSyncNotice(message){
+  let box=document.getElementById("systemSyncNotice");
+  if(!box){
+    box=document.createElement("div");
+    box.id="systemSyncNotice";
+    box.style.cssText="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(92vw,430px);background:white;color:#0f172a;border:1px solid #dbe7ff;border-radius:22px;padding:16px;z-index:9999;box-shadow:0 20px 60px rgba(15,23,42,.24);font-family:Inter,Segoe UI,Arial,sans-serif;text-align:left";
+    document.body.appendChild(box);
+  }
+  box.innerHTML=`<strong style="display:block;color:#0044c3;margin-bottom:6px">Ops, parece que o sistema demorou mais que o esperado.</strong>
+    <span style="display:block;color:#64748b;font-size:14px;line-height:1.45">${message||"Isso pode acontecer quando a planilha está sincronizando ou o sistema está ocupado."}</span>
+    <button type="button" onclick="updateWithoutLosingProgress()" style="width:100%;margin-top:12px;padding:13px 14px;border-radius:15px;border:0;background:#0044c3;color:white;font-weight:900;cursor:pointer">Clique aqui para atualizar sem perder o progresso</button>
+    <button type="button" onclick="hideSystemSyncNotice()" style="width:100%;margin-top:8px;padding:11px 14px;border-radius:15px;border:0;background:#eef4ff;color:#0044c3;font-weight:900;cursor:pointer">Fechar</button>`;
+  box.style.display="block";
+}
+
+function hideSystemSyncNotice(){
+  const box=document.getElementById("systemSyncNotice");
+  if(box)box.style.display="none";
+}
+
+async function api(action,data={}){
+  const startedAt=Date.now();
+  try{
+    const r=await fetch(API_URL,{method:"POST",cache:"no-store",body:JSON.stringify({action,...data,_t:Date.now()})});
+    const res=await r.json();
+    const elapsed=Date.now()-startedAt;
+
+    if(res&&!res.ok&&isSystemSpreadsheetError(res.error||res.message)){
+      showSystemSyncNotice(res.error||"O sistema está sincronizando com a planilha. Tente atualizar sem sair da tela.");
+    }
+
+    return res;
+  }catch(err){
+    const elapsed=Date.now()-startedAt;
+    const error="Falha temporária de conexão com o sistema/planilha. Tente atualizar sem sair da tela.";
+    showSystemSyncNotice(error);
+    return {ok:false,error};
+  }
+}
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function onlyDigits(v){return String(v||"").replace(/\D/g,"")}
 const BAIRROS_URUCUÍ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
@@ -106,7 +162,6 @@ function showLoader(text,search=false){
   document.getElementById("searchActions").style.display=search?"block":"none";
   loader.classList.toggle("searching",!!search);
   loader.classList.add("active");
-  startSlowLoaderWarning();
 }
 function hideLoader(){
   const loader=document.getElementById("loader");
