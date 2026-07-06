@@ -12,6 +12,60 @@ function openLegalModal(type){
 }
 function closeLegalModal(){document.getElementById("legalModal").classList.remove("active")}
 
+let slowLoaderTimer=null;
+function ensureSlowLoaderNotice(){
+  let box=document.getElementById("slowLoaderNotice");
+  if(box)return box;
+  const loader=document.getElementById("loader");
+  if(!loader)return null;
+  box=document.createElement("div");
+  box.id="slowLoaderNotice";
+  box.className="slow-loader-warning";
+  box.style.display="none";
+  box.innerHTML=`<strong>Ops, parece que está demorando mais que o esperado.</strong>
+    <span>Isso pode acontecer por instabilidade na conexão ou sincronização da planilha.</span>
+    <button type="button" onclick="updateWithoutLosingProgress()">Clique aqui para atualizar</button>`;
+  const inner=loader.querySelector("div");
+  (inner||loader).appendChild(box);
+  return box;
+}
+function startSlowLoaderWarning(){
+  clearTimeout(slowLoaderTimer);
+  const box=ensureSlowLoaderNotice();
+  if(box)box.style.display="none";
+  slowLoaderTimer=setTimeout(()=>{
+    const notice=ensureSlowLoaderNotice();
+    const loader=document.getElementById("loader");
+    if(notice&&loader&&loader.classList.contains("active"))notice.style.display="block";
+  },12000);
+}
+function hideSlowLoaderWarning(){
+  clearTimeout(slowLoaderTimer);
+  const box=document.getElementById("slowLoaderNotice");
+  if(box)box.style.display="none";
+}
+async function updateWithoutLosingProgress(){
+  hideSlowLoaderWarning();
+  try{
+    if(currentSearchingId){
+      await tryAgainCurrentSearch();
+      return;
+    }
+    if(session){
+      refreshBusy=false;
+      showLoader("Atualizando sem sair da tela...");
+      await refreshPanel();
+      hideLoader();
+      return;
+    }
+    hideLoader();
+  }catch(e){
+    hideLoader();
+    alert("Não foi possível atualizar agora. Tente novamente em alguns segundos.");
+  }
+}
+
+
 const PIX_KEY="57293143000156";
 const API_URL="https://script.google.com/macros/s/AKfycbxm2FcG0bODe7v0g86E1i3iXjzSeOxk7lkLWhDsYsQP_OSnWY-c7ABLnSWbgdVAOppg/exec";
 let session=JSON.parse(localStorage.getItem("pegaleva_client")||"null"),
@@ -45,8 +99,21 @@ function updateBairroOptions(){
 function cidadeRota(cidade){cidade=String(cidade||"").trim();if(cidade==="Uruçuí"||cidade==="Urucui"||cidade==="URUCUI")return "Uruçuí-PI";if(cidade==="Benedito Leite")return "Benedito Leite-MA";return cidade}
 function fullAddress(prefix){const rua=document.getElementById(prefix+"Rua").value.trim(),numero=(document.getElementById(prefix+"Numero").value.trim()||"0"),cidade=cidadeRota(document.getElementById(prefix+"Cidade").value);return[rua,numero,cidade].filter(Boolean).join(", ")}
 function pontoReferencia(prefix){return(document.getElementById(prefix+"Referencia")?.value||"").trim()}
-function showLoader(text,search=false){const loader=document.getElementById("loader");document.getElementById("loaderText").innerText=text||"Carregando...";document.getElementById("loaderSub").innerText=search?"Buscando entregador disponível.":"Aguarde um instante.";document.getElementById("searchActions").style.display=search?"block":"none";loader.classList.toggle("searching",!!search);loader.classList.add("active")}
-function hideLoader(){const loader=document.getElementById("loader");loader.classList.remove("active","searching");document.getElementById("searchActions").style.display="none"}
+function showLoader(text,search=false){
+  const loader=document.getElementById("loader");
+  document.getElementById("loaderText").innerText=text||"Carregando...";
+  document.getElementById("loaderSub").innerText=search?"Buscando entregador disponível.":"Aguarde um instante.";
+  document.getElementById("searchActions").style.display=search?"block":"none";
+  loader.classList.toggle("searching",!!search);
+  loader.classList.add("active");
+  startSlowLoaderWarning();
+}
+function hideLoader(){
+  const loader=document.getElementById("loader");
+  loader.classList.remove("active","searching");
+  document.getElementById("searchActions").style.display="none";
+  hideSlowLoaderWarning();
+}
 function playSuccessNotification(){
   try{
     const AudioCtx=window.AudioContext||window.webkitAudioContext;
@@ -747,4 +814,3 @@ document.addEventListener("DOMContentLoaded",()=>{
     clientCardsObserver.observe(document.body,{childList:true,subtree:true});
   }catch(e){}
 });
-
