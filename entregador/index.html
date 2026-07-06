@@ -2,10 +2,36 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Entregador - PegaLeva</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260706-cache">
 
   <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
+  <script>
+    const APP_VERSION = "20260706-cache";
+    async function clearAppCache(){
+      try{
+        if("caches" in window){
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        if("serviceWorker" in navigator){
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.update().catch(()=>{})));
+        }
+      }catch(e){}
+    }
+    function forceAppUpdate(){
+      clearAppCache().finally(()=>{
+        const url = new URL(window.location.href);
+        url.searchParams.set("v", Date.now());
+        window.location.replace(url.toString());
+      });
+    }
+    clearAppCache();
+  </script>
 </head>
 <body>
 <div class="loader" id="loader"><div><div class="spinner" id="loaderSpinner"></div><div class="loader-bike" id="loaderBike" style="display:none"><i class="fa-solid fa-motorcycle"></i><div class="loader-road"></div></div><h2 id="loaderText">Carregando...</h2></div></div>
@@ -22,8 +48,11 @@
 
 <section class="screen app" id="appScreen">
   <div class="top">
-    <button class="top-icon-btn refresh" onclick="forceInvisibleRefresh()" title="Atualizar">
+    <button class="top-icon-btn refresh" onclick="forceAppUpdate()" title="Atualizar sistema">
 <i class="fa-solid fa-rotate-right"></i>
+</button>
+    <button class="top-icon-btn logout" onclick="logout()" title="Sair">
+<i class="fa-solid fa-right-from-bracket"></i>
 </button>
     <button class="top-icon-btn menu" onclick="openSideMenu()" title="Menu">
 <i class="fa-solid fa-bars"></i>
@@ -165,6 +194,6 @@
 
 <div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> Enviar</button></div><button class="btn gray" onclick="closeChatModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div></div>
 
-<script src="script.js?v=finalizar-direto"></script>
+<script src="script.js?v=20260706-cache"></script>
 </body>
 </html>
