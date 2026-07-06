@@ -178,3 +178,39 @@ html,body{max-width:100%;overflow-x:hidden}
   .delivery-card .title>strong:first-child{font-size:16px}
   .delivery-card .delivery-price-client{font-size:17px;padding:8px 10px}
 }
+
+/* Aviso amigável quando o carregamento demora */
+.slow-loader-warning{
+  width:min(92vw,360px);
+  margin:18px auto 0;
+  background:rgba(255,255,255,.96);
+  color:#0f172a;
+  border-radius:22px;
+  padding:16px;
+  box-shadow:0 18px 42px rgba(0,0,0,.24);
+  border:1px solid rgba(255,255,255,.75);
+  text-align:center;
+}
+.slow-loader-warning strong{
+  display:block;
+  color:#0044c3;
+  font-size:16px;
+  line-height:1.25;
+  margin-bottom:6px;
+}
+.slow-loader-warning span{
+  display:block;
+  color:#64748b;
+  font-size:13px;
+  line-height:1.45;
+}
+.slow-loader-warning button{
+  width:100%;
+  margin-top:12px;
+  padding:13px 14px;
+  border-radius:15px;
+  background:#10b981;
+  color:white;
+  font-weight:950;
+  box-shadow:0 12px 26px rgba(16,185,129,.24);
+}
