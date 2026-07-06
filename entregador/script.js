@@ -210,7 +210,6 @@ async function forceInvisibleRefresh(){
     await refreshPanel();
     renderDriverHeader();
     initSwipeButtons(document);
-    initFinalizeSwipeButtons(document);
     initAvailableHandle();
   }catch(e){}finally{
     hideLoader();
@@ -412,7 +411,6 @@ function renderMine(list){
 
   document.getElementById("myBox").innerHTML=list.map(d=>deliveryHtml(d,false,false)).join("");
   window.lastDriverDeliveries=list;
-  initFinalizeSwipeButtons(document.getElementById("myBox"));
 }
 
 function renderHistory(hist){
@@ -437,14 +435,6 @@ function swipeActionHtml(id){
     <span class="swipe-side left"><i class="fa-solid fa-angles-left"></i> Recusar</span>
     <div class="swipe-knob"><i class="fa-solid fa-arrows-left-right"></i> Deslize</div>
     <span class="swipe-side right">Aceitar <i class="fa-solid fa-angles-right"></i></span>
-  </div>`;
-}
-function finalizeSwipeHtml(id){
-  const safe=String(id||"").replace(/'/g,"&#039;");
-  return `<div class="swipe-finalize wide" data-delivery-id="${safe}">
-    <span class="swipe-finalize-text"><i class="fa-solid fa-circle-check"></i> Deslize para finalizar entrega</span>
-    <div class="swipe-finalize-knob"><i class="fa-solid fa-motorcycle"></i></div>
-    <span class="swipe-finalize-ok">Finalizar <i class="fa-solid fa-angles-right"></i></span>
   </div>`;
 }
 
@@ -513,69 +503,6 @@ function initSwipeButtons(root){
   });
 }
 
-function initFinalizeSwipeButtons(root){
-  (root||document).querySelectorAll(".swipe-finalize:not([data-ready='1'])").forEach(el=>{
-    el.dataset.ready="1";
-    const knob=el.querySelector(".swipe-finalize-knob");
-    let startX=0,startY=0,dragging=false,limit=0,lastDx=0,locked=false;
-    const getPoint=e=>{
-      const t=e.touches&&e.touches[0]||e.changedTouches&&e.changedTouches[0]||e;
-      return {x:t.clientX||0,y:t.clientY||0};
-    };
-    const reset=()=>{
-      knob.style.transform="translateX(0)";
-      el.classList.remove("finishing");
-      document.body.classList.remove("swiping-delivery");
-      dragging=false;locked=false;lastDx=0;
-    };
-    const moveTo=x=>{
-      const dx=Math.max(0,Math.min(limit,x-startX));
-      lastDx=dx;
-      knob.style.transform=`translate3d(${dx}px,0,0)`;
-      el.classList.toggle("finishing",dx>limit*.72);
-      return dx;
-    };
-    const finish=dx=>{
-      const id=el.dataset.deliveryId;
-      document.body.classList.remove("swiping-delivery");
-      if(dx>limit*.72){finalizeDeliveryChecked(id);reset();return}
-      reset();
-    };
-    const start=e=>{
-      const p=getPoint(e);
-      dragging=true;locked=false;startX=p.x;startY=p.y;lastDx=0;
-      limit=Math.max(120,el.clientWidth-76);
-    };
-    const move=e=>{
-      if(!dragging)return;
-      const p=getPoint(e),dx=p.x-startX,dy=p.y-startY;
-      if(!locked){
-        if(Math.abs(dx)<8&&Math.abs(dy)<8)return;
-        locked=Math.abs(dx)>Math.abs(dy)&&dx>0;
-        if(locked)document.body.classList.add("swiping-delivery");
-      }
-      if(!locked)return;
-      e.preventDefault();
-      e.stopPropagation();
-      moveTo(p.x);
-    };
-    const end=e=>{
-      if(!dragging)return;
-      if(!locked){reset();return}
-      e.preventDefault&&e.preventDefault();
-      finish(lastDx);
-    };
-    el.addEventListener("mousedown",start);
-    window.addEventListener("mousemove",move,{passive:false});
-    window.addEventListener("mouseup",end,{passive:false});
-    window.addEventListener("mouseleave",()=>{if(dragging)reset()});
-    el.addEventListener("touchstart",start,{passive:true});
-    el.addEventListener("touchmove",move,{passive:false});
-    el.addEventListener("touchend",end,{passive:false});
-    el.addEventListener("touchcancel",reset,{passive:true});
-  });
-}
-
 function toggleDeliveryDetails(id){
   id=String(id||"");
   const box=document.getElementById("details-"+id);
@@ -619,7 +546,7 @@ function deliveryHtml(d,available,modalOnly){
       actionHtml=`<div class="delivery-actions-pro">
         <button class="btn light" onclick="openChatModal('${d.ID}')"><i class="fa-solid fa-message"></i> Mensagem${Number(d.EntregadorNaoLidas||0)>0?` <span class="chat-badge">${d.EntregadorNaoLidas}</span>`:""}</button>
         <button class="btn light" onclick="openPaymentModal('${d.ID}')"><i class="fa-solid fa-qrcode"></i> Pagar</button>
-        ${finalizeSwipeHtml(d.ID)}
+        <button class="btn green wide" onclick="finalizeDeliveryChecked('${d.ID}')"><i class="fa-solid fa-circle-check"></i> Entrega finalizada</button>
         <a class="btn route wide" href="${mapsUrlLimpo(d)}" target="_blank"><i class="fa-solid fa-map-location-dot"></i> Abrir rota online</a>
       </div>`;
     } else {
@@ -627,7 +554,7 @@ function deliveryHtml(d,available,modalOnly){
         <button class="btn green" onclick="updateStatus('${d.ID}','Finalizando uma entrega')"><i class="fa-solid fa-flag-checkered"></i> Finalizando uma entrega</button>
         <button class="btn" onclick="updateStatus('${d.ID}','Estou a caminho')"><i class="fa-solid fa-route"></i> Estou indo</button>
         <button class="btn wide" onclick="updateStatus('${d.ID}','Coletado')"><i class="fa-solid fa-box"></i> Coleta</button>
-        ${finalizeSwipeHtml(d.ID)}
+        <button class="btn green wide" onclick="finalizeDeliveryChecked('${d.ID}')"><i class="fa-solid fa-circle-check"></i> Entrega finalizada</button>
         <button class="btn red wide" onclick="cancelDelivery('${d.ID}')"><i class="fa-solid fa-ban"></i> Cancelar</button>
         <button class="btn light" onclick="openChatModal('${d.ID}')"><i class="fa-solid fa-message"></i> Mensagem${Number(d.EntregadorNaoLidas||0)>0?` <span class="chat-badge">${d.EntregadorNaoLidas}</span>`:""}</button>
         <button class="btn light" onclick="openPaymentModal('${d.ID}')"><i class="fa-solid fa-qrcode"></i> Pagar</button>
