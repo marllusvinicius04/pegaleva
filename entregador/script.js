@@ -1,4 +1,27 @@
 
+const APP_CACHE_VERSION="20260706-cache";
+async function clearAppCache(){
+  try{
+    if("caches" in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+    if("serviceWorker" in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.update().catch(()=>{})));
+    }
+  }catch(e){}
+}
+function forceAppUpdate(){
+  clearAppCache().finally(()=>{
+    const url=new URL(window.location.href);
+    url.searchParams.set("v",Date.now());
+    window.location.replace(url.toString());
+  });
+}
+clearAppCache();
+
+
 const PIX_KEY="57293143000156";
 const API_URL="https://script.google.com/macros/s/AKfycbyqeugeCr2xhK96ucylAez0-zpS1zJ1vzEb3qRVuA4rNEiGa6iTcwVTrkTF3Qr6RrGQ/exec";
 
@@ -869,6 +892,7 @@ showLoader("Saindo...");
 setTimeout(()=>{
 if(refreshTimer) clearTimeout(refreshTimer);
 localStorage.removeItem("pegaleva_driver");
+clearAppCache&&clearAppCache();
 session=null;
 hideLoader();
 document.getElementById("appScreen").classList.remove("active");
