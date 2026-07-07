@@ -565,6 +565,7 @@ function renderClientHistory(list){
     <p class="muted">ID: <b>${d.ID}</b></p>
     <p class="muted">Valor: <b>${money(d.Valor)}</b></p>
     <p class="muted">Pagamento: <b>${d.StatusPagamento||"Aguardando confirmação"}</b></p>
+    <p class="muted">Recebido por: <b>${d.ConfirmacaoEntrega||"-"}</b></p>
     ${d.NomeEntregador?driverMiniHtml(d):""}
     <p class="muted">Atualizado em: ${d.AtualizadoEm||d.CriadoEm||""}</p>
   </div>`).join("");
