@@ -669,10 +669,17 @@ async function sendDeliveryPhoto(id,file){
   showLoader("Enviando foto...");
   try{
     const photo=await resizeDeliveryPhoto(file);
-    const res=await api("uploadDeliveryPhoto",{deliveryId:id,codigo:session.profile.CodigoAcesso,photoBase64:photo.base64,mimeType:photo.mimeType,fileName:file.name||"foto-entrega.jpg"},{retries:1,timeoutMs:30000});
+    const payload={deliveryId:id,codigo:session.profile.CodigoAcesso,photoBase64:photo.base64,mimeType:photo.mimeType,fileName:file.name||"foto-entrega.jpg"};
+    let res=await api("uploadDeliveryPhoto",payload,{retries:1,timeoutMs:30000});
+    if(!res.ok&&String(res.error||"").toLowerCase().includes("action inválida")){
+      res=await api("uploaddeliveryphoto",payload,{retries:1,timeoutMs:30000});
+    }
+    if(!res.ok&&String(res.error||"").toLowerCase().includes("action inválida")){
+      res=await api("uploadphoto",payload,{retries:1,timeoutMs:30000});
+    }
     hideLoader();
     if(!res.ok)return showStatus("Não foi possível enviar a foto",friendlyError(res.error||"Tente novamente."));
-    showStatus("Foto enviada","A foto foi registrada na aba de entregas da planilha.");
+    showStatus("Foto enviada","A foto foi registrada na coluna FotosEntrega da aba entregas.");
     refreshPanel();
   }catch(e){
     hideLoader();
