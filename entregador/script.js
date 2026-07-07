@@ -1340,3 +1340,128 @@ document.getElementById("driverCode").value="";
     };
   }
 })();
+
+
+/* =========================================================
+   Alerta persistente de entregas disponíveis
+   Toca também para entregas já existentes ao abrir o painel
+   e repete a cada 5 segundos até aceitar ou recusar.
+========================================================= */
+(function(){
+  let persistentDeliveryAlertTimer = null;
+  let persistentDeliveryAlertIds = [];
+
+  function normalizeAvailableDeliveries(list){
+    try{
+      return (list||[])
+        .filter(d=>d && d.ID)
+        .filter(d=>!isClosedDelivery(d.Status))
+        .filter(d=>!refusedDeliveries[d.ID]);
+    }catch(e){
+      return [];
+    }
+  }
+
+  function currentVisibleAvailableDeliveries(){
+    return normalizeAvailableDeliveries(window.lastAvailableDeliveries||[]);
+  }
+
+  function stopPersistentDeliveryAlert(){
+    if(persistentDeliveryAlertTimer){
+      clearInterval(persistentDeliveryAlertTimer);
+      persistentDeliveryAlertTimer = null;
+    }
+    persistentDeliveryAlertIds = [];
+  }
+
+  function shouldKeepAlerting(){
+    const available = currentVisibleAvailableDeliveries();
+    const active = session && session.profile && String(session.profile.Ativo||"").toLowerCase()==="ativo";
+    if(!active || !available.length)return false;
+    const ids = available.map(d=>String(d.ID));
+    return persistentDeliveryAlertIds.some(id=>ids.includes(String(id)));
+  }
+
+  function startPersistentDeliveryAlert(list){
+    const available = normalizeAvailableDeliveries(list);
+    const active = session && session.profile && String(session.profile.Ativo||"").toLowerCase()==="ativo";
+    if(!active || !available.length){
+      stopPersistentDeliveryAlert();
+      return;
+    }
+
+    persistentDeliveryAlertIds = available.map(d=>String(d.ID));
+
+    try{ playDeliveryAlert(); }catch(e){}
+    try{
+      browserNotify(
+        "Entrega disponível",
+        available.length===1
+          ? `${available[0].BairroColeta||"Coleta"} para ${available[0].BairroDestino||"Destino"}`
+          : `${available.length} entregas disponíveis`
+      );
+    }catch(e){}
+
+    if(persistentDeliveryAlertTimer)return;
+
+    persistentDeliveryAlertTimer = setInterval(()=>{
+      if(!shouldKeepAlerting()){
+        stopPersistentDeliveryAlert();
+        return;
+      }
+      try{ playDeliveryAlert(); }catch(e){}
+    },5000);
+  }
+
+  const originalDetectNewDeliveryPersistent = typeof detectNewDelivery === "function" ? detectNewDelivery : null;
+  detectNewDelivery = function(list){
+    const available = normalizeAvailableDeliveries(list);
+    const active = session && session.profile && String(session.profile.Ativo||"").toLowerCase()==="ativo";
+
+    if(!active || !available.length){
+      stopPersistentDeliveryAlert();
+      if(originalDetectNewDeliveryPersistent) return originalDetectNewDeliveryPersistent(list);
+      return;
+    }
+
+    const newOnes = available.filter(d=>!lastAvailableIds.includes(d.ID));
+    const hasModalActive = document.getElementById("bottomOfferBar") && document.getElementById("bottomOfferBar").classList.contains("active");
+
+    lastAvailableIds = available.map(d=>d.ID);
+    localStorage.setItem("pegaleva_seen_deliveries",JSON.stringify(lastAvailableIds));
+
+    if(newOnes.length){
+      modalQueue = modalQueue.concat(newOnes.filter(d=>!modalQueue.some(q=>q.ID===d.ID)));
+      if(!hasModalActive)showNextModalDelivery();
+      startPersistentDeliveryAlert(available);
+      return;
+    }
+
+    if(!persistentDeliveryAlertTimer && available.length){
+      modalQueue = modalQueue.concat(available.filter(d=>!modalQueue.some(q=>q.ID===d.ID)));
+      if(!hasModalActive)showNextModalDelivery();
+      startPersistentDeliveryAlert(available);
+    }
+  };
+
+  const originalAcceptDeliveryPersistent = typeof acceptDelivery === "function" ? acceptDelivery : null;
+  acceptDelivery = async function(id){
+    stopPersistentDeliveryAlert();
+    if(originalAcceptDeliveryPersistent) return await originalAcceptDeliveryPersistent(id);
+  };
+
+  const originalRefuseDeliveryPersistent = typeof refuseDelivery === "function" ? refuseDelivery : null;
+  refuseDelivery = function(id){
+    stopPersistentDeliveryAlert();
+    if(originalRefuseDeliveryPersistent) return originalRefuseDeliveryPersistent(id);
+  };
+
+  const originalCloseModalPersistent = typeof closeModal === "function" ? closeModal : null;
+  closeModal = function(){
+    if(!currentVisibleAvailableDeliveries().length)stopPersistentDeliveryAlert();
+    if(originalCloseModalPersistent)return originalCloseModalPersistent();
+  };
+
+  window.addEventListener("beforeunload",stopPersistentDeliveryAlert);
+})();
+
