@@ -596,6 +596,79 @@ function toggleDeliveryDetails(id){
   if(btn)btn.innerHTML=box.classList.contains("open")?'<i class="fa-solid fa-circle-info"></i> Ocultar dados':'<i class="fa-solid fa-circle-info"></i> Ver dados';
 }
 
+
+function deliveryPhotoLinksHtml(d){
+  const raw=String(d.FotosEntrega||d.FotoEntrega||d.PhotoEntrega||"").trim();
+  if(!raw)return "";
+  const links=raw.split(/\s+/).filter(Boolean);
+  if(!links.length)return "";
+  return `<p class="info"><b>Fotos:</b> ${links.map((u,i)=>`<a href="${u}" target="_blank">Foto ${i+1}</a>`).join(" • ")}</p>`;
+}
+
+function cameraButtonHtml(id){
+  const safe=String(id||"").replace(/'/g,"&#039;");
+  return `<button class="btn light delivery-camera-btn" onclick="openDeliveryCamera('${safe}')" title="Tirar foto da entrega"><i class="fa-solid fa-camera"></i></button>`;
+}
+
+function openDeliveryCamera(id){
+  const input=document.createElement("input");
+  input.type="file";
+  input.accept="image/*";
+  input.capture="environment";
+  input.style.display="none";
+  input.onchange=()=>{
+    const file=input.files&&input.files[0];
+    input.remove();
+    if(file)sendDeliveryPhoto(id,file);
+  };
+  document.body.appendChild(input);
+  input.click();
+}
+
+function resizeDeliveryPhoto(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error("Não foi possível ler a foto."));
+    reader.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>resolve({base64:String(reader.result||""),mimeType:file.type||"image/jpeg"});
+      img.onload=()=>{
+        const max=1280;
+        let w=img.width,h=img.height;
+        if(w>max||h>max){
+          const ratio=Math.min(max/w,max/h);
+          w=Math.round(w*ratio);
+          h=Math.round(h*ratio);
+        }
+        const canvas=document.createElement("canvas");
+        canvas.width=w;
+        canvas.height=h;
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(img,0,0,w,h);
+        resolve({base64:canvas.toDataURL("image/jpeg",0.82),mimeType:"image/jpeg"});
+      };
+      img.src=String(reader.result||"");
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function sendDeliveryPhoto(id,file){
+  showLoader("Enviando foto...");
+  try{
+    const photo=await resizeDeliveryPhoto(file);
+    const res=await api("uploadDeliveryPhoto",{deliveryId:id,codigo:session.profile.CodigoAcesso,photoBase64:photo.base64,mimeType:photo.mimeType,fileName:file.name||"foto-entrega.jpg"},{retries:1,timeoutMs:30000});
+    hideLoader();
+    if(!res.ok)return showStatus("Não foi possível enviar a foto",friendlyError(res.error||"Tente novamente."));
+    showStatus("Foto enviada","A foto foi registrada na aba de entregas da planilha.");
+    refreshPanel();
+  }catch(e){
+    hideLoader();
+    showStatus("Não foi possível enviar a foto",friendlyError(e&&e.message?e.message:"Tente novamente."));
+  }
+}
+
+
 function deliveryHtml(d,available,modalOnly){
   const waDest=onlyDigits(d.WhatsAppDestino),
         waSend=onlyDigits(d.WhatsAppSolicitante),
@@ -645,7 +718,10 @@ function deliveryHtml(d,available,modalOnly){
         <span class="user-circle"><i class="fa-solid fa-user"></i></span>
         <div><strong>${d.NomeSolicitante||"Solicitante"}</strong><p class="muted">${d.Conteudo||"Entrega"} • ${d.Volumes||1} volume(s)</p></div>
       </div>
-      <div class="delivery-price-pro">${money(d.Valor)}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${cameraButtonHtml(d.ID)}
+        <div class="delivery-price-pro">${money(d.Valor)}</div>
+      </div>
     </div>
     <div class="delivery-route-pro">
       <div class="route-point-pro pickup">
@@ -664,6 +740,7 @@ function deliveryHtml(d,available,modalOnly){
       <p class="info"><b>Quem envia:</b> ${d.NomeSolicitante||""} ${!modalOnly?`• <a href="${waSendUrl}" target="_blank">${d.WhatsAppSolicitante||"WhatsApp"}</a>`:""}</p>
       <p class="info"><b>Quem recebe:</b> ${d.NomeDestino||""} ${!modalOnly?`• <a href="${waDestUrl}" target="_blank">${d.WhatsAppDestino||"WhatsApp"}</a>`:""}</p>
       <p class="info"><b>Status:</b> <span class="badge ${finalized?"green":canceled?"red":"yellow"}">${d.Status}</span> <b>Pagamento:</b> ${d.StatusPagamento||"Aguardando confirmação"}</p>
+      ${deliveryPhotoLinksHtml(d)}
       ${going?`<div class="route-mini">5MIN CHEGANDO...</div>`:""}
       ${collected?`<div class="route-mini">entrega em rota <i class="fa-solid fa-motorcycle"></i></div>`:""}
     </div>
