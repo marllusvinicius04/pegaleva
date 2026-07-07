@@ -958,3 +958,185 @@ function showSystemDelayNotice(){
   setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },200);
 })();
 
+
+/* =========================================================
+   Atualização automática mais rápida + mensagens amigáveis
+   Evita mensagens técnicas do Apps Script e melhora a busca.
+========================================================= */
+(function(){
+  let fastRefreshTimer = null;
+  let fastRefreshActive = false;
+  let lastFastRefresh = 0;
+
+  function friendlySheetMessage(msg){
+    msg = String(msg || "").toLowerCase();
+    if(
+      msg.includes("apps script") ||
+      msg.includes("implantação") ||
+      msg.includes("deploy") ||
+      msg.includes("script") ||
+      msg.includes("exception") ||
+      msg.includes("erro") ||
+      msg.includes("failed") ||
+      msg.includes("timeout") ||
+      msg.includes("lock") ||
+      msg.includes("bloqueio") ||
+      msg.includes("planilha") ||
+      msg.includes("servidor") ||
+      msg.includes("conexão")
+    ){
+      return "Sistema ocupado, aguardando sincronização da solicitação. Se houver entregador disponível, ele poderá aceitar em instantes.";
+    }
+    return msg || "Sistema ocupado, aguardando sincronização da solicitação.";
+  }
+
+  function isSearchingDelivery(){
+    return !!currentSearchingId || (document.getElementById("loader") && document.getElementById("loader").classList.contains("searching"));
+  }
+
+  function startFastRefresh(){
+    if(fastRefreshTimer) clearInterval(fastRefreshTimer);
+    fastRefreshActive = true;
+    fastRefreshTimer = setInterval(async()=>{
+      if(!session) return stopFastRefresh();
+      if(document.visibilityState === "hidden") return;
+      if(refreshBusy) return;
+
+      const now = Date.now();
+      const interval = isSearchingDelivery() ? 900 : 1800;
+      if(now - lastFastRefresh < interval) return;
+      lastFastRefresh = now;
+
+      try{
+        refreshBusy = false;
+        await refreshPanel();
+      }catch(e){}
+    },700);
+  }
+
+  function stopFastRefresh(){
+    fastRefreshActive = false;
+    if(fastRefreshTimer){
+      clearInterval(fastRefreshTimer);
+      fastRefreshTimer = null;
+    }
+  }
+
+  const originalApiFriendly = typeof api === "function" ? api : null;
+  api = async function(action,data={}){
+    try{
+      const r = await fetch(API_URL,{
+        method:"POST",
+        cache:"no-store",
+        body:JSON.stringify({action,...data,_t:Date.now()})
+      });
+
+      const raw = await r.text();
+      let json;
+      try{
+        json = JSON.parse(raw);
+      }catch(e){
+        return {ok:false,error:friendlySheetMessage(raw)};
+      }
+
+      if(json && json.error) json.error = friendlySheetMessage(json.error);
+      if(json && json.message && !json.ok) json.message = friendlySheetMessage(json.message);
+      return json;
+    }catch(err){
+      return {ok:false,error:friendlySheetMessage(err && err.message ? err.message : "conexão")};
+    }
+  };
+
+  const originalShowPanelMessageFriendly = typeof showPanelMessage === "function" ? showPanelMessage : null;
+  showPanelMessage = function(text,type){
+    const box=document.getElementById("deliveriesBox");
+    const msg=friendlySheetMessage(text);
+    if(!box){
+      if(originalShowPanelMessageFriendly) return originalShowPanelMessageFriendly(msg,type);
+      return;
+    }
+    box.innerHTML=`<div class="pay-alert" style="${type==='bad'?'background:#fff7ed;color:#9a3412':''}">${msg}</div>`;
+  };
+
+  const originalShowStatusFriendly = typeof showStatus === "function" ? showStatus : null;
+  showStatus = function(title,text,type){
+    const safeText=friendlySheetMessage(text);
+    const safeTitle=String(title||"Status")
+      .replace(/erro/ig,"Aguarde")
+      .replace(/falha/ig,"Aguarde");
+    if(originalShowStatusFriendly) return originalShowStatusFriendly(safeTitle,safeText,type==="bad"?"ok":type);
+  };
+
+  const originalStartAutoRefreshFast = typeof startAutoRefresh === "function" ? startAutoRefresh : null;
+  startAutoRefresh = function(){
+    if(originalStartAutoRefreshFast) originalStartAutoRefreshFast();
+    startFastRefresh();
+  };
+
+  const originalScheduleAutoRefreshFast = typeof scheduleAutoRefresh === "function" ? scheduleAutoRefresh : null;
+  scheduleAutoRefresh = function(){
+    if(refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(async()=>{
+      if(session && !refreshBusy && document.visibilityState !== "hidden"){
+        try{ await refreshPanel(); }catch(e){}
+      }
+      scheduleAutoRefresh();
+    }, isSearchingDelivery() ? 1200 : 2500);
+  };
+
+  const originalConfirmDeliveryFast = typeof confirmDelivery === "function" ? confirmDelivery : null;
+  confirmDelivery = async function(){
+    if(!originalConfirmDeliveryFast) return;
+    startFastRefresh();
+    try{
+      return await originalConfirmDeliveryFast();
+    }catch(e){
+      hideLoader();
+      showPanelMessage("Sistema ocupado, aguardando sincronização da solicitação. Se houver entregador disponível, ele poderá aceitar em instantes.","bad");
+    }
+  };
+
+  const originalConfirmSavedOrderDeliveryFast = typeof confirmSavedOrderDelivery === "function" ? confirmSavedOrderDelivery : null;
+  confirmSavedOrderDelivery = async function(id){
+    if(!originalConfirmSavedOrderDeliveryFast) return;
+    startFastRefresh();
+    try{
+      return await originalConfirmSavedOrderDeliveryFast(id);
+    }catch(e){
+      hideLoader();
+      showStatus("Aguarde","Sistema ocupado, aguardando sincronização da solicitação. Se houver entregador disponível, ele poderá aceitar em instantes.","ok");
+    }
+  };
+
+  const originalTryAgainCurrentSearchFast = typeof tryAgainCurrentSearch === "function" ? tryAgainCurrentSearch : null;
+  tryAgainCurrentSearch = async function(){
+    startFastRefresh();
+    if(originalTryAgainCurrentSearchFast) return await originalTryAgainCurrentSearchFast();
+  };
+
+  const originalRefreshPanelFast = typeof refreshPanel === "function" ? refreshPanel : null;
+  refreshPanel = async function(){
+    if(!session || refreshBusy) return;
+    try{
+      return await originalRefreshPanelFast();
+    }catch(e){
+      refreshBusy=false;
+      if(isSearchingDelivery()){
+        return;
+      }
+    }
+  };
+
+  window.addEventListener("focus",()=>{ if(session){ startFastRefresh(); refreshPanel(); } });
+  window.addEventListener("pageshow",()=>{ if(session){ startFastRefresh(); refreshPanel(); } });
+  window.addEventListener("online",()=>{ if(session){ startFastRefresh(); refreshPanel(); } });
+  document.addEventListener("visibilitychange",()=>{
+    if(!session)return;
+    if(document.visibilityState==="hidden") return;
+    startFastRefresh();
+    refreshPanel();
+  });
+
+  if(session) startFastRefresh();
+})();
+
