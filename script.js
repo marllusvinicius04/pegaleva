@@ -1005,3 +1005,81 @@ function showSystemDelayNotice(){
   window.addEventListener("unhandledrejection",()=>{ try{ hideSlowLoaderWarning(); }catch(e){} });
 })();
 
+
+/* =========================================================
+   Correção: evitar "Sistema ocupado" ao solicitar entrega
+   Pausa o auto-refresh enquanto a entrega está sendo criada
+   e tenta novamente apenas quando o backend responder ocupado.
+========================================================= */
+(function(){
+  let criandoEntregaPegaLeva=false;
+
+  function isCreateDeliveryAction(action){
+    const a=String(action||"").toLowerCase();
+    return a==="createdelivery" || a==="createdeliveryfromsavedorder";
+  }
+
+  function isBusyError(res){
+    const msg=String((res&&res.error)||"").toLowerCase();
+    return msg.includes("sistema ocupado") ||
+           msg.includes("bloqueio") ||
+           msg.includes("lock") ||
+           msg.includes("processando outra solicitação");
+  }
+
+  const apiAnteriorPegaLeva=typeof api==="function"?api:null;
+  if(apiAnteriorPegaLeva){
+    api=async function(action,data={}){
+      const criando=isCreateDeliveryAction(action);
+      if(criando){
+        criandoEntregaPegaLeva=true;
+        if(refreshTimer)clearTimeout(refreshTimer);
+        refreshBusy=false;
+      }
+
+      try{
+        let res=await apiAnteriorPegaLeva(action,data);
+
+        if(criando && res && !res.ok && isBusyError(res)){
+          await new Promise(resolve=>setTimeout(resolve,2200));
+          res=await apiAnteriorPegaLeva(action,data);
+        }
+
+        return res;
+      }finally{
+        if(criando){
+          setTimeout(()=>{
+            criandoEntregaPegaLeva=false;
+            try{
+              refreshBusy=false;
+              if(typeof scheduleAutoRefresh==="function")scheduleAutoRefresh();
+            }catch(e){}
+          },2500);
+        }
+      }
+    };
+  }
+
+  const refreshAnteriorPegaLeva=typeof refreshPanel==="function"?refreshPanel:null;
+  if(refreshAnteriorPegaLeva){
+    refreshPanel=async function(){
+      if(criandoEntregaPegaLeva)return;
+      try{
+        return await refreshAnteriorPegaLeva.apply(this,arguments);
+      }catch(e){
+        refreshBusy=false;
+      }
+    };
+  }
+
+  scheduleAutoRefresh=function(){
+    if(refreshTimer)clearTimeout(refreshTimer);
+    refreshTimer=setTimeout(async()=>{
+      if(!criandoEntregaPegaLeva){
+        await refreshPanel();
+      }
+      scheduleAutoRefresh();
+    },3000);
+  };
+})();
+
