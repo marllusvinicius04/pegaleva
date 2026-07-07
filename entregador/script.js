@@ -988,3 +988,355 @@ document.getElementById("loginScreen").classList.add("active");
 document.getElementById("driverCode").value="";
 },2000);
 }
+
+
+/* =========================================================
+   Reforços inteligentes de estabilidade do entregador
+   Mantém a lógica original e apenas evita travamentos comuns.
+========================================================= */
+(function(){
+  const get = id => document.getElementById(id);
+  const safeText = (id, value) => {
+    const el = get(id);
+    if(el) el.innerText = value == null ? "" : String(value);
+  };
+  const safeHtml = (id, value) => {
+    const el = get(id);
+    if(el) el.innerHTML = value == null ? "" : String(value);
+  };
+  const safeClassAdd = (id, cls) => {
+    const el = get(id);
+    if(el) el.classList.add(cls);
+  };
+  const safeClassRemove = (id, ...cls) => {
+    const el = get(id);
+    if(el) el.classList.remove(...cls);
+  };
+  const safeDisplay = (id, value) => {
+    const el = get(id);
+    if(el) el.style.display = value;
+  };
+  const safeValue = (id, fallback="") => {
+    const el = get(id);
+    return el && el.value !== undefined ? el.value : fallback;
+  };
+  const safeSetValue = (id, value) => {
+    const el = get(id);
+    if(el) el.value = value == null ? "" : String(value);
+  };
+  const safeJsonParse = (value, fallback) => {
+    try{
+      const parsed = JSON.parse(value);
+      return parsed == null ? fallback : parsed;
+    }catch(e){
+      return fallback;
+    }
+  };
+
+  function safeErrorMessage(msg){
+    try{
+      return friendlyError ? friendlyError(msg) : (msg || "Não foi possível concluir agora.");
+    }catch(e){
+      return msg || "Não foi possível concluir agora.";
+    }
+  }
+
+  const originalShowLoader = typeof showLoader === "function" ? showLoader : null;
+  showLoader = function(t, mode){
+    try{
+      safeText("loaderText", t || "Carregando...");
+      const spin = get("loaderSpinner");
+      const bike = get("loaderBike");
+      if(spin) spin.style.display = mode === "bike" ? "none" : "block";
+      if(bike) bike.style.display = mode === "bike" ? "block" : "none";
+      safeClassAdd("loader","active");
+    }catch(e){
+      if(originalShowLoader) try{ originalShowLoader(t, mode); }catch(err){}
+    }
+  };
+
+  const originalHideLoader = typeof hideLoader === "function" ? hideLoader : null;
+  hideLoader = function(){
+    try{
+      safeClassRemove("loader","active");
+      safeDisplay("loaderSpinner","block");
+      safeDisplay("loaderBike","none");
+    }catch(e){
+      if(originalHideLoader) try{ originalHideLoader(); }catch(err){}
+    }
+  };
+
+  const originalApi = typeof api === "function" ? api : null;
+  api = async function(action, data={}, options={}){
+    if(originalApi){
+      try{
+        return await originalApi(action, data, options);
+      }catch(e){
+        return {ok:false,error:"Falha de conexão com o servidor. Tente novamente."};
+      }
+    }
+    return {ok:false,error:"API não encontrada."};
+  };
+
+  const originalRenderDriverHeader = typeof renderDriverHeader === "function" ? renderDriverHeader : null;
+  renderDriverHeader = function(){
+    try{
+      if(!session || !session.profile) return;
+      const p=session.profile;
+      const fullName=p.Nome||"Entregador";
+      const name=primeiroNome(fullName);
+      const plate="Placa: "+(p.PlacaMoto||"-");
+      safeText("driverName", name);
+      safeText("driverPlate", plate);
+      safeText("sideDriverName", fullName);
+      safeText("sideDriverPlate", plate);
+      renderSaldoText();
+      const btnOn=get("btnOn"), btnOff=get("btnOff");
+      if(btnOn)btnOn.classList.toggle("active",String(p.Ativo).toLowerCase()==="ativo");
+      if(btnOff)btnOff.classList.toggle("active",String(p.Ativo).toLowerCase()!=="ativo");
+    }catch(e){
+      if(originalRenderDriverHeader) try{ originalRenderDriverHeader(); }catch(err){}
+    }
+  };
+
+  const originalRenderSaldoText = typeof renderSaldoText === "function" ? renderSaldoText : null;
+  renderSaldoText = function(){
+    try{
+      const p=session&&session.profile?session.profile:{};
+      const val=money(p.Saldo||0);
+      safeText("saldoText", saldoHidden ? "R$ ****" : val);
+      const btn=get("toggleSaldoBtn");
+      if(btn)btn.innerHTML=saldoHidden?'<i class="fa-solid fa-eye-slash"></i>':'<i class="fa-solid fa-eye"></i>';
+      safeText("sideSaldoText", val);
+      safeText("withdrawAvailable", val);
+    }catch(e){
+      if(originalRenderSaldoText) try{ originalRenderSaldoText(); }catch(err){}
+    }
+  };
+
+  const originalRefreshPanel = typeof refreshPanel === "function" ? refreshPanel : null;
+  refreshPanel = async function(){
+    try{
+      if(!session || refreshBusy) return;
+      if(originalRefreshPanel) return await originalRefreshPanel();
+    }catch(e){
+      refreshBusy=false;
+      silentConnectionWarning();
+    }
+  };
+
+  const originalRenderAvailable = typeof renderAvailable === "function" ? renderAvailable : null;
+  renderAvailable = function(list){
+    try{
+      const box=get("availableBox");
+      if(!box) return;
+      return originalRenderAvailable ? originalRenderAvailable(list || []) : undefined;
+    }catch(e){
+      safeHtml("availableBox",'<p class="muted" style="margin-top:12px">(0) Sem pedidos, fique atento!</p>');
+      updateAvailableCount(0);
+    }
+  };
+
+  const originalRenderMine = typeof renderMine === "function" ? renderMine : null;
+  renderMine = function(list){
+    try{
+      const box=get("myBox");
+      if(!box) return;
+      return originalRenderMine ? originalRenderMine(list || []) : undefined;
+    }catch(e){
+      safeHtml("myBox",'<p class="muted">(0) Sem pedidos, fique atento!</p>');
+      window.lastDriverDeliveries=[];
+    }
+  };
+
+  const originalOpenWithdrawModal = typeof openWithdrawModal === "function" ? openWithdrawModal : null;
+  openWithdrawModal = function(){
+    try{
+      const saldo=Number(session&&session.profile?session.profile.Saldo||0:0);
+      safeText("withdrawAvailable", money(saldo));
+      safeText("withdrawTransparentNote","Será transferido via PIX o pagamento do valor total "+money(saldo)+" já descontado da taxa de sistema/serviço de R$1,98 de cada entrega. Saque disponível somente a partir de R$50,00. Pagamentos são feitos quarta e sábado em horário comercial.");
+      safeSetValue("withdrawPix","");
+      safeSetValue("withdrawName","");
+      safeClassAdd("withdrawModal","active");
+    }catch(e){
+      if(originalOpenWithdrawModal) try{ originalOpenWithdrawModal(); }catch(err){}
+    }
+  };
+
+  const originalRequestWithdraw = typeof requestWithdraw === "function" ? requestWithdraw : null;
+  requestWithdraw = async function(){
+    try{
+      const saldo=Number(session&&session.profile?session.profile.Saldo||0:0);
+      const pix=String(safeValue("withdrawPix","")).trim();
+      const nome=String(safeValue("withdrawName","")).trim();
+      if(saldo<50)return showStatus("Saque indisponível","O saque mínimo é de R$50,00.");
+      if(!pix||!nome)return showStatus("Dados incompletos","Informe a chave PIX e o nome do destinatário.");
+      showLoader("Enviando solicitação...");
+      const res=await api("requestDriverWithdraw",{codigo:session.profile.CodigoAcesso,pix,nomeDestinatario:nome},{retries:1,timeoutMs:30000});
+      hideLoader();
+      if(!res.ok)return showStatus("Não foi possível solicitar agora",safeErrorMessage(res.error||"Tente novamente."));
+      closeWithdrawModal();
+      showStatus("Saque solicitado","Sua solicitação foi enviada com o valor total do saldo já descontado da taxa de sistema/serviço de R$1,98 por entrega. Pagamentos são feitos quarta e sábado em horário comercial.");
+      refreshPanel();
+    }catch(e){
+      hideLoader();
+      if(originalRequestWithdraw) try{ return await originalRequestWithdraw(); }catch(err){}
+      showStatus("Erro","Não foi possível solicitar o saque agora.");
+    }
+  };
+
+  const originalAcceptDelivery = typeof acceptDelivery === "function" ? acceptDelivery : null;
+  const acceptingSet = new Set();
+  acceptDelivery = async function(id){
+    id=String(id||"");
+    if(!id || acceptingSet.has(id)) return;
+    acceptingSet.add(id);
+    try{
+      if(originalAcceptDelivery) return await originalAcceptDelivery(id);
+    }finally{
+      acceptingSet.delete(id);
+    }
+  };
+
+  const originalUpdateStatus = typeof updateStatus === "function" ? updateStatus : null;
+  const updatingStatusSet = new Set();
+  updateStatus = async function(id,status){
+    id=String(id||"");
+    const key=id+"_"+String(status||"");
+    if(!id || updatingStatusSet.has(key)) return;
+    updatingStatusSet.add(key);
+    try{
+      if(originalUpdateStatus) return await originalUpdateStatus(id,status);
+    }catch(e){
+      hideLoader();
+      alert(safeErrorMessage(e&&e.message?e.message:"Erro ao atualizar."));
+    }finally{
+      updatingStatusSet.delete(key);
+    }
+  };
+
+  const originalRegisterPayment = typeof registerPayment === "function" ? registerPayment : null;
+  let paymentBusy=false;
+  registerPayment = async function(status){
+    if(paymentBusy) return;
+    paymentBusy=true;
+    try{
+      if(originalRegisterPayment) return await originalRegisterPayment(status);
+    }finally{
+      paymentBusy=false;
+    }
+  };
+
+  const originalSendChatMessage = typeof sendChatMessage === "function" ? sendChatMessage : null;
+  let chatBusy=false;
+  sendChatMessage = async function(){
+    if(chatBusy) return;
+    chatBusy=true;
+    try{
+      if(originalSendChatMessage) return await originalSendChatMessage();
+    }finally{
+      chatBusy=false;
+    }
+  };
+
+  const originalShowStatus = typeof showStatus === "function" ? showStatus : null;
+  showStatus = function(title,text){
+    try{
+      safeText("statusTitle", title || "Status");
+      safeText("statusText", text || "");
+      safeClassAdd("statusModal","active");
+    }catch(e){
+      if(originalShowStatus) try{ originalShowStatus(title,text); }catch(err){}
+    }
+  };
+
+  closeStatusModal = function(){ safeClassRemove("statusModal","active"); };
+  closePaymentModal = function(){ safeClassRemove("paymentModal","active"); currentPaymentDeliveryId=""; };
+  closePaymentsModal = function(){ safeClassRemove("paymentsModal","active"); };
+  closeDriverHistoryModal = function(){ safeClassRemove("driverHistoryModal","active"); };
+  closeWithdrawModal = function(){ safeClassRemove("withdrawModal","active"); };
+
+  const originalOpenSideMenu = typeof openSideMenu === "function" ? openSideMenu : null;
+  openSideMenu = function(){
+    try{
+      renderDriverHeader();
+      safeClassAdd("sideMenuBackdrop","active");
+      safeClassAdd("sideMenu","active");
+    }catch(e){
+      if(originalOpenSideMenu) try{ originalOpenSideMenu(); }catch(err){}
+    }
+  };
+  closeSideMenu = function(){
+    safeClassRemove("sideMenuBackdrop","active");
+    safeClassRemove("sideMenu","active");
+  };
+
+  const originalLogout = typeof logout === "function" ? logout : null;
+  logout = function(){
+    try{
+      closeSideMenu();
+      showLoader("Saindo...");
+      setTimeout(()=>{
+        if(refreshTimer) clearTimeout(refreshTimer);
+        localStorage.removeItem("pegaleva_driver");
+        try{ clearAppCache&&clearAppCache(); }catch(e){}
+        session=null;
+        hideLoader();
+        safeClassRemove("appScreen","active");
+        safeClassAdd("loginScreen","active");
+        safeSetValue("driverCode","");
+      },1200);
+    }catch(e){
+      if(originalLogout) try{ originalLogout(); }catch(err){}
+    }
+  };
+
+  window.addEventListener("online",()=>{ if(session) refreshPanel(); });
+  window.addEventListener("error",()=>{ try{ hideLoader(); }catch(e){} });
+  window.addEventListener("unhandledrejection",()=>{ try{ hideLoader(); }catch(e){} });
+
+  try{
+    openDeliveryDetails = Array.isArray(openDeliveryDetails) ? openDeliveryDetails : safeJsonParse(localStorage.getItem("pegaleva_open_delivery_details"),[]);
+    lastAvailableIds = Array.isArray(lastAvailableIds) ? lastAvailableIds : safeJsonParse(localStorage.getItem("pegaleva_seen_deliveries"),[]);
+    finalizedShown = Array.isArray(finalizedShown) ? finalizedShown : safeJsonParse(localStorage.getItem("pegaleva_finalized_driver"),[]);
+    refusedDeliveries = refusedDeliveries && typeof refusedDeliveries === "object" ? refusedDeliveries : safeJsonParse(localStorage.getItem("pegaleva_refused_temp"),{});
+  }catch(e){}
+})();
+
+
+
+
+/* ===== Melhoria de resposta do som de nova entrega ===== */
+(function(){
+  if (typeof notificationAudio !== "undefined" && notificationAudio) {
+    try { notificationAudio.preload = "auto"; } catch(e){}
+  }
+
+  if (typeof playNotificationSound === "function") {
+    const _oldPlay = playNotificationSound;
+    playNotificationSound = function(){
+      try{
+        if (typeof notificationAudio !== "undefined" && notificationAudio){
+          notificationAudio.currentTime = 0;
+        }
+      }catch(e){}
+      return _oldPlay.apply(this, arguments);
+    };
+  }
+
+  if (typeof refreshPanel === "function") {
+    const _refreshPanel = refreshPanel;
+    refreshPanel = async function(){
+      const before = Array.isArray(window.lastAvailableIds) ? [...window.lastAvailableIds] : [];
+      const result = await _refreshPanel.apply(this, arguments);
+      try{
+        if(Array.isArray(window.lastAvailableIds) && before.length < window.lastAvailableIds.length){
+          if(typeof playNotificationSound==="function"){
+            playNotificationSound();
+          }
+        }
+      }catch(e){}
+      return result;
+    };
+  }
+})();
