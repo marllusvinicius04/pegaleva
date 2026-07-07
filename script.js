@@ -587,11 +587,16 @@ function renderCompanyOffers(res){
   const oferta=document.getElementById("ofertaEntrega");
   if(!box)return;
   if(session&&session.type==="empresa"){
+    const temDesconto=Number(session.profile.EntregasComDescontoRestantes||0)>0;
     box.style.display="grid";
     if(normal)normal.innerText=money(res.valorNormal||res.valor);
     if(promo)promo.innerText=money(res.valorPromocional||res.valor);
     if(oferta)oferta.value="normal";
-    box.querySelectorAll(".company-offer").forEach((btn,i)=>btn.classList.toggle("active",i===0));
+    box.querySelectorAll(".company-offer").forEach((btn,i)=>{
+      btn.classList.toggle("active",i===0);
+      if(i===1)btn.style.display=temDesconto?"":"none";
+    });
+    if(!temDesconto)document.getElementById("priceText").innerText=money(res.valorNormal||res.valor);
   }else{
     box.style.display="none";
     if(oferta)oferta.value="normal";
@@ -600,6 +605,7 @@ function renderCompanyOffers(res){
 function selectCompanyOffer(tipo){
   const box=document.getElementById("companyOfferBox");
   const oferta=document.getElementById("ofertaEntrega");
+  if(session&&session.type==="empresa"&&Number(session.profile.EntregasComDescontoRestantes||0)<=0)tipo="normal";
   if(oferta)oferta.value=tipo;
   if(box)box.querySelectorAll(".company-offer").forEach(btn=>btn.classList.toggle("active",btn.textContent.toLowerCase().includes(tipo==="promocional"?"promocional":"normal")));
   const priceEl=document.getElementById(tipo==="promocional"?"companyPromoPrice":"companyNormalPrice");
