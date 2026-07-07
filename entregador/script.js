@@ -23,7 +23,7 @@ clearAppCache();
 
 
 const PIX_KEY="57293143000156";
-const API_URL="https://script.google.com/macros/s/AKfycbx739xcgwZ0NTYdtj0pjFN0QAqyNh94PV96PxKRy90pOvKHOg1V0LFf-gjkrIsKaL1w/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbyqeugeCr2xhK96ucylAez0-zpS1zJ1vzEb3qRVuA4rNEiGa6iTcwVTrkTF3Qr6RrGQ/exec";
 
 let openDeliveryDetails=JSON.parse(localStorage.getItem("pegaleva_open_delivery_details")||"[]"),
 session=JSON.parse(localStorage.getItem("pegaleva_driver")||"null"),
@@ -366,7 +366,7 @@ function renderWithdrawHistory(){
 function openWithdrawModal(){
   const saldo=Number(session&&session.profile?session.profile.Saldo||0:0);
   document.getElementById("withdrawAvailable").innerText=money(saldo);
-  document.getElementById("withdrawTransparentNote").innerText="Será transferido via PIX o pagamento do valor total "+money(saldo)+" já descontado da taxa de sistema/serviço de R$1,98 de cada entrega. Saque disponível somente a partir de R$10,00. Pagamentos são feitos quarta e sábado em horário comercial.";
+  document.getElementById("withdrawTransparentNote").innerText="Será transferido via PIX o pagamento do valor total "+money(saldo)+" já descontado da taxa de sistema/serviço de R$1,98 de cada entrega. Saque disponível somente a partir de R$50,00. Pagamentos são feitos quarta e sábado em horário comercial.";
   document.getElementById("withdrawPix").value="";
   document.getElementById("withdrawName").value="";
   document.getElementById("withdrawModal").classList.add("active");
@@ -376,7 +376,7 @@ async function requestWithdraw(){
   const saldo=Number(session&&session.profile?session.profile.Saldo||0:0);
   const pix=document.getElementById("withdrawPix").value.trim();
   const nome=document.getElementById("withdrawName").value.trim();
-  if(saldo<10)return showStatus("Saque indisponível","O saque mínimo é de R$10,00.");
+  if(saldo<50)return showStatus("Saque indisponível","O saque mínimo é de R$50,00.");
   if(!pix||!nome)return showStatus("Dados incompletos","Informe a chave PIX e o nome do destinatário.");
   showLoader("Enviando solicitação...");
   const res=await api("requestDriverWithdraw",{codigo:session.profile.CodigoAcesso,pix,nomeDestinatario:nome});
