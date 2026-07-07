@@ -633,8 +633,8 @@ function resizeDeliveryPhoto(file){
       const img=new Image();
       img.onerror=()=>reject(new Error("Não foi possível preparar a foto."));
       img.onload=()=>{
-        const limits=[720,640,560,480,420,360];
-        const qualities=[0.58,0.48,0.40,0.34,0.28,0.22];
+        const limits=[420,360,320,280,240,200];
+        const qualities=[0.30,0.25,0.22,0.18,0.15,0.12];
         let best="";
         let bestMime="image/jpeg";
         for(let i=0;i<limits.length;i++){
@@ -651,10 +651,10 @@ function resizeDeliveryPhoto(file){
           const ctx=canvas.getContext("2d");
           ctx.drawImage(img,0,0,w,h);
           best=canvas.toDataURL("image/jpeg",qualities[i]);
-          if(best.length<42000)break;
+          if(best.length<26000)break;
         }
-        if(best.length>48000){
-          reject(new Error("A foto ficou grande demais. Tente tirar a foto mais de perto ou com menos detalhes no fundo."));
+        if(best.length>32000){
+          reject(new Error("A foto ficou grande demais. Tente tirar a foto mais perto do comprovante/objeto e com menos fundo."));
           return;
         }
         resolve({base64:best,mimeType:bestMime});
