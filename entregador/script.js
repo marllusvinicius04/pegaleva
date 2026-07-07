@@ -631,21 +631,33 @@ function resizeDeliveryPhoto(file){
     reader.onerror=()=>reject(new Error("Não foi possível ler a foto."));
     reader.onload=()=>{
       const img=new Image();
-      img.onerror=()=>resolve({base64:String(reader.result||""),mimeType:file.type||"image/jpeg"});
+      img.onerror=()=>reject(new Error("Não foi possível preparar a foto."));
       img.onload=()=>{
-        const max=1280;
-        let w=img.width,h=img.height;
-        if(w>max||h>max){
-          const ratio=Math.min(max/w,max/h);
-          w=Math.round(w*ratio);
-          h=Math.round(h*ratio);
+        const limits=[720,640,560,480,420,360];
+        const qualities=[0.58,0.48,0.40,0.34,0.28,0.22];
+        let best="";
+        let bestMime="image/jpeg";
+        for(let i=0;i<limits.length;i++){
+          const max=limits[i];
+          let w=img.width,h=img.height;
+          if(w>max||h>max){
+            const ratio=Math.min(max/w,max/h);
+            w=Math.round(w*ratio);
+            h=Math.round(h*ratio);
+          }
+          const canvas=document.createElement("canvas");
+          canvas.width=w;
+          canvas.height=h;
+          const ctx=canvas.getContext("2d");
+          ctx.drawImage(img,0,0,w,h);
+          best=canvas.toDataURL("image/jpeg",qualities[i]);
+          if(best.length<42000)break;
         }
-        const canvas=document.createElement("canvas");
-        canvas.width=w;
-        canvas.height=h;
-        const ctx=canvas.getContext("2d");
-        ctx.drawImage(img,0,0,w,h);
-        resolve({base64:canvas.toDataURL("image/jpeg",0.82),mimeType:"image/jpeg"});
+        if(best.length>48000){
+          reject(new Error("A foto ficou grande demais. Tente tirar a foto mais de perto ou com menos detalhes no fundo."));
+          return;
+        }
+        resolve({base64:best,mimeType:bestMime});
       };
       img.src=String(reader.result||"");
     };
