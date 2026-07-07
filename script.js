@@ -831,3 +831,130 @@ function showSystemDelayNotice(){
     alert("Ops, parece que está demorando mais que o esperado. Tente novamente.");
   }
 }
+
+
+/* =========================================================
+   Correção reforçada dos selects de bairros
+   Evita bug onde os bairros às vezes não aparecem no formulário.
+========================================================= */
+(function(){
+  const BAIRROS_PADRAO_URUCUÍ = ["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
+
+  function getEl(id){
+    return document.getElementById(id);
+  }
+
+  function bairrosPorCidade(cidade){
+    cidade = String(cidade || "").trim();
+    if(cidade === "Benedito Leite") return ["Benedito Leite"];
+    return (typeof BAIRROS_URUCUÍ !== "undefined" && Array.isArray(BAIRROS_URUCUÍ) && BAIRROS_URUCUÍ.length)
+      ? BAIRROS_URUCUÍ
+      : BAIRROS_PADRAO_URUCUÍ;
+  }
+
+  function ensureBairroSelect(selectId, cidadeId, keepValue=true){
+    const select = getEl(selectId);
+    const cidadeEl = getEl(cidadeId);
+    if(!select || !cidadeEl) return;
+
+    const cidade = String(cidadeEl.value || "").trim();
+    const atual = keepValue ? String(select.value || "").trim() : "";
+    const bairros = bairrosPorCidade(cidade);
+
+    if(cidade === "Benedito Leite"){
+      select.disabled = true;
+      select.innerHTML = '<option value="Benedito Leite">Benedito Leite</option>';
+      select.value = "Benedito Leite";
+      return;
+    }
+
+    select.disabled = false;
+
+    const precisaRecriar =
+      select.options.length <= 1 ||
+      !Array.from(select.options).some(o => bairros.includes(o.value || o.textContent));
+
+    if(precisaRecriar){
+      select.innerHTML = '<option value="">Selecione</option>' + bairros.map(b => `<option value="${b}">${b}</option>`).join("");
+    }
+
+    if(atual && bairros.includes(atual)){
+      select.value = atual;
+    }else if(select.value && !bairros.includes(select.value)){
+      select.value = "";
+    }
+  }
+
+  const originalFillBairroSelect = typeof fillBairroSelect === "function" ? fillBairroSelect : null;
+  fillBairroSelect = function(selectId,cidadeId){
+    try{
+      ensureBairroSelect(selectId,cidadeId,true);
+    }catch(e){
+      if(originalFillBairroSelect) try{ originalFillBairroSelect(selectId,cidadeId); }catch(err){}
+    }
+  };
+
+  const originalUpdateBairroOptions = typeof updateBairroOptions === "function" ? updateBairroOptions : null;
+  updateBairroOptions = function(){
+    try{
+      ensureBairroSelect("bairroColeta","coletaCidade",true);
+      ensureBairroSelect("bairroDestino","destinoCidade",true);
+    }catch(e){
+      if(originalUpdateBairroOptions) try{ originalUpdateBairroOptions(); }catch(err){}
+    }
+  };
+
+  function bindBairroFixEvents(){
+    [["coletaCidade","bairroColeta"],["destinoCidade","bairroDestino"]].forEach(pair=>{
+      const cidade = getEl(pair[0]);
+      const bairro = getEl(pair[1]);
+      if(cidade && cidade.dataset.bairroFixReady !== "1"){
+        cidade.dataset.bairroFixReady = "1";
+        cidade.addEventListener("change",()=>ensureBairroSelect(pair[1],pair[0],false));
+        cidade.addEventListener("input",()=>ensureBairroSelect(pair[1],pair[0],false));
+        cidade.addEventListener("blur",()=>ensureBairroSelect(pair[1],pair[0],true));
+      }
+      if(bairro && bairro.dataset.bairroFixReady !== "1"){
+        bairro.dataset.bairroFixReady = "1";
+        bairro.addEventListener("focus",()=>ensureBairroSelect(pair[1],pair[0],true));
+        bairro.addEventListener("click",()=>ensureBairroSelect(pair[1],pair[0],true));
+        bairro.addEventListener("touchstart",()=>ensureBairroSelect(pair[1],pair[0],true),{passive:true});
+      }
+    });
+  }
+
+  const originalOpenPanelBairroFix = typeof openPanel === "function" ? openPanel : null;
+  openPanel = function(){
+    if(originalOpenPanelBairroFix) originalOpenPanelBairroFix();
+    setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },50);
+    setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },350);
+  };
+
+  const originalSetStepBairroFix = typeof setStep === "function" ? setStep : null;
+  setStep = function(n){
+    const result = originalSetStepBairroFix ? originalSetStepBairroFix(n) : undefined;
+    setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },30);
+    return result;
+  };
+
+  const originalValidateStepBairroFix = typeof validateStep === "function" ? validateStep : null;
+  validateStep = function(){
+    bindBairroFixEvents();
+    updateBairroOptions();
+    return originalValidateStepBairroFix ? originalValidateStepBairroFix() : true;
+  };
+
+  document.addEventListener("DOMContentLoaded",()=>{
+    bindBairroFixEvents();
+    updateBairroOptions();
+    setTimeout(updateBairroOptions,300);
+  });
+
+  window.addEventListener("pageshow",()=>{
+    bindBairroFixEvents();
+    updateBairroOptions();
+  });
+
+  setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },200);
+})();
+
