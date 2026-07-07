@@ -597,93 +597,32 @@ function toggleDeliveryDetails(id){
 }
 
 
-function deliveryPhotoLinksHtml(d){
-  const raw=String(d.FotosEntrega||d.FotoEntrega||d.PhotoEntrega||"").trim();
+function deliveryConfirmationHtml(d){
+  const raw=String(d.ConfirmacaoEntrega||d.Confirmacao||"").trim();
   if(!raw)return "";
-  const links=raw.split(/\s+/).filter(Boolean);
-  if(!links.length)return "";
-  return `<p class="info"><b>Fotos:</b> ${links.map((u,i)=>`<a href="${u}" target="_blank">Foto ${i+1}</a>`).join(" • ")}</p>`;
+  return `<p class="info"><b>Confirmação:</b> ${raw}</p>`;
 }
 
-function cameraButtonHtml(id){
+function confirmButtonHtml(id){
   const safe=String(id||"").replace(/'/g,"&#039;");
-  return `<button class="btn light delivery-camera-btn" onclick="openDeliveryCamera('${safe}')" title="Tirar foto da entrega"><i class="fa-solid fa-camera"></i></button>`;
+  return `<button class="btn light delivery-confirm-btn" onclick="openDeliveryConfirmation('${safe}')" title="Confirmar entrega"><i class="fa-solid fa-circle-check"></i></button>`;
 }
 
-function openDeliveryCamera(id){
-  const input=document.createElement("input");
-  input.type="file";
-  input.accept="image/*";
-  input.capture="environment";
-  input.style.display="none";
-  input.onchange=()=>{
-    const file=input.files&&input.files[0];
-    input.remove();
-    if(file)sendDeliveryPhoto(id,file);
-  };
-  document.body.appendChild(input);
-  input.click();
-}
-
-function resizeDeliveryPhoto(file){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onerror=()=>reject(new Error("Não foi possível ler a foto."));
-    reader.onload=()=>{
-      const img=new Image();
-      img.onerror=()=>reject(new Error("Não foi possível preparar a foto."));
-      img.onload=()=>{
-        const limits=[420,360,320,280,240,200];
-        const qualities=[0.30,0.25,0.22,0.18,0.15,0.12];
-        let best="";
-        let bestMime="image/jpeg";
-        for(let i=0;i<limits.length;i++){
-          const max=limits[i];
-          let w=img.width,h=img.height;
-          if(w>max||h>max){
-            const ratio=Math.min(max/w,max/h);
-            w=Math.round(w*ratio);
-            h=Math.round(h*ratio);
-          }
-          const canvas=document.createElement("canvas");
-          canvas.width=w;
-          canvas.height=h;
-          const ctx=canvas.getContext("2d");
-          ctx.drawImage(img,0,0,w,h);
-          best=canvas.toDataURL("image/jpeg",qualities[i]);
-          if(best.length<26000)break;
-        }
-        if(best.length>32000){
-          reject(new Error("A foto ficou grande demais. Tente tirar a foto mais perto do comprovante/objeto e com menos fundo."));
-          return;
-        }
-        resolve({base64:best,mimeType:bestMime});
-      };
-      img.src=String(reader.result||"");
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-async function sendDeliveryPhoto(id,file){
-  showLoader("Enviando foto...");
+async function openDeliveryConfirmation(id){
+  const cpf=prompt("Digite o CPF de quem recebeu para confirmar a entrega:");
+  if(cpf===null)return;
+  const cleanCpf=onlyDigits(cpf);
+  if(cleanCpf.length!==11)return showStatus("CPF inválido","Digite um CPF com 11 números para confirmar a entrega.");
+  showLoader("Confirmando entrega...");
   try{
-    const photo=await resizeDeliveryPhoto(file);
-    const payload={deliveryId:id,codigo:session.profile.CodigoAcesso,photoBase64:photo.base64,mimeType:photo.mimeType,fileName:file.name||"foto-entrega.jpg"};
-    let res=await api("uploadDeliveryPhoto",payload,{retries:1,timeoutMs:30000});
-    if(!res.ok&&String(res.error||"").toLowerCase().includes("action inválida")){
-      res=await api("uploaddeliveryphoto",payload,{retries:1,timeoutMs:30000});
-    }
-    if(!res.ok&&String(res.error||"").toLowerCase().includes("action inválida")){
-      res=await api("uploadphoto",payload,{retries:1,timeoutMs:30000});
-    }
+    const res=await api("confirmDeliveryCpf",{deliveryId:id,codigo:session.profile.CodigoAcesso,cpf:cleanCpf},{retries:1,timeoutMs:30000});
     hideLoader();
-    if(!res.ok)return showStatus("Não foi possível enviar a foto",friendlyError(res.error||"Tente novamente."));
-    showStatus("Foto enviada","A foto foi registrada na coluna FotosEntrega da aba entregas.");
+    if(!res.ok)return showStatus("Não foi possível confirmar",friendlyError(res.error||"Tente novamente."));
+    showStatus("Entrega confirmada","O CPF foi registrado na coluna ConfirmacaoEntrega da aba entregas.");
     refreshPanel();
   }catch(e){
     hideLoader();
-    showStatus("Não foi possível enviar a foto",friendlyError(e&&e.message?e.message:"Tente novamente."));
+    showStatus("Não foi possível confirmar",friendlyError(e&&e.message?e.message:"Tente novamente."));
   }
 }
 
@@ -738,7 +677,7 @@ function deliveryHtml(d,available,modalOnly){
         <div><strong>${d.NomeSolicitante||"Solicitante"}</strong><p class="muted">${d.Conteudo||"Entrega"} • ${d.Volumes||1} volume(s)</p></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        ${cameraButtonHtml(d.ID)}
+        ${confirmButtonHtml(d.ID)}
         <div class="delivery-price-pro">${money(d.Valor)}</div>
       </div>
     </div>
@@ -759,7 +698,7 @@ function deliveryHtml(d,available,modalOnly){
       <p class="info"><b>Quem envia:</b> ${d.NomeSolicitante||""} ${!modalOnly?`• <a href="${waSendUrl}" target="_blank">${d.WhatsAppSolicitante||"WhatsApp"}</a>`:""}</p>
       <p class="info"><b>Quem recebe:</b> ${d.NomeDestino||""} ${!modalOnly?`• <a href="${waDestUrl}" target="_blank">${d.WhatsAppDestino||"WhatsApp"}</a>`:""}</p>
       <p class="info"><b>Status:</b> <span class="badge ${finalized?"green":canceled?"red":"yellow"}">${d.Status}</span> <b>Pagamento:</b> ${d.StatusPagamento||"Aguardando confirmação"}</p>
-      ${deliveryPhotoLinksHtml(d)}
+      ${deliveryConfirmationHtml(d)}
       ${going?`<div class="route-mini">5MIN CHEGANDO...</div>`:""}
       ${collected?`<div class="route-mini">entrega em rota <i class="fa-solid fa-motorcycle"></i></div>`:""}
     </div>
