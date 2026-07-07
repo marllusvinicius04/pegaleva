@@ -831,3 +831,177 @@ function showSystemDelayNotice(){
     alert("Ops, parece que está demorando mais que o esperado. Tente novamente.");
   }
 }
+
+
+/* =========================================================
+   Reforços inteligentes de estabilidade e navegação
+   Mantém a lógica original e apenas evita travamentos comuns.
+========================================================= */
+(function(){
+  const get = id => document.getElementById(id);
+  const safeValue = (id, fallback="") => {
+    const el = get(id);
+    return el && el.value !== undefined ? el.value : fallback;
+  };
+  const safeText = (id, value) => {
+    const el = get(id);
+    if(el) el.innerText = value;
+  };
+  const safeDisplay = (id, value) => {
+    const el = get(id);
+    if(el) el.style.display = value;
+  };
+
+  api = async function(action, data={}){
+    try{
+      const controller = window.AbortController ? new AbortController() : null;
+      const timeout = controller ? setTimeout(()=>controller.abort(), 30000) : null;
+      const r = await fetch(API_URL,{
+        method:"POST",
+        cache:"no-store",
+        body:JSON.stringify({action,...data}),
+        signal:controller ? controller.signal : undefined
+      });
+      if(timeout) clearTimeout(timeout);
+      const text = await r.text();
+      try{
+        return JSON.parse(text);
+      }catch(e){
+        showSystemDelayNotice();
+        return {ok:false,error:"Resposta inválida do servidor. Atualize e tente novamente."};
+      }
+    }catch(err){
+      showSystemDelayNotice();
+      return {ok:false,error:"Falha de conexão com o servidor. Confira sua internet e tente novamente."};
+    }
+  };
+
+  const originalShowLoader = typeof showLoader === "function" ? showLoader : null;
+  showLoader = function(text, search=false){
+    try{
+      const loader = get("loader");
+      if(!loader) return;
+      safeText("loaderText", text || "Carregando...");
+      safeText("loaderSub", search ? "Buscando entregador disponível." : "Aguarde um instante.");
+      safeDisplay("searchActions", search ? "block" : "none");
+      loader.classList.toggle("searching", !!search);
+      loader.classList.add("active");
+      startSlowLoaderWarning();
+    }catch(e){
+      if(originalShowLoader) try{ originalShowLoader(text, search); }catch(err){}
+    }
+  };
+
+  const originalHideLoader = typeof hideLoader === "function" ? hideLoader : null;
+  hideLoader = function(){
+    try{
+      hideSlowLoaderWarning();
+      const loader = get("loader");
+      if(loader) loader.classList.remove("active","searching");
+      safeDisplay("searchActions","none");
+    }catch(e){
+      if(originalHideLoader) try{ originalHideLoader(); }catch(err){}
+    }
+  };
+
+  fullAddress = function(prefix){
+    const rua = String(safeValue(prefix+"Rua","")).trim();
+    const numero = String(safeValue(prefix+"Numero","0")).trim() || "0";
+    const cidade = cidadeRota(safeValue(prefix+"Cidade",""));
+    return [rua, numero, cidade].filter(Boolean).join(", ");
+  };
+
+  fillBairroSelect = function(selectId, cidadeId){
+    const select = get(selectId);
+    const cidadeEl = get(cidadeId);
+    if(!select || !cidadeEl) return;
+    const cidade = cidadeEl.value;
+    if(cidade === "Benedito Leite"){
+      select.innerHTML = '<option value="Benedito Leite">Benedito Leite</option>';
+      select.value = "Benedito Leite";
+      select.disabled = true;
+      return;
+    }
+    select.disabled = false;
+    select.innerHTML = '<option value="">Selecione</option>' + BAIRROS_URUCUÍ.map(b=>`<option>${b}</option>`).join("");
+  };
+
+  updateBairroOptions = function(){
+    const coleta = get("bairroColeta");
+    const destino = get("bairroDestino");
+    const coletaAtual = coleta ? coleta.value : "";
+    const destinoAtual = destino ? destino.value : "";
+    fillBairroSelect("bairroColeta","coletaCidade");
+    fillBairroSelect("bairroDestino","destinoCidade");
+    if(coleta && BAIRROS_URUCUÍ.includes(coletaAtual)) coleta.value = coletaAtual;
+    if(destino && BAIRROS_URUCUÍ.includes(destinoAtual)) destino.value = destinoAtual;
+  };
+
+  const originalOpenLegalModal = typeof openLegalModal === "function" ? openLegalModal : null;
+  openLegalModal = function(type){
+    const title = get("legalTitle");
+    const text = get("legalText");
+    const modal = get("legalModal");
+    if(!title || !text || !modal){
+      if(originalOpenLegalModal) try{ originalOpenLegalModal(type); }catch(e){}
+      return;
+    }
+    if(type==="privacidade"){
+      title.innerText="Política de privacidade";
+      text.innerText="O Pega e Leva utiliza os dados informados no cadastro e nas solicitações apenas para identificar o cliente, organizar a entrega, calcular fretes, facilitar contato e melhorar o atendimento. Não compartilhe seu código de acesso com terceiros.";
+    }else{
+      title.innerText="Termos de uso";
+      text.innerText="Ao usar o Pega e Leva, o usuário confirma que as informações da entrega são verdadeiras, que os itens enviados são permitidos e que o pagamento deve seguir as regras exibidas no sistema. O serviço é destinado a entregas locais de pequenos itens conforme disponibilidade da frota.";
+    }
+    modal.classList.add("active");
+  };
+
+  closeLegalModal = function(){
+    const modal = get("legalModal");
+    if(modal) modal.classList.remove("active");
+  };
+
+  const originalOpenPanel = typeof openPanel === "function" ? openPanel : null;
+  openPanel = function(){
+    try{
+      if(!session || !session.profile) return;
+      const h = document.querySelector(".history-chat-btn");
+      if(h) h.style.display = "grid";
+      const access = get("accessScreen");
+      const app = get("appScreen");
+      if(access) access.classList.remove("active");
+      if(app) app.classList.add("active");
+      const clientNav = get("clientAppNav");
+      if(clientNav) clientNav.style.display = "";
+      const p = session.profile;
+      const name = session.type==="empresa" ? p.Responsavel : p.Nome;
+      safeText("welcomeName","Olá, "+(name||""));
+      safeText("welcomeType",session.type==="empresa"?"Painel da empresa":"Painel do usuário");
+      safeDisplay("companyBox",session.type==="empresa"?"block":"none");
+      safeDisplay("useAddressBtn",session.type==="empresa"?"block":"none");
+      setTimeout(updateBairroOptions,0);
+      toggleCouponArea();
+      renderProfile();
+      loadClientTools();
+      startAutoRefresh();
+    }catch(e){
+      if(originalOpenPanel) try{ originalOpenPanel(); }catch(err){}
+    }
+  };
+
+  const originalRefreshPanel = typeof refreshPanel === "function" ? refreshPanel : null;
+  refreshPanel = async function(){
+    try{
+      if(!session || refreshBusy) return;
+      if(originalRefreshPanel) await originalRefreshPanel();
+    }catch(e){
+      refreshBusy = false;
+      showSystemDelayNotice();
+    }
+  };
+
+  window.addEventListener("online",()=>{ if(session) refreshPanel(); });
+  window.addEventListener("error",()=>{ try{ hideSlowLoaderWarning(); }catch(e){} });
+  window.addEventListener("unhandledrejection",()=>{ try{ hideSlowLoaderWarning(); }catch(e){} });
+})();
+
