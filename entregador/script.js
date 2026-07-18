@@ -87,7 +87,7 @@ function primeiroNome(nome){
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function driverBalance(profile){
   const p=profile||{};
-  const fields=["Saldo","saldo","SaldoDisponivel","saldoDisponivel","valorDisponivel"];
+  const fields=["SaldoTotal","saldoTotal","Saldo","saldo","SaldoDisponivel","saldoDisponivel","valorDisponivel"];
   for(const field of fields){
     if(Object.prototype.hasOwnProperty.call(p,field)&&p[field]!==""&&p[field]!==null&&p[field]!==undefined){
       if(typeof p[field]==="number")return Number.isFinite(p[field])?p[field]:0;
