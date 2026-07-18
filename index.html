@@ -64,7 +64,7 @@
     </div>
     <div id="userAccess" style="display:none">
       <div class="tabs"><button class="active" id="tabUserLogin" onclick="showUserTab('login')">Entrar</button><button id="tabUserCreate" onclick="showUserTab('create')">Criar conta</button></div>
-      <div class="login-box" id="userLoginBox" style="display:block"><label>Código de acesso do usuário</label><input id="userLoginCode" placeholder="Ex: JOAO123"><button class="btn" onclick="loginSelected('usuario')">Entrar como usuário</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button></div>
+      <div class="login-box" id="userLoginBox" style="display:block"><label>E-mail</label><input id="userLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite seu e-mail"><label>Código de acesso do usuário</label><input id="userLoginCode" autocomplete="current-password" placeholder="Digite seu código de acesso"><button class="btn" onclick="loginSelected('usuario')">Entrar como usuário</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button></div>
       <div class="login-box" id="userCreateBox">
         <div id="userCreateFormStep">
           <label>Nome completo</label><input id="uNome" placeholder="Nome completo">
