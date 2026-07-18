@@ -85,6 +85,23 @@ function primeiroNome(nome){
   return n?n.split(" ")[0]:"Entregador";
 }
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function driverBalance(profile){
+  const p=profile||{};
+  const fields=["Saldo","saldo","SaldoDisponivel","saldoDisponivel","valorDisponivel"];
+  for(const field of fields){
+    if(Object.prototype.hasOwnProperty.call(p,field)&&p[field]!==""&&p[field]!==null&&p[field]!==undefined){
+      if(typeof p[field]==="number")return Number.isFinite(p[field])?p[field]:0;
+      const raw=String(p[field]).trim();
+      if(!raw)return 0;
+      const normalized=raw.includes(",")
+        ? raw.replace(/\./g,"").replace(",",".").replace(/[^0-9.-]/g,"")
+        : raw.replace(/[^0-9.-]/g,"");
+      const value=Number(normalized);
+      return Number.isFinite(value)?value:0;
+    }
+  }
+  return 0;
+}
 function onlyDigits(v){return String(v||"").replace(/\D/g,"")}
 function cidadeRota(cidade){cidade=String(cidade||"").trim();if(cidade==="Uruçuí"||cidade==="Urucui"||cidade==="URUCUI")return "Uruçuí-PI";if(cidade==="Benedito Leite")return "Benedito Leite-MA";return cidade}
 function limparEnderecoRota(endereco,cidade){let partes=String(endereco||"").split(",").map(p=>p.trim()).filter(Boolean);const rua=partes[0]||"";const numero=partes[1]||"0";const cid=cidadeRota(cidade||partes[partes.length-1]||"");return [rua,numero,cid].filter(Boolean).join(", ")}
@@ -254,7 +271,7 @@ function renderDriverHeader(){
 
 function renderSaldoText(){
   const p=session&&session.profile?session.profile:{};
-  const val=money(p.Saldo||0);
+  const val=money(driverBalance(p));
   const el=document.getElementById("saldoText");
   const btn=document.getElementById("toggleSaldoBtn");
   const side=document.getElementById("sideSaldoText");
@@ -364,7 +381,7 @@ function renderWithdrawHistory(){
   }).join(""):'<p class="muted" style="margin-top:8px">Nenhum saque solicitado ainda.</p>');
 }
 function openWithdrawModal(){
-  const saldo=Number(session&&session.profile?session.profile.Saldo||0:0);
+  const saldo=driverBalance(session&&session.profile?session.profile:{});
   document.getElementById("withdrawAvailable").innerText=money(saldo);
   document.getElementById("withdrawTransparentNote").innerText="Será transferido via PIX o pagamento do valor total "+money(saldo)+" já descontado da taxa de sistema/serviço de R$1,98 de cada entrega. Saque disponível somente a partir de R$50,00. Pagamentos são feitos quarta e sábado em horário comercial.";
   document.getElementById("withdrawPix").value="";
@@ -373,7 +390,7 @@ function openWithdrawModal(){
 }
 function closeWithdrawModal(){document.getElementById("withdrawModal").classList.remove("active")}
 async function requestWithdraw(){
-  const saldo=Number(session&&session.profile?session.profile.Saldo||0:0);
+  const saldo=driverBalance(session&&session.profile?session.profile:{});
   const pix=document.getElementById("withdrawPix").value.trim();
   const nome=document.getElementById("withdrawName").value.trim();
   if(saldo<50)return showStatus("Saque indisponível","O saque mínimo é de R$50,00.");
@@ -1121,7 +1138,7 @@ document.getElementById("driverCode").value="";
   renderSaldoText = function(){
     try{
       const p=session&&session.profile?session.profile:{};
-      const val=money(p.Saldo||0);
+      const val=money(driverBalance(p));
       safeText("saldoText", saldoHidden ? "R$ ****" : val);
       const btn=get("toggleSaldoBtn");
       if(btn)btn.innerHTML=saldoHidden?'<i class="fa-solid fa-eye-slash"></i>':'<i class="fa-solid fa-eye"></i>';
@@ -1170,7 +1187,7 @@ document.getElementById("driverCode").value="";
   const originalOpenWithdrawModal = typeof openWithdrawModal === "function" ? openWithdrawModal : null;
   openWithdrawModal = function(){
     try{
-      const saldo=Number(session&&session.profile?session.profile.Saldo||0:0);
+      const saldo=driverBalance(session&&session.profile?session.profile:{});
       safeText("withdrawAvailable", money(saldo));
       safeText("withdrawTransparentNote","Será transferido via PIX o pagamento do valor total "+money(saldo)+" já descontado da taxa de sistema/serviço de R$1,98 de cada entrega. Saque disponível somente a partir de R$50,00. Pagamentos são feitos quarta e sábado em horário comercial.");
       safeSetValue("withdrawPix","");
@@ -1184,7 +1201,7 @@ document.getElementById("driverCode").value="";
   const originalRequestWithdraw = typeof requestWithdraw === "function" ? requestWithdraw : null;
   requestWithdraw = async function(){
     try{
-      const saldo=Number(session&&session.profile?session.profile.Saldo||0:0);
+      const saldo=driverBalance(session&&session.profile?session.profile:{});
       const pix=String(safeValue("withdrawPix","")).trim();
       const nome=String(safeValue("withdrawName","")).trim();
       if(saldo<50)return showStatus("Saque indisponível","O saque mínimo é de R$50,00.");
