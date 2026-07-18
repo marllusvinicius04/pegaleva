@@ -854,10 +854,20 @@ function finalizeDeliveryChecked(id){
 
 async function updateStatus(id,status){
   showLoader("Atualizando...");
-  const res=await api("updateDeliveryStatus",{deliveryId:id,status});
+  const res=await api("updateDeliveryStatus",{
+    deliveryId:id,
+    status,
+    codigoEntregador:session.profile.CodigoAcesso
+  });
   hideLoader();
 
   if(!res.ok)return alert(friendlyError(res.error||"Erro ao atualizar."));
+
+  if(res.profile){
+    session.profile=res.profile;
+    localStorage.setItem("pegaleva_driver",JSON.stringify(session));
+    renderDriverHeader();
+  }
 
   if(status==="Entrega finalizada")
     showStatus("Entrega finalizada com sucesso","Saldo atualizado e entrega registrada no histórico.");
