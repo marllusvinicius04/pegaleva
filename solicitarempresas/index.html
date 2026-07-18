@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>PegaLeva — Painel da Empresa</title>
+  <link rel="icon" type="image/jpeg" href="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+  <div class="loader" id="loader"><div><div class="spinner"></div><h2 id="loaderText">Carregando...</h2><p style="margin-top:7px;opacity:.9">Aguarde um instante.</p></div></div>
+
+  <section class="screen login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="logo"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"></div>
+      <h1>Acesso da empresa</h1>
+      <p class="subtitle">Entre para criar pedidos, solicitar entregadores, simular fretes e acompanhar suas entregas.</p>
+      <div class="login-box">
+        <div class="notice"><i class="fa-solid fa-building-shield"></i> Acesso exclusivo para empresas cadastradas no PegaLeva.</div>
+        <label for="companyCode">Código de acesso da empresa</label>
+        <input id="companyCode" autocomplete="current-password" placeholder="Digite o código cadastrado" onkeydown="if(event.key==='Enter')loginCompany()">
+        <button class="btn" onclick="loginCompany()"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+        <div class="error" id="loginError"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="app hidden" id="appScreen">
+    <header class="topbar">
+      <div class="top-inner">
+        <div class="brand"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"><div><strong>PegaLeva Empresas</strong><span>Painel rápido da empresa</span></div></div>
+        <button class="btn logout" onclick="logoutCompany()"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="welcome">
+        <div class="welcome-top"><div><h2 id="companyWelcome">Olá!</h2><p class="muted">Escolha uma opção para continuar.</p></div><button class="btn light small" onclick="refreshAll()"><i class="fa-solid fa-rotate"></i> Atualizar</button></div>
+        <div class="company-stats"><span class="stat-pill green" id="discountStat">Desconto: 0%</span><span class="stat-pill" id="discountRemainingStat">Entregas com desconto: 0</span><span class="stat-pill yellow" id="priorityStat">Prioridade: Desativado</span></div>
+      </section>
+
+      <section class="menu-grid" id="menuGrid">
+        <button class="menu-card" onclick="openPanel('orderPanel')"><i class="fa-solid fa-box"></i><strong>Criar pedido</strong><span>Gere códigos, veja pedidos preenchidos e acompanhe os já solicitados.</span></button>
+        <button class="menu-card" onclick="openPanel('deliveryPanel')"><i class="fa-solid fa-motorcycle"></i><strong>Solicitar entregador</strong><span>Preencha por etapas, confira o valor com desconto e confirme antes de solicitar.</span></button>
+        <button class="menu-card" onclick="openPanel('pricePanel')"><i class="fa-solid fa-calculator"></i><strong>Simular taxas</strong><span>Simule por etapas e veja o desconto disponível para sua empresa.</span></button>
+      </section>
+
+      <section class="panel" id="orderPanel">
+        <div class="panel-head"><div><h2>Criar pedido</h2><p class="muted">Crie um novo pedido e acompanhe os pedidos ativos abaixo.</p></div><button class="btn gray back" onclick="backMenu()"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+        <label>Nome do pedido</label><input id="orderName" placeholder="Ex: Pedido mesa 4, João, balcão">
+        <div class="grid2"><div><label>Cidade da coleta</label><select id="orderCity" onchange="syncCityBairro('orderCity','orderBairro')"><option>Uruçuí</option><option>Benedito Leite</option></select></div><div><label>Bairro da coleta</label><select id="orderBairro"></select></div></div>
+        <label>Rota de retorno</label><select id="orderReturn"><option value="nao">Não</option><option value="sim">Sim</option></select>
+        <button class="btn green" onclick="createOrder()"><i class="fa-solid fa-plus"></i> Criar pedido</button>
+        <div id="orderResult"></div>
+        <div class="section-title">Meus pedidos</div><p class="muted">Os pedidos permanecem disponíveis conforme o prazo definido no sistema.</p>
+        <div class="cards-grid" id="savedOrdersBox"><div class="item-card"><p class="muted">Carregando pedidos...</p></div></div>
+      </section>
+
+      <section class="panel" id="deliveryPanel">
+        <div class="panel-head"><div><h2>Solicitar entregador</h2><p class="muted">Preencha as etapas e confirme todas as informações antes de solicitar.</p></div><button class="btn gray back" onclick="backMenu()"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+        <div class="progress" id="deliveryProgress"><span class="active"></span><span></span><span></span><span></span></div>
+
+        <div class="form-step active" data-delivery-step="0">
+          <div class="section-title">1. Local de coleta</div>
+          <button class="btn light" onclick="useCompanyAddress()"><i class="fa-solid fa-building"></i> Usar endereço cadastrado da empresa</button>
+          <div class="grid2"><div><label>Cidade da coleta</label><select id="dColetaCidade" onchange="syncCityBairro('dColetaCidade','dColetaBairro');scheduleDeliveryPrice()"><option>Uruçuí</option><option>Benedito Leite</option></select></div><div><label>Bairro da coleta</label><select id="dColetaBairro" onchange="scheduleDeliveryPrice()"></select></div></div>
+          <div class="grid2"><div><label>Rua da coleta</label><input id="dColetaRua" placeholder="Rua ou avenida"></div><div><label>Número</label><input id="dColetaNumero" placeholder="Número"></div></div>
+          <label>Referência da coleta</label><input id="dColetaRef" placeholder="Ponto de referência">
+          <button class="btn" onclick="nextDeliveryStep()">Próximo <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+
+        <div class="form-step" data-delivery-step="1">
+          <div class="section-title">2. Destino e destinatário</div>
+          <div class="grid2"><div><label>Cidade do destino</label><select id="dDestinoCidade" onchange="syncCityBairro('dDestinoCidade','dDestinoBairro');scheduleDeliveryPrice()"><option>Uruçuí</option><option>Benedito Leite</option></select></div><div><label>Bairro do destino</label><select id="dDestinoBairro" onchange="scheduleDeliveryPrice()"></select></div></div>
+          <div class="grid2"><div><label>Rua do destino</label><input id="dDestinoRua" placeholder="Rua ou avenida"></div><div><label>Número</label><input id="dDestinoNumero" placeholder="Número"></div></div>
+          <label>Referência do destino</label><input id="dDestinoRef" placeholder="Ponto de referência">
+          <div class="grid2"><div><label>Nome do destinatário</label><input id="dNomeDestino" placeholder="Nome de quem recebe"></div><div><label>WhatsApp do destinatário</label><input id="dWhatsDestino" inputmode="numeric" placeholder="DDD + WhatsApp"></div></div>
+          <div class="grid2"><button class="btn gray" onclick="prevDeliveryStep()">Voltar</button><button class="btn" onclick="nextDeliveryStep()">Próximo</button></div>
+        </div>
+
+        <div class="form-step" data-delivery-step="2">
+          <div class="section-title">3. Informações da entrega</div>
+          <label>Conteúdo da entrega</label><textarea id="dConteudo" placeholder="O que será transportado?"></textarea>
+          <div class="grid2"><div><label>Quantidade de volumes</label><select id="dVolumes"><option>1</option><option>2</option><option>3</option><option>4</option></select></div><div><label>Rota de retorno</label><select id="dReturn" onchange="scheduleDeliveryPrice()"><option value="nao">Não</option><option value="sim">Sim</option></select></div></div>
+          <div class="grid2"><div><label>Forma de pagamento</label><select id="dPagamento" onchange="toggleCashObservation()"><option>PIX</option><option>Espécie</option></select></div><div><label>Tipo de frete</label><select id="dOffer" onchange="renderDeliverySelectedPrice()"><option value="normal">Entrega normal</option><option value="promocional">Oferta para empresa</option></select></div></div>
+          <div id="cashObservationBox" class="hidden"><label>Observação para dinheiro/troco</label><textarea id="dObsPagamento" placeholder="Ex: Troco para R$ 50,00"></textarea></div>
+          <div class="price-box"><span class="muted">Valor estimado</span><div class="price" id="deliveryPreview">R$ 0,00</div><div class="discount-box" id="deliveryDiscountInfo">O desconto da empresa será aplicado quando disponível.</div></div>
+          <div class="grid2"><button class="btn gray" onclick="prevDeliveryStep()">Voltar</button><button class="btn" onclick="nextDeliveryStep()">Revisar solicitação</button></div>
+        </div>
+
+        <div class="form-step" data-delivery-step="3">
+          <div class="section-title">4. Confirmação</div><p class="muted">Confira os dados. O entregador só será solicitado após clicar em confirmar.</p>
+          <div class="summary" id="deliverySummary"></div>
+          <div class="grid2"><button class="btn gray" onclick="prevDeliveryStep()">Corrigir informações</button><button class="btn green" onclick="createDelivery()"><i class="fa-solid fa-motorcycle"></i> Confirmar e solicitar</button></div>
+        </div>
+        <div id="deliveryResult"></div>
+      </section>
+
+      <section class="panel" id="pricePanel">
+        <div class="panel-head"><div><h2>Simular taxas</h2><p class="muted">Faça a simulação em etapas e veja o desconto da sua empresa.</p></div><button class="btn gray back" onclick="backMenu()"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+        <div class="progress" id="priceProgress"><span class="active"></span><span></span><span></span></div>
+        <div class="form-step active" data-price-step="0">
+          <div class="section-title">1. Local de coleta</div>
+          <div class="grid2"><div><label>Cidade da coleta</label><select id="pColetaCidade" onchange="syncCityBairro('pColetaCidade','pColetaBairro')"><option>Uruçuí</option><option>Benedito Leite</option></select></div><div><label>Bairro da coleta</label><select id="pColetaBairro"></select></div></div>
+          <button class="btn" onclick="nextPriceStep()">Próximo</button>
+        </div>
+        <div class="form-step" data-price-step="1">
+          <div class="section-title">2. Destino e retorno</div>
+          <div class="grid2"><div><label>Cidade do destino</label><select id="pDestinoCidade" onchange="syncCityBairro('pDestinoCidade','pDestinoBairro')"><option>Uruçuí</option><option>Benedito Leite</option></select></div><div><label>Bairro do destino</label><select id="pDestinoBairro"></select></div></div>
+          <label>Rota de retorno</label><select id="pReturn"><option value="nao">Não</option><option value="sim">Sim</option></select>
+          <div class="grid2"><button class="btn gray" onclick="prevPriceStep()">Voltar</button><button class="btn" onclick="nextPriceStep()">Ver valores</button></div>
+        </div>
+        <div class="form-step" data-price-step="2">
+          <div class="section-title">3. Resultado da simulação</div><div id="priceResult"></div>
+          <div class="grid2"><button class="btn gray" onclick="prevPriceStep()">Alterar rota</button><button class="btn green" onclick="openDeliveryFromSimulation()"><i class="fa-solid fa-motorcycle"></i> Solicitar entregador</button></div>
+        </div>
+      </section>
+    </main>
+
+    <button class="floating-deliveries" id="floatingDeliveries" onclick="openDeliveriesDrawer()" aria-label="Ver minhas entregas"><i class="fa-solid fa-route"></i><span class="floating-count" id="deliveryCount">0</span></button>
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDeliveriesDrawer()"></div>
+    <aside class="drawer" id="deliveriesDrawer"><div class="drawer-head"><div><strong>Minhas entregas</strong><small style="display:block;opacity:.85;margin-top:2px">Status, pagamento e entregador</small></div><button class="btn" onclick="closeDeliveriesDrawer()"><i class="fa-solid fa-xmark"></i></button></div><div class="drawer-body" id="deliveriesBox"><p class="muted">Carregando entregas...</p></div></aside>
+  </section>
+
+<script src="script.js"></script>
+</body>
+</html>
