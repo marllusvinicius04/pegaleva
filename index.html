@@ -385,6 +385,115 @@
   </div>
 </div>
 
+
+<!-- SOLICITAÇÃO RÁPIDA EXCLUSIVA PARA EMPRESAS -->
+<style>
+  .company-quick-request-btn{
+    position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+    z-index:9998;display:none;align-items:center;justify-content:center;gap:10px;
+    border:0;border-radius:999px;padding:14px 24px;background:#f97316;color:#fff;
+    font-size:15px;font-weight:900;box-shadow:0 12px 30px rgba(249,115,22,.38);
+    cursor:pointer;animation:companyQuickRequestRise .35s ease both
+  }
+  .company-quick-request-btn i{font-size:18px}
+  .company-quick-request-btn:hover{background:#ea580c;transform:translateX(-50%) translateY(-2px)}
+  @keyframes companyQuickRequestRise{from{opacity:0;transform:translate(-50%,28px)}to{opacity:1;transform:translate(-50%,0)}}
+  .company-quick-modal{position:fixed;inset:0;z-index:10020;background:rgba(15,23,42,.72);display:none;align-items:center;justify-content:center;padding:18px}
+  .company-quick-modal.active{display:flex}
+  .company-quick-card{width:min(520px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+  .company-quick-card h2{margin:0;color:#0f172a;display:flex;align-items:center;gap:9px}
+  .company-quick-card h2 i{color:#f97316}
+  .company-quick-card label{display:block;margin-top:12px}
+  .company-quick-card input,.company-quick-card select{width:100%}
+  .company-quick-warning{margin-top:14px;padding:13px;border-radius:15px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.48}
+  .company-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
+  .company-quick-actions .btn{margin-top:0}
+  @media(max-width:560px){
+    .company-quick-request-btn{bottom:12px;padding:13px 20px}
+    .company-quick-card{padding:17px;border-radius:20px}
+  }
+</style>
+
+<button type="button" id="companyQuickRequestBtn" class="company-quick-request-btn" onclick="openCompanyQuickRequest()">
+  <i class="fa-solid fa-motorcycle"></i><span>Solicitar</span>
+</button>
+
+<div id="companyQuickRequestModal" class="company-quick-modal" onclick="closeCompanyQuickRequest(event)">
+  <div class="company-quick-card" onclick="event.stopPropagation()">
+    <h2><i class="fa-solid fa-motorcycle"></i> Solicitar entrega</h2>
+    <p class="muted" style="margin-top:6px">Informe somente o bairro de entrega e o nome de quem vai receber.</p>
+
+    <label>Cidade de entrega</label>
+    <select id="companyQuickCity" onchange="updateCompanyQuickBairros()">
+      <option>Uruçuí</option>
+      <option>Benedito Leite</option>
+    </select>
+
+    <label>Bairro de entrega</label>
+    <select id="companyQuickBairro"><option value="">Selecione</option></select>
+
+    <label>Nome de quem vai receber</label>
+    <input id="companyQuickReceiver" placeholder="Nome de quem vai receber">
+
+    <label>Conteúdo</label>
+    <select id="companyQuickContent">
+      <option value="">Selecione</option>
+      <option>Comidas e bebidas</option>
+      <option>Frios</option>
+      <option>Documentos e papéis</option>
+      <option>Outros</option>
+    </select>
+
+    <label>Volumes</label>
+    <select id="companyQuickVolumes">
+      <option value="1">1 volume</option><option value="2">2 volumes</option>
+      <option value="3">3 volumes</option><option value="4">4 volumes</option>
+    </select>
+
+    <label>Rota de retorno</label>
+    <select id="companyQuickReturn">
+      <option value="Não">Não</option><option value="Sim">Sim</option>
+    </select>
+
+    <label>Forma de pagamento</label>
+    <select id="companyQuickPayment">
+      <option value="">Selecione</option>
+      <option value="PIX">PIX</option>
+      <option value="Espécie">Espécie</option>
+      <option value="Cartão">Cartão</option>
+      <option value="Faturado">Faturado</option>
+    </select>
+
+    <div id="companyQuickPriceBox" class="company-quick-warning" style="display:none"></div>
+    <div class="company-quick-actions">
+      <button type="button" class="btn gray" onclick="closeCompanyQuickRequest()">Cancelar</button>
+      <button type="button" class="btn" style="background:#f97316" onclick="prepareCompanyQuickConfirmation()">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<div id="companyQuickConfirmModal" class="company-quick-modal" onclick="closeCompanyQuickConfirmation(event)">
+  <div class="company-quick-card" onclick="event.stopPropagation()">
+    <h2><i class="fa-solid fa-triangle-exclamation"></i> Confirmação</h2>
+    <div class="company-quick-warning">
+      <strong>Ao receber o entregador, encaminhe para ele:</strong><br><br>
+      • A localização em tempo real do cliente pelo WhatsApp;<br>
+      • O número do cliente, caso seja necessário contato.<br><br>
+      Isso agiliza a entrega e evita atrasos.
+    </div>
+    <div style="margin-top:13px;padding:13px;border:1px solid #e2e8f0;border-radius:15px;color:#475569;font-size:12px;line-height:1.5">
+      <strong style="color:#0f172a">Termo de responsabilidade</strong><br>
+      O Pega e Leva não se responsabiliza por atrasos, erros ou entregas em locais incorretos ocasionados por localização enviada incorretamente pelo solicitante.
+    </div>
+    <div class="company-quick-actions">
+      <button type="button" class="btn gray" onclick="closeCompanyQuickConfirmation()">Cancelar</button>
+      <button type="button" class="btn" style="background:#f97316" onclick="confirmCompanyQuickDelivery()">
+        <i class="fa-solid fa-motorcycle"></i> Confirmar solicitação
+      </button>
+    </div>
+  </div>
+</div>
+
 <script src="script.js?v=aviso-demora"></script>
 
 </body>
