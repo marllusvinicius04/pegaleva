@@ -10,7 +10,6 @@
   <link rel="icon" type="image/jpeg" href="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
-
 </head>
 <body>
   <div class="loader" id="loader"><div><div class="spinner"></div><h2 id="loaderText">Carregando...</h2><p style="margin-top:7px;opacity:.9">Aguarde um instante.</p></div></div>
@@ -121,6 +120,29 @@
         </div>
       </section>
     </main>
+
+    <div class="saved-order-modal-overlay" id="savedOrderCompanyModal" onclick="if(event.target===this)closeSavedOrderCompanyModal()">
+      <div class="saved-order-modal">
+        <div class="saved-order-modal-head">
+          <div><h2>Confirmar dados da empresa</h2><p class="muted">Confirme o endereço de coleta antes de solicitar o entregador.</p></div>
+          <button class="btn gray small" onclick="closeSavedOrderCompanyModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="saved-order-confirmation" id="savedOrderConfirmationInfo">Confira os dados da coleta da empresa.</div>
+        <button class="btn light" onclick="useSavedCompanyAddressForOrder()"><i class="fa-solid fa-location-dot"></i> Usar meu endereço cadastrado</button>
+        <label>Rua/Avenida da coleta</label>
+        <input id="savedOrderRuaColeta" placeholder="Endereço de coleta">
+        <div class="grid2">
+          <div><label>Número da coleta</label><input id="savedOrderNumeroColeta" placeholder="Se não tiver número, coloque 0"></div>
+          <div><label>Cidade da coleta</label><select id="savedOrderCidadeColeta"><option>Uruçuí</option><option>Benedito Leite</option></select></div>
+        </div>
+        <label>Ponto de referência da coleta</label>
+        <input id="savedOrderReferenciaColeta" placeholder="Ponto de referência obrigatório">
+        <div class="grid2">
+          <button class="btn gray" onclick="closeSavedOrderCompanyModal()">Cancelar</button>
+          <button class="btn green" onclick="confirmSavedOrderDelivery()"><i class="fa-solid fa-motorcycle"></i> Confirmar e solicitar</button>
+        </div>
+      </div>
+    </div>
 
     <button class="floating-deliveries" id="floatingDeliveries" onclick="openDeliveriesDrawer()" aria-label="Ver minhas entregas"><i class="fa-solid fa-route"></i><span class="floating-count" id="deliveryCount">0</span></button>
     <div class="drawer-overlay" id="drawerOverlay" onclick="closeDeliveriesDrawer()"></div>

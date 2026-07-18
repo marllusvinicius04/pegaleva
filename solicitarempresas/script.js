@@ -1,7 +1,7 @@
 const API_URL="https://script.google.com/macros/s/AKfycbx739xcgwZ0NTYdtj0pjFN0QAqyNh94PV96PxKRy90pOvKHOg1V0LFf-gjkrIsKaL1w/exec";
 const BAIRROS_URUCUÍ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
 let companySession=JSON.parse(localStorage.getItem("pegaleva_company_light")||"null");
-let companyDeliveries=[],savedOrders=[],deliveryStep=0,priceStep=0,deliveryPriceData=null,refreshTimer=null,priceDebounce=null;
+let companyDeliveries=[],savedOrders=[],deliveryStep=0,priceStep=0,deliveryPriceData=null,refreshTimer=null,priceDebounce=null,pendingSavedOrderId=null;
 
 function qs(id){return document.getElementById(id)}
 function onlyDigits(v){return String(v||"").replace(/\D/g,"")}
@@ -57,7 +57,52 @@ async function createOrder(){const nomePedido=qs("orderName").value.trim(),cidad
 async function loadSavedOrders(){if(!companySession)return;const res=await api("getSavedClients",{codigoEmpresa:companyCode(),codigo:companyCode(),whatsappEmpresa:companySession.profile.WhatsApp||""});savedOrders=res&&res.ok?(res.list||res.salvos||res.saved||res.clientes||[]):[];renderSavedOrders()}
 function renderSavedOrders(){const box=qs("savedOrdersBox");if(!savedOrders.length){box.innerHTML='<div class="item-card"><p class="muted">Nenhum pedido ativo no momento.</p></div>';return}box.innerHTML=savedOrders.map(c=>{const requested=!!(c.EntregaID||String(c.StatusPedido||"").toLowerCase().includes("solicitado"));const filled=!!c.NomeDestino;return `<article class="item-card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap"><strong>${esc(c.NomePedido||c.NomeDestino||"Pedido")}</strong><span class="badge ${requested?"green":filled?"yellow":""}">${requested?"Solicitado":filled?"Preenchido":"Aguardando cliente"}</span></div><p class="muted"><b>Código:</b> ${esc(c.PedidoCodigo||"---")}</p><p class="muted"><b>Coleta:</b> ${esc(c.CidadeColeta||"")} • ${esc(c.BairroColeta||"---")} • ${c.RotaRetorno?"com retorno":"sem retorno"}</p>${filled?`<p class="muted"><b>Destino:</b> ${esc(c.NomeDestino||"")} — ${esc(c.Rua||"")}, Nº ${esc(c.Numero||"0")} - ${esc(c.Bairro||"")}, ${esc(c.Cidade||"")}</p>`:'<p class="muted">Aguardando o cliente preencher os dados.</p>'}${c.FreteEscolhido?`<p class="muted"><b>Frete:</b> ${esc(c.FreteEscolhido)} • ${money(c.ValorFrete||0)}</p>`:""}<div class="item-actions"><button class="btn light" onclick="copyOrderMessage('${esc(c.PedidoCodigo||"")}')"><i class="fa-solid fa-copy"></i> Copiar</button>${requested?'<button class="btn gray" disabled>Já solicitado</button>':filled?`<button class="btn green" onclick="requestSavedOrder('${esc(c.ID||"")}')"><i class="fa-solid fa-motorcycle"></i> Solicitar</button>`:'<button class="btn gray" disabled>Aguardando</button>'}</div></article>`}).join("")}
 async function copyOrderMessage(code){const message=`INFORME SEUS DADOS NO FORMULÁRIO ABAIXO PARA RECEBER SEU PRODUTO EM SUA CASA COM QUALIDADE E ECONOMIA!\n\nhttps://pegaelevadelivery.com.br/rastreioentrega\n\nCódigo do pedido: ${String(code).toUpperCase()}`;try{await navigator.clipboard.writeText(message);alert("Mensagem copiada com sucesso.")}catch(e){alert(message)}}
-async function requestSavedOrder(id){if(!confirm("Confirma a solicitação do entregador para este pedido?"))return;showLoader("Solicitando entregador...");const res=await api("createDeliveryFromSavedOrder",{id,savedId:id,codigoEmpresa:companyCode(),codigoCliente:companyCode()});hideLoader();if(!res.ok){alert(res.error||"Não foi possível solicitar este pedido.");return}await refreshAll();openDeliveriesDrawer()}
+function requestSavedOrder(id){
+  const order=savedOrders.find(x=>String(x.ID)===String(id));
+  if(!order)return alert("Pedido não encontrado. Atualize a página e tente novamente.");
+  pendingSavedOrderId=id;
+  const p=companySession?.profile||{};
+  qs("savedOrderRuaColeta").value=p.Rua||p.Endereco||"";
+  qs("savedOrderNumeroColeta").value=p.Numero||"";
+  qs("savedOrderReferenciaColeta").value=p.Referencia||"";
+  qs("savedOrderCidadeColeta").value=String(p.Cidade||order.CidadeColeta||"Uruçuí").includes("Benedito")?"Benedito Leite":"Uruçuí";
+  qs("savedOrderConfirmationInfo").innerHTML=`Pedido <b>${esc(order.NomePedido||order.PedidoCodigo||"selecionado")}</b>. Confirme os dados da coleta da sua empresa antes de solicitar.`;
+  qs("savedOrderCompanyModal").classList.add("active");
+}
+function closeSavedOrderCompanyModal(){
+  pendingSavedOrderId=null;
+  qs("savedOrderCompanyModal").classList.remove("active");
+}
+function useSavedCompanyAddressForOrder(){
+  const p=companySession?.profile||{};
+  qs("savedOrderRuaColeta").value=p.Rua||p.Endereco||"";
+  qs("savedOrderNumeroColeta").value=p.Numero||"";
+  qs("savedOrderReferenciaColeta").value=p.Referencia||"";
+  qs("savedOrderCidadeColeta").value=String(p.Cidade||"Uruçuí").includes("Benedito")?"Benedito Leite":"Uruçuí";
+}
+async function confirmSavedOrderDelivery(){
+  const order=savedOrders.find(x=>String(x.ID)===String(pendingSavedOrderId));
+  if(!order)return alert("Pedido não encontrado. Feche esta tela e tente novamente.");
+  const rua=qs("savedOrderRuaColeta").value.trim();
+  const numero=qs("savedOrderNumeroColeta").value.trim();
+  const referencia=qs("savedOrderReferenciaColeta").value.trim();
+  const cidade=qs("savedOrderCidadeColeta").value.trim();
+  if(!rua||!numero||!referencia||!cidade)return alert("Confirme rua, número, ponto de referência e cidade da coleta.");
+  showLoader("Solicitando entregador...");
+  const res=await api("createDeliveryFromSavedOrder",{
+    pedidoCodigo:order.PedidoCodigo,
+    ruaColeta:rua,
+    numeroColeta:numero||"0",
+    referenciaColeta:referencia,
+    cidadeColeta:cidade,
+    bairroColeta:order.BairroColeta||""
+  });
+  hideLoader();
+  if(!res.ok){alert(res.error||"Não foi possível solicitar este pedido.");return}
+  closeSavedOrderCompanyModal();
+  await refreshAll();
+  openDeliveriesDrawer();
+}
 
 async function refreshAll(){if(!companySession)return;const res=await api("getClientPanel",{codigo:companyCode(),expectedType:"empresa",limit:80,_t:Date.now()});if(res.ok&&res.type==="empresa"){companySession={ok:true,type:"empresa",profile:res.profile};companyDeliveries=res.deliveries||[];localStorage.setItem("pegaleva_company_light",JSON.stringify(companySession));renderCompanyHeader();renderDeliveries()}await loadSavedOrders()}
 function startRefresh(){clearInterval(refreshTimer);refreshTimer=setInterval(refreshAll,12000)}
