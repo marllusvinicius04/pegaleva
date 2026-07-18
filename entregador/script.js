@@ -856,9 +856,17 @@ async function updateStatus(id,status){
   showLoader("Atualizando...");
   const res=await api("updateDeliveryStatus",{deliveryId:id,status});
   hideLoader();
+
   if(!res.ok)return alert(friendlyError(res.error||"Erro ao atualizar."));
-  if(status==="Entrega finalizada")showStatus("Entrega finalizada com sucesso","Saldo atualizado e entrega registrada no histórico.");
-  refreshPanel();
+
+  if(status==="Entrega finalizada")
+    showStatus("Entrega finalizada com sucesso","Saldo atualizado e entrega registrada no histórico.");
+
+  lastRefreshAt=0;
+  refreshBusy=false;
+
+  await refreshPanel();
+  renderDriverHeader();
 }
 
 async function cancelDelivery(id){
@@ -1464,4 +1472,3 @@ document.getElementById("driverCode").value="";
 
   window.addEventListener("beforeunload",stopPersistentDeliveryAlert);
 })();
-
