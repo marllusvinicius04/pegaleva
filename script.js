@@ -72,7 +72,21 @@ let session=JSON.parse(localStorage.getItem("pegaleva_client")||"null"),
 chatDeliveryId="",currentStep=0,lastPrice=0,currentSearchingId="",showAllClientDeliveries=false,knownStatuses=JSON.parse(localStorage.getItem("pegaleva_status_client")||"{}"),refreshTimer=null,refreshBusy=false,clientCoupons=[],clientAnnouncements=[],clientSavedContacts=[];
 const steps=()=>document.querySelectorAll(".step"),dots=()=>document.querySelectorAll(".dot");
 if(session)openPanel();
-async function api(action,data={}){try{const r=await fetch(API_URL,{method:"POST",cache:"no-store",body:JSON.stringify({action,...data})});return await r.json()}catch(err){showSystemDelayNotice();return {ok:false,error:"Falha de conexão com o servidor. Confira a implantação do Apps Script e tente novamente."}}}
+let consecutiveApiFailures=0;
+async function api(action,data={}){
+  try{
+    const r=await fetch(API_URL,{method:"POST",cache:"no-store",body:JSON.stringify({action,...data})});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const result=await r.json();
+    consecutiveApiFailures=0;
+    hideSlowLoaderWarning();
+    return result;
+  }catch(err){
+    consecutiveApiFailures++;
+    if(consecutiveApiFailures>=2)showSystemDelayNotice();
+    return {ok:false,error:"Falha de conexão com o servidor. Confira a implantação do Apps Script e tente novamente."};
+  }
+}
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function onlyDigits(v){return String(v||"").replace(/\D/g,"")}
 const BAIRROS_URUCUÍ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
