@@ -620,3 +620,473 @@ body:not(:has(#accessScreen.active)) .support-chat{
     flex:1 1 auto!important;
   }
 }
+
+/* ============================================================
+   REFINAMENTO VISUAL — WEBSITE DE LOGÍSTICA
+   Mantém integralmente as cores existentes do sistema.
+   Atua somente na página pública #accessScreen.
+   ============================================================ */
+
+#accessScreen{
+  background:#0044c3!important;
+}
+
+#accessScreen .site-shell{
+  background:
+    radial-gradient(circle at 12% 4%,rgba(255,255,255,.16),transparent 22%),
+    radial-gradient(circle at 88% 10%,rgba(255,255,255,.10),transparent 24%),
+    #0044c3!important;
+}
+
+/* NAVEGAÇÃO MAIS LIMPA */
+#accessScreen .site-nav{
+  background:rgba(0,68,195,.94)!important;
+  border-bottom:1px solid rgba(255,255,255,.14)!important;
+  box-shadow:0 10px 30px rgba(0,30,90,.12)!important;
+  backdrop-filter:blur(18px)!important;
+  -webkit-backdrop-filter:blur(18px)!important;
+}
+
+#accessScreen .site-nav-inner{
+  min-height:76px!important;
+  padding:11px 20px!important;
+}
+
+#accessScreen .site-brand img{
+  width:54px!important;
+  height:54px!important;
+  border-radius:17px!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.16)!important;
+}
+
+#accessScreen .site-menu{
+  gap:7px!important;
+}
+
+#accessScreen .site-menu a,
+#accessScreen .site-menu button{
+  padding:10px 14px!important;
+  border-radius:12px!important;
+  background:transparent!important;
+  border:1px solid transparent!important;
+  color:white!important;
+  box-shadow:none!important;
+  transition:.2s ease!important;
+}
+
+#accessScreen .site-menu a:hover,
+#accessScreen .site-menu button:hover{
+  background:rgba(255,255,255,.10)!important;
+  border-color:rgba(255,255,255,.14)!important;
+}
+
+#accessScreen .site-menu .nav-login{
+  background:white!important;
+  color:#0044c3!important;
+  padding-inline:18px!important;
+  box-shadow:0 10px 24px rgba(0,0,0,.14)!important;
+}
+
+/* HERO PRINCIPAL */
+#accessScreen .site-hero{
+  position:relative!important;
+  min-height:calc(100vh - 76px)!important;
+  padding-top:52px!important;
+  padding-bottom:52px!important;
+}
+
+#accessScreen .site-hero:before{
+  content:""!important;
+  position:absolute!important;
+  inset:26px 18px!important;
+  z-index:-1!important;
+  border-radius:38px!important;
+  background:
+    radial-gradient(circle at 78% 20%,rgba(16,185,129,.18),transparent 24%),
+    linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.015))!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+}
+
+#accessScreen .hero-copy{
+  padding:20px 4px 20px 14px!important;
+}
+
+#accessScreen .hero-badge{
+  padding:9px 13px!important;
+  margin-bottom:20px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.12)!important;
+  border:1px solid rgba(255,255,255,.22)!important;
+  box-shadow:none!important;
+  letter-spacing:.1px!important;
+}
+
+#accessScreen .hero-copy h1{
+  max-width:720px!important;
+  margin-bottom:22px!important;
+  font-size:clamp(46px,6.2vw,76px)!important;
+  line-height:.98!important;
+  letter-spacing:-2.8px!important;
+  text-shadow:none!important;
+}
+
+#accessScreen .hero-copy h1 span{
+  color:white!important;
+  text-decoration-color:#10b981!important;
+  text-decoration-thickness:6px!important;
+  text-underline-offset:9px!important;
+}
+
+#accessScreen .hero-copy p{
+  max-width:620px!important;
+  font-size:17px!important;
+  line-height:1.68!important;
+  color:rgba(255,255,255,.88)!important;
+}
+
+#accessScreen .hero-actions{
+  gap:10px!important;
+  margin-top:28px!important;
+}
+
+#accessScreen .hero-actions .btn{
+  min-height:52px!important;
+  padding:14px 20px!important;
+  border-radius:14px!important;
+  box-shadow:none!important;
+  transition:.2s ease!important;
+}
+
+#accessScreen .hero-actions .btn:hover{
+  transform:translateY(-2px)!important;
+}
+
+#accessScreen .hero-actions .btn.light{
+  background:white!important;
+  color:#0044c3!important;
+  box-shadow:0 14px 30px rgba(0,0,0,.15)!important;
+}
+
+#accessScreen .hero-actions .btn.green{
+  background:#10b981!important;
+  color:white!important;
+  box-shadow:0 14px 30px rgba(16,185,129,.22)!important;
+}
+
+/* CARD DE ACESSO MAIS SOFISTICADO */
+#accessScreen .site-login{
+  width:min(100%,500px)!important;
+  padding:28px!important;
+  border-radius:28px!important;
+  background:rgba(255,255,255,.97)!important;
+  color:#0f172a!important;
+  border:1px solid rgba(255,255,255,.88)!important;
+  box-shadow:0 30px 80px rgba(0,24,72,.28)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  text-align:left!important;
+}
+
+#accessScreen .site-login .mini-title{
+  background:#eef4ff!important;
+  color:#0044c3!important;
+  border:1px solid #dbe7ff!important;
+  box-shadow:none!important;
+}
+
+#accessScreen .site-login .logo-top{
+  width:70px!important;
+  height:70px!important;
+  margin:0 0 15px!important;
+  border-radius:19px!important;
+  box-shadow:0 12px 26px rgba(0,68,195,.12)!important;
+}
+
+#accessScreen .site-login h1{
+  color:#0f172a!important;
+  text-align:left!important;
+  font-size:29px!important;
+  letter-spacing:-.7px!important;
+}
+
+#accessScreen .site-login > p{
+  color:#64748b!important;
+  text-align:left!important;
+  opacity:1!important;
+  margin-bottom:18px!important;
+}
+
+#accessScreen .site-login .access-options{
+  gap:10px!important;
+}
+
+#accessScreen .site-login .option-card{
+  min-height:138px!important;
+  border-radius:20px!important;
+  border:1px solid #e2e8f0!important;
+  box-shadow:none!important;
+  background:#fff!important;
+  transition:.2s ease!important;
+}
+
+#accessScreen .site-login .option-card:hover{
+  transform:translateY(-2px)!important;
+  border-color:#0044c3!important;
+  background:#f8fbff!important;
+  box-shadow:0 14px 28px rgba(15,23,42,.08)!important;
+}
+
+#accessScreen .site-login .option-card i{
+  border-radius:14px!important;
+}
+
+#accessScreen .site-login .tabs{
+  background:#eef4ff!important;
+  border-radius:14px!important;
+}
+
+#accessScreen .site-login .tabs button{
+  color:#475569!important;
+  border-radius:10px!important;
+}
+
+#accessScreen .site-login .tabs button.active{
+  color:#0044c3!important;
+  background:white!important;
+}
+
+#accessScreen .site-login .login-box{
+  border-radius:20px!important;
+  box-shadow:none!important;
+  border:1px solid #e5eaf2!important;
+}
+
+#accessScreen .site-login input,
+#accessScreen .site-login select,
+#accessScreen .site-login textarea{
+  border-radius:12px!important;
+  background:#fbfdff!important;
+}
+
+#accessScreen .site-login .btn{
+  border-radius:12px!important;
+}
+
+/* SEÇÕES COM APARÊNCIA DE PLATAFORMA */
+#accessScreen .section-wrap{
+  padding-top:16px!important;
+}
+
+#accessScreen .site-section{
+  margin:20px auto!important;
+  padding:44px!important;
+  border-radius:30px!important;
+  background:white!important;
+  border:1px solid rgba(226,232,240,.82)!important;
+  box-shadow:0 18px 55px rgba(0,30,90,.13)!important;
+}
+
+#accessScreen .section-head{
+  max-width:760px!important;
+  margin:0 auto 30px!important;
+}
+
+#accessScreen .section-kicker{
+  border-radius:999px!important;
+  padding:8px 12px!important;
+}
+
+#accessScreen .section-head h2{
+  font-size:clamp(32px,4.2vw,46px)!important;
+  color:#0044c3!important;
+  line-height:1.06!important;
+  letter-spacing:-1.5px!important;
+}
+
+#accessScreen .benefits-grid{
+  gap:14px!important;
+}
+
+#accessScreen .benefit-card{
+  padding:24px!important;
+  border-radius:20px!important;
+  background:#fff!important;
+  border:1px solid #e4eaf2!important;
+  box-shadow:none!important;
+}
+
+#accessScreen .benefit-card:hover{
+  transform:translateY(-4px)!important;
+  border-color:#dbe7ff!important;
+  box-shadow:0 16px 34px rgba(15,23,42,.08)!important;
+}
+
+#accessScreen .benefit-card i{
+  width:50px!important;
+  height:50px!important;
+  border-radius:15px!important;
+}
+
+#accessScreen .company-card{
+  padding:32px!important;
+  border-radius:24px!important;
+  box-shadow:0 20px 45px rgba(0,68,195,.22)!important;
+}
+
+#accessScreen .company-item{
+  padding:17px!important;
+  border-radius:17px!important;
+  background:#fff!important;
+  border:1px solid #e5eaf2!important;
+}
+
+#accessScreen .company-item i{
+  border-radius:13px!important;
+}
+
+#accessScreen .coverage-box{
+  padding:32px!important;
+  border-radius:24px!important;
+}
+
+#accessScreen .coverage-tags span{
+  border-radius:10px!important;
+}
+
+#accessScreen .coverage-icon{
+  border-radius:24px!important;
+}
+
+#accessScreen .step-site-card{
+  padding:20px!important;
+  border-radius:18px!important;
+  background:white!important;
+  border:1px solid #e5eaf2!important;
+}
+
+#accessScreen .step-site-card b{
+  border-radius:10px!important;
+}
+
+#accessScreen .simulator-call{
+  padding:32px!important;
+  border-radius:24px!important;
+  background:linear-gradient(135deg,#0044c3,#ffffff)!important;
+}
+
+#accessScreen #entregador{
+  width:min(1144px,calc(100% - 36px))!important;
+  margin:20px auto!important;
+}
+
+/* RODAPÉ */
+#accessScreen .site-footer{
+  margin-top:38px!important;
+  border-top:1px solid rgba(255,255,255,.14)!important;
+}
+
+#accessScreen .footer-inner{
+  padding-top:40px!important;
+  padding-bottom:40px!important;
+}
+
+#accessScreen .footer-brand img{
+  border-radius:15px!important;
+}
+
+/* TABLET */
+@media(max-width:980px){
+  #accessScreen .site-hero:before{
+    inset:18px 12px!important;
+    border-radius:30px!important;
+  }
+
+  #accessScreen .hero-copy{
+    padding-inline:18px!important;
+  }
+
+  #accessScreen .site-login{
+    width:min(100%,620px)!important;
+  }
+
+  #accessScreen .site-section{
+    padding:34px!important;
+  }
+}
+
+/* CELULAR */
+@media(max-width:600px){
+  #accessScreen .site-nav-inner{
+    min-height:66px!important;
+  }
+
+  #accessScreen .site-brand img{
+    width:48px!important;
+    height:48px!important;
+  }
+
+  #accessScreen .site-hero{
+    padding-top:22px!important;
+  }
+
+  #accessScreen .site-hero:before{
+    inset:8px 6px!important;
+    border-radius:24px!important;
+  }
+
+  #accessScreen .hero-copy{
+    padding:24px 10px 4px!important;
+  }
+
+  #accessScreen .hero-copy h1{
+    font-size:clamp(38px,12vw,52px)!important;
+    letter-spacing:-1.7px!important;
+  }
+
+  #accessScreen .hero-copy p{
+    font-size:15px!important;
+  }
+
+  #accessScreen .site-login{
+    padding:20px!important;
+    border-radius:22px!important;
+  }
+
+  #accessScreen .site-login .logo-top{
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+
+  #accessScreen .site-login h1,
+  #accessScreen .site-login > p{
+    text-align:center!important;
+  }
+
+  #accessScreen .site-login .option-card{
+    min-height:auto!important;
+  }
+
+  #accessScreen .site-section{
+    padding:24px 18px!important;
+    border-radius:22px!important;
+  }
+
+  #accessScreen .section-head{
+    text-align:left!important;
+  }
+
+  #accessScreen .section-head h2{
+    font-size:30px!important;
+  }
+
+  #accessScreen .company-card,
+  #accessScreen .coverage-box,
+  #accessScreen .simulator-call{
+    padding:22px!important;
+    border-radius:20px!important;
+  }
+
+  #accessScreen #entregador{
+    width:calc(100% - 24px)!important;
+  }
+}
