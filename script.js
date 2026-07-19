@@ -32,13 +32,28 @@ async function quickLogin(type){
   if(!item)return;
   await loginByCode(item.codigo,type,item.email,false);
 }
+function isPublicSiteVisible(){
+  return document.getElementById("accessScreen")?.classList.contains("active")&&!session;
+}
+function setSupportVisibility(show){
+  const float=document.getElementById("supportFloat");
+  const chat=document.getElementById("supportChat");
+  if(!show){
+    if(float)float.style.display="none";
+    if(chat)chat.classList.remove("active");
+    return;
+  }
+  if(float)float.style.display="flex";
+}
 function openSupportChat(){
+  if(!isPublicSiteVisible())return;
   document.getElementById("supportChat")?.classList.add("active");
-  const float=document.getElementById("supportFloat");if(float)float.style.display="none";
+  const float=document.getElementById("supportFloat");
+  if(float)float.style.display="none";
 }
 function closeSupportChat(){
   document.getElementById("supportChat")?.classList.remove("active");
-  const float=document.getElementById("supportFloat");if(float)float.style.display="flex";
+  setSupportVisibility(isPublicSiteVisible());
 }
 function answerSupport(topic){
   const answers={
@@ -244,7 +259,7 @@ async function loginSelected(type){const codigo=type==="empresa"?document.getEle
 async function loginByCode(codigo,expectedType,email="",isNewAccount=false){session=null;localStorage.removeItem("pegaleva_client");showLoader("Carregando seu painel...");const res=await api("loginClient",{codigo,email,expectedType});hideLoader();if(!res.ok){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}if(res.type!==expectedType){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}const perfilEmail=String(res.profile?.Email||"").trim().toLowerCase();if(perfilEmail!==String(email||"").trim().toLowerCase()){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}session=res;localStorage.setItem("pegaleva_client",JSON.stringify(session));openPanel();if(isNewAccount)setTimeout(showNewAccountWelcomeModal,180);return true}
 function showNewAccountWelcomeModal(){if(!session)return;const p=session.profile||{};const fullName=String(session.type==="empresa"?(p.Responsavel||""):(p.Nome||"")).trim();const firstName=fullName.split(/\s+/)[0]||"";const feminine=session.type==="empresa"||/[aáàâã]$/i.test(firstName);const title=document.getElementById("newAccountWelcomeTitle"),text=document.getElementById("newAccountWelcomeText"),modal=document.getElementById("newAccountWelcomeModal");if(title)title.innerText=(feminine?"Bem-vinda, ":"Bem-vindo, ")+(firstName||"ao Pega&Leva")+"!";if(text)text.innerText=session.type==="empresa"?"Seu negócio foi cadastrado com sucesso no Pega&Leva. Agora você já pode acessar o painel e começar a solicitar suas entregas.":"Sua conta foi criada com sucesso no Pega&Leva. Agora você já pode acessar o painel e solicitar sua primeira entrega.";if(modal)modal.classList.add("active")}
 function closeNewAccountWelcomeModal(){document.getElementById("newAccountWelcomeModal")?.classList.remove("active")}
-function openPanel(){setTimeout(updateBairroOptions,0);document.querySelector(".history-chat-btn").style.display="grid";document.getElementById("accessScreen").classList.remove("active");document.getElementById("appScreen").classList.add("active");
+function openPanel(){setSupportVisibility(false);setTimeout(updateBairroOptions,0);document.querySelector(".history-chat-btn").style.display="grid";document.getElementById("accessScreen").classList.remove("active");document.getElementById("appScreen").classList.add("active");
   const clientNav=document.getElementById("clientAppNav");
   if(clientNav) clientNav.style.display="";
 const p=session.profile,name=session.type==="empresa"?p.Responsavel:p.Nome;const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";document.getElementById("welcomeName").innerText="Olá, "+primeiroNome;document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuário";document.getElementById("companyBox").style.display=session.type==="empresa"?"block":"none";document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";toggleCouponArea();renderProfile();loadClientTools();startAutoRefresh()}
@@ -765,6 +780,7 @@ session=null;
 hideLoader();
 document.getElementById("appScreen").classList.remove("active");
 document.getElementById("accessScreen").classList.add("active");
+setSupportVisibility(true);
 },2000);
 }
 
