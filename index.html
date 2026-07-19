@@ -16,74 +16,8 @@
 
 
 
-
-<style>
-.quick-access-box{display:none;margin:0 0 14px;padding:12px;border:1px solid #dbe7ff;border-radius:16px;background:#f8fbff;text-align:left}
-.quick-access-box.active{display:block}
-.quick-access-box strong{display:block;color:#0044c3;font-size:13px}
-.quick-access-box span{display:block;color:#64748b;font-size:11px;margin-top:3px}
-.quick-access-actions{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:9px}
-.quick-access-actions button{margin:0!important}
-.remember-access{display:flex;align-items:flex-start;gap:8px;margin:11px 0 2px;color:#475569;font-size:12px;line-height:1.35;text-align:left}
-.remember-access input{width:auto!important;margin:2px 0 0!important;flex:0 0 auto}
-
-.support-float{position:fixed;right:18px;top:96px;z-index:1005;display:flex;align-items:center;gap:9px;border:0;background:white;border-radius:999px;padding:7px 13px 7px 7px;box-shadow:0 12px 35px rgba(15,23,42,.22);cursor:pointer;color:#0044c3;font-weight:900}
-.support-float img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:3px solid #eaf1ff}
-.support-float small{display:block;color:#64748b;font-size:10px;font-weight:700;margin-top:1px}
-.support-chat{position:fixed;right:18px;top:88px;width:min(390px,calc(100vw - 28px));height:min(610px,calc(100vh - 110px));z-index:1010;background:#fff;border-radius:24px;box-shadow:0 24px 70px rgba(15,23,42,.3);display:none;overflow:hidden;border:1px solid #e2e8f0}
-.support-chat.active{display:flex;flex-direction:column}
-.support-head{background:linear-gradient(135deg,#0044c3,#1769e8);color:white;padding:15px;display:flex;align-items:center;gap:11px}
-.support-head img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.75)}
-.support-head div{flex:1}.support-head strong{display:block;font-size:15px}.support-head span{font-size:11px;opacity:.9}
-.support-head button{border:0;background:rgba(255,255,255,.16);color:white;width:34px;height:34px;border-radius:50%;cursor:pointer}
-.support-body{padding:14px;overflow:auto;flex:1;background:#f7f9fc}
-.support-bubble{background:white;border:1px solid #e5eaf2;border-radius:5px 18px 18px 18px;padding:12px;color:#334155;font-size:13px;line-height:1.45;box-shadow:0 5px 16px rgba(15,23,42,.05)}
-.support-options{display:grid;gap:8px;margin-top:12px}
-.support-options button{border:1px solid #dbe7ff;background:white;color:#0044c3;border-radius:14px;padding:11px;text-align:left;font-weight:850;cursor:pointer}
-.support-options button:hover{background:#eef4ff}
-.support-answer{margin-top:10px;background:#eaf2ff;color:#17365f;border-radius:18px 5px 18px 18px;padding:12px;font-size:13px;line-height:1.5}
-.support-cta{display:grid;gap:8px;margin-top:12px}
-.support-cta button{margin:0!important}
-.support-footer{padding:11px 14px;background:white;border-top:1px solid #edf0f5;font-size:10px;color:#64748b;text-align:center}
-@media(max-width:600px){
-  .support-float{right:12px;top:auto;bottom:18px;padding-right:10px}
-  .support-float img{width:44px;height:44px}
-  .support-chat{right:7px;top:auto;bottom:7px;width:calc(100vw - 14px);height:min(650px,calc(100vh - 14px));border-radius:22px}
-}
-</style>
-
 </head>
 <body>
-
-<button type="button" class="support-float" id="supportFloat" onclick="openSupportChat()" aria-label="Abrir atendimento">
-  <img src="https://i.ibb.co/4gpQMy4V/PEGA-E-LEVA-MKT.png" alt="Atendimento Pega e Leva">
-  <span>Atendimento<small>Tire suas dúvidas</small></span>
-</button>
-
-<div class="support-chat" id="supportChat" aria-live="polite">
-  <div class="support-head">
-    <img src="https://i.ibb.co/4gpQMy4V/PEGA-E-LEVA-MKT.png" alt="Atendimento">
-    <div><strong>Atendimento Pega&amp;Leva</strong><span>Respostas rápidas para você começar</span></div>
-    <button type="button" onclick="closeSupportChat()" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
-  </div>
-  <div class="support-body">
-    <div class="support-bubble">
-      Olá! 👋 Posso explicar como o Pega&amp;Leva funciona antes do seu cadastro. Escolha uma dúvida:
-    </div>
-    <div class="support-options">
-      <button onclick="answerSupport('como')">Como solicito uma entrega?</button>
-      <button onclick="answerSupport('horario')">Qual é o horário de atendimento?</button>
-      <button onclick="answerSupport('frota')">Os entregadores são da frota Pega&amp;Leva?</button>
-      <button onclick="answerSupport('agilidade')">A entrega é rápida?</button>
-      <button onclick="answerSupport('preco')">Como o valor do frete é calculado?</button>
-      <button onclick="answerSupport('empresa')">Quero cadastrar minha empresa</button>
-      <button onclick="answerSupport('seguranca')">Como acompanho minha entrega?</button>
-    </div>
-    <div id="supportAnswer"></div>
-  </div>
-  <div class="support-footer">Atendimento automático com informações do serviço.</div>
-</div>
-
 <div id='successToast' class='success-toast'>Informações adicionadas</div>
 <div class="loader" id="loader"><div><div class="moto-loader" id="motoLoader"><i class="fa-solid fa-motorcycle"></i></div><div class="spinner"></div><h2 id="loaderText">Carregando...</h2><p id="loaderSub">Aguarde um instante.</p><div id="searchActions" style="display:none;max-width:280px;margin:20px auto 0">
   <button class="btn gray" onclick="closeSearchLoader()">Fechar</button>
@@ -125,18 +59,12 @@
     <h1 id="accessTitle">Olá, bem-vindo</h1><p id="accessSubtitle">Escolha uma opção para </p>
     <button class="back-btn" id="backBtn" onclick="backToOptions()"><i class="fa-solid fa-arrow-left"></i> Voltar para opções</button>
     <div class="access-options" id="accessOptions">
-      <button class="option-card" onclick="selectAccessType('usuario')"><i class="fa-solid fa-user"></i><strong>Entrar como usuário</strong><span>Usuários cadastrados Pega&amp;Leva</span></button>
-      <button class="option-card" onclick="selectAccessType('empresa')"><i class="fa-solid fa-building"></i><strong>Entrar como empresa</strong><span>Empresas cadastradas Pega&amp;Leva</span></button>
+      <button class="option-card" onclick="selectAccessType('usuario')"><i class="fa-solid fa-user"></i><strong>Solicitar entrega</strong><span>Entre ou crie sua conta para pedir uma entrega.</span></button>
+      <button class="option-card" onclick="selectAccessType('empresa')"><i class="fa-solid fa-building"></i><strong>Entrar como empresa</strong><span>Entrar com código de empresa.</span></button>
     </div>
     <div id="userAccess" style="display:none">
       <div class="tabs"><button class="active" id="tabUserLogin" onclick="showUserTab('login')">Entrar</button><button id="tabUserCreate" onclick="showUserTab('create')">Criar conta</button></div>
-      <div class="login-box" id="userLoginBox" style="display:block">
-        <div class="quick-access-box" id="quickAccessUser"></div>
-        <label>E-mail</label><input id="userLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite seu e-mail">
-        <label>Código de acesso do usuário</label><input id="userLoginCode" autocomplete="current-password" placeholder="Digite seu código de acesso">
-        <label class="remember-access"><input type="checkbox" id="rememberUserAccess"> <span>Salvar meu acesso neste aparelho para entrar mais rápido nas próximas vezes.</span></label>
-        <button class="btn" onclick="loginSelected('usuario')">Entrar como usuário</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button>
-      </div>
+      <div class="login-box" id="userLoginBox" style="display:block"><label>E-mail</label><input id="userLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite seu e-mail"><label>Código de acesso do usuário</label><input id="userLoginCode" autocomplete="current-password" placeholder="Digite seu código de acesso"><button class="btn" onclick="loginSelected('usuario')">Entrar como usuário</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button></div>
       <div class="login-box" id="userCreateBox">
         <div id="userCreateFormStep">
           <label>Nome completo</label><input id="uNome" placeholder="Nome completo">
@@ -159,13 +87,7 @@
     </div>
     <div id="companyAccess" style="display:none">
       <div class="tabs"><button class="active" id="tabCompanyLogin" onclick="showCompanyTab('login')">Entrar</button><button id="tabCompanyCreate" onclick="showCompanyTab('create')">Criar conta</button></div>
-      <div class="login-box" id="companyLoginBox" style="display:block">
-        <div class="quick-access-box" id="quickAccessCompany"></div>
-        <label>E-mail cadastrado da empresa</label><input id="companyLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite o e-mail cadastrado">
-        <label>Código de acesso da empresa</label><input id="companyLoginCode" autocomplete="current-password" placeholder="Ex: EMPRESA123">
-        <label class="remember-access"><input type="checkbox" id="rememberCompanyAccess"> <span>Salvar meu acesso neste aparelho para entrar mais rápido nas próximas vezes.</span></label>
-        <button class="btn" onclick="loginSelected('empresa')">Entrar como empresa</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button>
-      </div>
+      <div class="login-box" id="companyLoginBox" style="display:block"><label>E-mail cadastrado da empresa</label><input id="companyLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite o e-mail cadastrado"><label>Código de acesso da empresa</label><input id="companyLoginCode" autocomplete="current-password" placeholder="Ex: EMPRESA123"><button class="btn" onclick="loginSelected('empresa')">Entrar como empresa</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button></div>
       <div class="login-box" id="companyCreateBox" style="display:none">
         <div id="companyCreateStep1">
           <div class="mini-title"><i class="fa-solid fa-building"></i> Etapa 1 de 3</div>
@@ -215,7 +137,7 @@
         <div class="section-kicker" style="background:rgba(255,255,255,.16);color:white"><i class="fa-solid fa-store"></i> Para empresas parceiras</div>
         <h2>Venda mais sem se preocupar com a entrega.</h2>
         <p>Empresas podem usar o Pega e Leva para solicitar entregas com prioridade, desconto nos fretes e mais organização no atendimento dos clientes.</p>
-        <button type="button" class="btn light" onclick="openCompanyRegistration()" style="width:auto;margin-top:18px;display:inline-flex"><i class="fa-solid fa-building"></i> Cadastrar meu negócio</button>
+        <a class="btn light" href="https://wa.me/5589994372011?text=Ol%C3%A1%2C%20quero%20entrar%20como%20empresa%20no%20Pega%20e%20Leva" target="_blank" style="width:auto;margin-top:18px;display:inline-flex"><i class="fa-solid fa-building"></i> Entrar como empresa</a>
       </div>
       <div class="company-list">
         <div class="company-item"><i class="fa-solid fa-percent"></i><div><strong>Desconto em fretes</strong><span>Planos podem liberar entregas com desconto para reduzir o custo operacional.</span></div></div>
@@ -478,18 +400,6 @@
   </div>
 </div>
 
-
-<div class="modal" id="newAccountWelcomeModal">
-  <div class="modal-box" style="max-width:430px;text-align:center;padding:28px 22px">
-    <div style="width:118px;height:118px;border-radius:50%;margin:0 auto 16px;overflow:hidden;border:5px solid #eef4ff;box-shadow:0 10px 28px rgba(0,68,195,.16);background:#fff">
-      <img src="https://i.ibb.co/4gpQMy4V/PEGA-E-LEVA-MKT.png" alt="Pega e Leva" style="width:100%;height:100%;object-fit:cover;display:block">
-    </div>
-    <h2 id="newAccountWelcomeTitle">Bem-vindo!</h2>
-    <p class="muted" id="newAccountWelcomeText" style="margin-top:10px;line-height:1.55">Sua conta foi criada com sucesso.</p>
-    <button type="button" class="btn green" onclick="closeNewAccountWelcomeModal()" style="margin-top:20px">Começar agora</button>
-  </div>
-</div>
-
 <div class="modal" id="legalModal"><div class="modal-box" style="max-width:560px;text-align:left"><h2 id="legalTitle">Termos</h2><p class="muted" id="legalText"></p><button class="btn" onclick="closeLegalModal()">Entendi</button></div></div>
 
 <div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()">Enviar</button></div><button class="btn gray" onclick="closeChatModal()">Fechar</button></div></div>
@@ -504,7 +414,7 @@
   </div>
 </div>
 
-<script src="script.js?v=acesso-rapido-atendimento"></script>
+<script src="script.js?v=aviso-demora"></script>
 
 </body>
 </html>
