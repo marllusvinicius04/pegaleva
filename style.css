@@ -1090,3 +1090,304 @@ body:not(:has(#accessScreen.active)) .support-chat{
     width:calc(100% - 24px)!important;
   }
 }
+
+/* ============================================================
+   AJUSTES SOLICITADOS — VOLTAR VAZADO E SEÇÕES CLARAS
+   ============================================================ */
+
+/* 1. BOTÕES VOLTAR DOS FORMULÁRIOS */
+#accessScreen .login-card .btn.gray,
+#appScreen .btn.gray{
+  background:transparent!important;
+  color:#0044c3!important;
+  border:1.5px solid #0044c3!important;
+  box-shadow:none!important;
+  font-weight:900!important;
+  transition:.2s ease!important;
+}
+
+#accessScreen .login-card .btn.gray:hover,
+#appScreen .btn.gray:hover{
+  background:#eef4ff!important;
+  color:#0044c3!important;
+  border-color:#0044c3!important;
+  transform:translateY(-1px)!important;
+}
+
+/* Botão principal de voltar da área de acesso */
+#accessScreen .back-btn{
+  background:transparent!important;
+  color:#0044c3!important;
+  border:1.5px solid #0044c3!important;
+  box-shadow:none!important;
+}
+
+#accessScreen .back-btn:hover{
+  background:#eef4ff!important;
+}
+
+/* 2. HERO AZUL COM IMAGEM E DEGRADÊ */
+#accessScreen{
+  background:#f7f9fc!important;
+}
+
+#accessScreen .site-shell{
+  background:#f7f9fc!important;
+}
+
+#accessScreen .site-nav{
+  background:rgba(0,68,195,.96)!important;
+}
+
+#accessScreen .site-hero{
+  width:100%!important;
+  max-width:none!important;
+  min-height:calc(100vh - 76px)!important;
+  padding:clamp(42px,6vw,80px) max(18px,calc((100vw - 1180px)/2))!important;
+  background:
+    linear-gradient(90deg,rgba(0,68,195,.97) 0%,rgba(0,68,195,.92) 42%,rgba(0,68,195,.70) 67%,rgba(0,68,195,.46) 100%),
+    url("https://piadeliveryctba.com.br/wp-content/uploads/2024/09/entregador.webp") center right/cover no-repeat!important;
+  position:relative!important;
+  overflow:hidden!important;
+}
+
+#accessScreen .site-hero:before{
+  content:""!important;
+  position:absolute!important;
+  inset:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:
+    radial-gradient(circle at 18% 12%,rgba(255,255,255,.13),transparent 28%),
+    linear-gradient(180deg,rgba(0,68,195,.03),rgba(0,68,195,.16))!important;
+  z-index:0!important;
+}
+
+#accessScreen .hero-copy,
+#accessScreen .site-login{
+  position:relative!important;
+  z-index:1!important;
+}
+
+#accessScreen .hero-copy{
+  padding-left:0!important;
+}
+
+#accessScreen .hero-copy h1,
+#accessScreen .hero-copy p,
+#accessScreen .hero-badge{
+  color:white!important;
+}
+
+#accessScreen .hero-copy h1 span{
+  color:white!important;
+  text-decoration-color:#10b981!important;
+}
+
+/* Card de login sobre o hero */
+#accessScreen .site-login{
+  background:rgba(255,255,255,.96)!important;
+  border:1px solid rgba(255,255,255,.88)!important;
+  box-shadow:0 30px 80px rgba(0,24,72,.30)!important;
+}
+
+/* 3. DEMAIS SEÇÕES EM FUNDO CLARO */
+#accessScreen .section-wrap{
+  width:100%!important;
+  max-width:none!important;
+  padding:54px max(18px,calc((100vw - 1180px)/2)) 10px!important;
+  background:#f7f9fc!important;
+}
+
+#accessScreen .site-section{
+  width:100%!important;
+  max-width:1180px!important;
+  margin:0 auto 34px!important;
+  padding:48px 0!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+/* Bloco de vantagens */
+#accessScreen #vantagens{
+  background:white!important;
+  border:1px solid #e7edf5!important;
+  border-radius:28px!important;
+  padding:44px!important;
+  box-shadow:0 14px 40px rgba(15,23,42,.06)!important;
+}
+
+/* Cards claros e discretos */
+#accessScreen .benefit-card,
+#accessScreen .step-site-card,
+#accessScreen .company-item{
+  background:white!important;
+  border:1px solid #e4eaf2!important;
+  box-shadow:0 8px 24px rgba(15,23,42,.045)!important;
+}
+
+#accessScreen .benefit-card:hover,
+#accessScreen .step-site-card:hover,
+#accessScreen .company-item:hover{
+  border-color:#d5e2f5!important;
+  box-shadow:0 14px 30px rgba(15,23,42,.075)!important;
+}
+
+/* Empresas em composição clara */
+#accessScreen #empresas{
+  background:#eef4ff!important;
+  border-radius:28px!important;
+  padding:44px!important;
+}
+
+#accessScreen #empresas .company-card{
+  background:white!important;
+  color:#0f172a!important;
+  border:1px solid #dce7f7!important;
+  box-shadow:0 14px 34px rgba(0,68,195,.08)!important;
+}
+
+#accessScreen #empresas .company-card h2{
+  color:#0044c3!important;
+}
+
+#accessScreen #empresas .company-card p{
+  color:#64748b!important;
+  opacity:1!important;
+}
+
+#accessScreen #empresas .company-card .section-kicker{
+  background:#eef4ff!important;
+  color:#0044c3!important;
+  border:1px solid #dbe7ff!important;
+}
+
+#accessScreen #empresas .company-card .btn.light{
+  background:#0044c3!important;
+  color:white!important;
+}
+
+/* Região em fundo claro */
+#accessScreen #regiao{
+  background:white!important;
+  border:1px solid #e7edf5!important;
+  border-radius:28px!important;
+  padding:38px!important;
+  box-shadow:0 14px 40px rgba(15,23,42,.05)!important;
+}
+
+#accessScreen .coverage-box{
+  background:#f8fbff!important;
+  border:1px solid #e1eaf7!important;
+  box-shadow:none!important;
+}
+
+/* Como funciona */
+#accessScreen .steps-grid{
+  gap:16px!important;
+}
+
+#accessScreen .step-site-card{
+  position:relative!important;
+}
+
+#accessScreen .step-site-card b{
+  background:#0044c3!important;
+  color:white!important;
+}
+
+/* Simulador em fundo claro */
+#accessScreen .simulator-call{
+  background:#eef4ff!important;
+  color:#0f172a!important;
+  border:1px solid #dce7f7!important;
+  box-shadow:none!important;
+}
+
+#accessScreen .simulator-call h2{
+  color:#0044c3!important;
+}
+
+#accessScreen .simulator-call p{
+  color:#64748b!important;
+  opacity:1!important;
+}
+
+/* Entregador em composição clara */
+#accessScreen #entregador{
+  background:white!important;
+  border:1px solid #e7edf5!important;
+  border-radius:28px!important;
+  padding:44px!important;
+  box-shadow:0 14px 40px rgba(15,23,42,.05)!important;
+}
+
+#accessScreen #entregador .company-card{
+  background:#eef4ff!important;
+  color:#0f172a!important;
+  border:1px solid #dce7f7!important;
+  box-shadow:none!important;
+}
+
+#accessScreen #entregador .company-card h2{
+  color:#0044c3!important;
+}
+
+#accessScreen #entregador .company-card p{
+  color:#64748b!important;
+  opacity:1!important;
+}
+
+#accessScreen #entregador .company-card .section-kicker{
+  background:white!important;
+  color:#0044c3!important;
+  border:1px solid #dbe7ff!important;
+}
+
+/* Rodapé preservado */
+#accessScreen .site-footer{
+  background:#0044c3!important;
+}
+
+/* TABLET */
+@media(max-width:980px){
+  #accessScreen .site-hero{
+    background:
+      linear-gradient(180deg,rgba(0,68,195,.95) 0%,rgba(0,68,195,.90) 56%,rgba(0,68,195,.72) 100%),
+      url("https://piadeliveryctba.com.br/wp-content/uploads/2024/09/entregador.webp") center/cover no-repeat!important;
+  }
+
+  #accessScreen .site-section,
+  #accessScreen #vantagens,
+  #accessScreen #empresas,
+  #accessScreen #regiao,
+  #accessScreen #entregador{
+    padding:34px!important;
+  }
+}
+
+/* CELULAR */
+@media(max-width:600px){
+  #accessScreen .site-hero{
+    padding:30px 12px 26px!important;
+    background:
+      linear-gradient(180deg,rgba(0,68,195,.97) 0%,rgba(0,68,195,.94) 48%,rgba(0,68,195,.76) 100%),
+      url("https://piadeliveryctba.com.br/wp-content/uploads/2024/09/entregador.webp") center/cover no-repeat!important;
+  }
+
+  #accessScreen .section-wrap{
+    padding:30px 12px 4px!important;
+  }
+
+  #accessScreen .site-section,
+  #accessScreen #vantagens,
+  #accessScreen #empresas,
+  #accessScreen #regiao,
+  #accessScreen #entregador{
+    padding:22px 18px!important;
+    border-radius:22px!important;
+    margin-bottom:20px!important;
+  }
+}
