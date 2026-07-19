@@ -11,7 +11,7 @@
   <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    <link rel="stylesheet" href="style.css?v=website-responsivo-corrigido-20260719">
+    <link rel="stylesheet" href="style.css?v=chat-atendimento-corrigido-20260719">
 
 
 
@@ -504,7 +504,172 @@
   </div>
 </div>
 
-<script src="script.js?v=acesso-rapido-atendimento"></script>
+<script src="script.js?v=chat-atendimento-corrigido-20260719"></script>
+
+<script>
+/* Correção isolada do chat de atendimento */
+(function(){
+  let supportChatBusy=false;
+
+  function getSupportElements(){
+    return {
+      chat:document.getElementById("supportChat"),
+      float:document.getElementById("supportFloat"),
+      body:document.querySelector("#supportChat .support-body"),
+      answer:document.getElementById("supportAnswer")
+    };
+  }
+
+  window.openSupportChat=function(){
+    if(supportChatBusy)return;
+    supportChatBusy=true;
+
+    const {chat,float}=getSupportElements();
+    if(!chat){
+      supportChatBusy=false;
+      return;
+    }
+
+    chat.style.display="";
+    chat.classList.add("active");
+    chat.setAttribute("aria-hidden","false");
+
+    if(float){
+      float.style.display="none";
+      float.setAttribute("aria-expanded","true");
+    }
+
+    requestAnimationFrame(()=>{
+      const closeButton=chat.querySelector(".support-head button");
+      if(closeButton)closeButton.focus({preventScroll:true});
+      supportChatBusy=false;
+    });
+  };
+
+  window.closeSupportChat=function(){
+    if(supportChatBusy)return;
+    supportChatBusy=true;
+
+    const {chat,float}=getSupportElements();
+
+    if(chat){
+      chat.classList.remove("active");
+      chat.setAttribute("aria-hidden","true");
+    }
+
+    if(float){
+      float.style.display="flex";
+      float.setAttribute("aria-expanded","false");
+      requestAnimationFrame(()=>{
+        float.focus({preventScroll:true});
+        supportChatBusy=false;
+      });
+    }else{
+      supportChatBusy=false;
+    }
+  };
+
+  window.answerSupport=function(topic){
+    const answers={
+      como:{
+        text:"É simples: crie sua conta gratuita, informe o endereço de coleta e destino, confira o valor e confirme. A solicitação vai para os entregadores disponíveis e você acompanha tudo pelo painel.",
+        cta:"Criar conta e solicitar",
+        action:"user"
+      },
+      horario:{
+        text:"O atendimento regular funciona de segunda a sábado, das 08h às 22h, conforme disponibilidade da frota. Aos domingos não há atendimento regular, salvo comunicação oficial do Pega&Leva.",
+        cta:"Criar minha conta",
+        action:"user"
+      },
+      frota:{
+        text:"As entregas são realizadas por entregadores cadastrados na frota Pega&Leva. A aceitação depende da disponibilidade dos entregadores no momento da solicitação, e todo o pedido fica registrado na plataforma.",
+        cta:"Solicitar uma entrega",
+        action:"user"
+      },
+      agilidade:{
+        text:"O sistema envia sua solicitação aos entregadores disponíveis para acelerar o atendimento. O tempo pode variar conforme demanda, distância, clima e disponibilidade, mas você acompanha cada atualização pelo painel.",
+        cta:"Começar agora",
+        action:"user"
+      },
+      preco:{
+        text:"O frete é calculado automaticamente conforme cidade, bairros de coleta e destino, rota de retorno e regras ativas. Você pode simular o valor antes de criar a conta ou confirmar a entrega.",
+        cta:"Simular meu frete",
+        action:"sim"
+      },
+      empresa:{
+        text:"Empresas têm um painel próprio para organizar pedidos e entregas, acompanhar valores e solicitar serviços diretamente pela plataforma.",
+        cta:"Cadastrar meu negócio",
+        action:"company"
+      },
+      seguranca:{
+        text:"Após solicitar, você acompanha status, entregador e histórico diretamente no painel. As informações da coleta e do destino ficam registradas no sistema para facilitar o acompanhamento.",
+        cta:"Criar conta gratuita",
+        action:"user"
+      }
+    };
+
+    const selected=answers[topic]||answers.como;
+    const {answer,body}=getSupportElements();
+    if(!answer)return;
+
+    answer.innerHTML=
+      '<div class="support-answer">'+selected.text+
+      '<div class="support-cta">'+
+      '<button type="button" class="btn green" onclick="supportCta(\''+selected.action+'\')">'+selected.cta+'</button>'+
+      '<button type="button" class="btn light" onclick="closeSupportChat()">Continuar navegando</button>'+
+      '</div></div>';
+
+    /* Não usa scrollIntoView no elemento fixo, pois isso travava alguns celulares. */
+    requestAnimationFrame(()=>{
+      if(body)body.scrollTop=body.scrollHeight;
+    });
+  };
+
+  window.supportCta=function(action){
+    window.closeSupportChat();
+
+    setTimeout(()=>{
+      if(action==="company" && typeof window.openCompanyRegistration==="function"){
+        window.openCompanyRegistration();
+        return;
+      }
+
+      if(action==="sim" && typeof window.openSimuladorFrete==="function"){
+        window.openSimuladorFrete();
+        return;
+      }
+
+      const login=document.getElementById("loginArea");
+      if(login)login.scrollIntoView({block:"center"});
+
+      if(typeof window.selectAccessType==="function"){
+        window.selectAccessType("usuario");
+      }
+      if(typeof window.showUserTab==="function"){
+        window.showUserTab("create");
+      }
+    },80);
+  };
+
+  document.addEventListener("DOMContentLoaded",function(){
+    const {chat,float}=getSupportElements();
+
+    if(chat){
+      chat.setAttribute("aria-hidden","true");
+    }
+
+    if(float){
+      float.setAttribute("aria-expanded","false");
+    }
+
+    document.addEventListener("keydown",function(event){
+      if(event.key==="Escape" && chat && chat.classList.contains("active")){
+        window.closeSupportChat();
+      }
+    });
+  });
+})();
+</script>
 
 </body>
 </html>
