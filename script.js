@@ -1,4 +1,72 @@
 
+const QUICK_ACCESS_KEY="pegaleva_quick_access";
+
+function getQuickAccessData(){
+  try{return JSON.parse(localStorage.getItem(QUICK_ACCESS_KEY)||"{}")||{}}catch(e){return {}}
+}
+function saveQuickAccess(type,email,codigo){
+  const all=getQuickAccessData();
+  all[type]={email:String(email||"").trim().toLowerCase(),codigo:String(codigo||"").trim()};
+  localStorage.setItem(QUICK_ACCESS_KEY,JSON.stringify(all));
+  renderQuickAccess();
+}
+function removeQuickAccess(type){
+  const all=getQuickAccessData();
+  delete all[type];
+  localStorage.setItem(QUICK_ACCESS_KEY,JSON.stringify(all));
+  renderQuickAccess();
+}
+function renderQuickAccess(){
+  const all=getQuickAccessData();
+  [["usuario","quickAccessUser"],["empresa","quickAccessCompany"]].forEach(([type,id])=>{
+    const box=document.getElementById(id),item=all[type];
+    if(!box)return;
+    if(!item||!item.email||!item.codigo){box.classList.remove("active");box.innerHTML="";return}
+    const label=type==="empresa"?"empresa":"usuário";
+    box.innerHTML=`<strong><i class="fa-solid fa-bolt"></i> Acesso rápido</strong><span>${item.email}</span><div class="quick-access-actions"><button type="button" class="btn green" onclick="quickLogin('${type}')">Entrar rapidamente</button><button type="button" class="btn gray" onclick="removeQuickAccess('${type}')" title="Remover acesso salvo"><i class="fa-solid fa-trash"></i></button></div>`;
+    box.classList.add("active");
+  });
+}
+async function quickLogin(type){
+  const item=getQuickAccessData()[type];
+  if(!item)return;
+  await loginByCode(item.codigo,type,item.email,false);
+}
+function openSupportChat(){
+  document.getElementById("supportChat")?.classList.add("active");
+  const float=document.getElementById("supportFloat");if(float)float.style.display="none";
+}
+function closeSupportChat(){
+  document.getElementById("supportChat")?.classList.remove("active");
+  const float=document.getElementById("supportFloat");if(float)float.style.display="flex";
+}
+function answerSupport(topic){
+  const answers={
+    como:{text:"É simples: crie sua conta gratuita, informe o endereço de coleta e destino, confira o valor e confirme. A solicitação vai para os entregadores disponíveis e você acompanha tudo pelo painel.",cta:"Criar conta e solicitar",action:"user"},
+    horario:{text:"O atendimento regular funciona de segunda a sábado, das 08h às 22h, conforme disponibilidade da frota. Aos domingos não há atendimento regular, salvo comunicação oficial do Pega&Leva.",cta:"Criar minha conta",action:"user"},
+    frota:{text:"As entregas são realizadas por entregadores cadastrados na frota Pega&Leva. A aceitação depende da disponibilidade dos entregadores no momento da solicitação, e todo o pedido fica registrado na plataforma.",cta:"Solicitar uma entrega",action:"user"},
+    agilidade:{text:"O sistema envia sua solicitação aos entregadores disponíveis para acelerar o atendimento. O tempo pode variar conforme demanda, distância, clima e disponibilidade, mas você acompanha cada atualização pelo painel.",cta:"Começar agora",action:"user"},
+    preco:{text:"O frete é calculado automaticamente conforme cidade, bairros de coleta e destino, rota de retorno e regras ativas. Você pode simular o valor antes de criar a conta ou confirmar a entrega.",cta:"Simular meu frete",action:"sim"},
+    empresa:{text:"Empresas ganham um painel próprio para organizar pedidos e entregas. As 100 primeiras empresas cadastradas não pagam mensalidade, uma oportunidade para começar sem custo mensal e testar o serviço no dia a dia.",cta:"Cadastrar meu negócio",action:"company"},
+    seguranca:{text:"Após solicitar, você acompanha status, entregador e histórico diretamente no painel. As informações da coleta e do destino ficam registradas no sistema para facilitar o acompanhamento.",cta:"Criar conta gratuita",action:"user"}
+  };
+  const a=answers[topic]||answers.como;
+  const box=document.getElementById("supportAnswer");
+  if(!box)return;
+  box.innerHTML=`<div class="support-answer">${a.text}<div class="support-cta"><button type="button" class="btn green" onclick="supportCta('${a.action}')">${a.cta}</button><button type="button" class="btn light" onclick="closeSupportChat()">Continuar navegando</button></div></div>`;
+  box.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function supportCta(action){
+  closeSupportChat();
+  if(action==="company"){openCompanyRegistration();return}
+  if(action==="sim"){openSimuladorFrete();return}
+  document.getElementById("loginArea")?.scrollIntoView({behavior:"smooth",block:"center"});
+  selectAccessType("usuario");
+  showUserTab("create");
+}
+document.addEventListener("DOMContentLoaded",renderQuickAccess);
+
+
 function openLegalModal(type){
   const title=document.getElementById("legalTitle"),text=document.getElementById("legalText");
   if(type==="privacidade"){
@@ -165,15 +233,15 @@ function showCompanyTab(tab){document.getElementById("tabCompanyLogin").classLis
 function resetCompanyCreateSteps(){showCompanyCreateStep(1)}
 function getCompanyCreateData(){return {responsavel:(document.getElementById("cNomeEmpresa")?.value||"").trim(),cpfCnpj:onlyDigits(document.getElementById("cCpfCnpj")?.value||""),email:(document.getElementById("cEmail")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("cWhatsapp")?.value||""),cidade:(document.getElementById("cCidade")?.value||"").trim(),rua:(document.getElementById("cRua")?.value||"").trim(),numero:(document.getElementById("cNumero")?.value||"").trim(),referencia:(document.getElementById("cReferencia")?.value||"").trim(),codigo:(document.getElementById("newCompanyCode")?.value||"").trim()}}
 function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail válido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informações de endereço para continuar.");return}[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
-async function createCompanyAccount(){const data=getCompanyCreateData();if(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp||!data.cidade||!data.rua||!data.numero||!data.referencia||!data.codigo){alert("Preencha todos os dados da empresa.");return}showLoader("Cadastrando empresa...");const res=await api("adminRegisterCompany",data);hideLoader();if(!res.ok){alert(res.error||"Não foi possível cadastrar a empresa.");return}await loginByCode(data.codigo,"empresa",data.email,true)}
+async function createCompanyAccount(){const data=getCompanyCreateData();if(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp||!data.cidade||!data.rua||!data.numero||!data.referencia||!data.codigo){alert("Preencha todos os dados da empresa.");return}showLoader("Cadastrando empresa...");const res=await api("adminRegisterCompany",data);hideLoader();if(!res.ok){alert(res.error||"Não foi possível cadastrar a empresa.");return}const ok=await loginByCode(data.codigo,"empresa",data.email,true);if(ok)saveQuickAccess("empresa",data.email,data.codigo)}
 let codeTimer;function checkCodeLive(inputId,msgId){clearTimeout(codeTimer);codeTimer=setTimeout(async()=>{const codigo=document.getElementById(inputId).value.trim();if(!codigo){document.getElementById(msgId).innerText="";return}const res=await api("checkCode",{codigo});document.getElementById(msgId).innerText=res.message||"";document.getElementById(msgId).style.color=res.available?"#047857":"#ef4444"},350)}
 let pendingUserRegisterData=null;
 function resetUserCreateSteps(){const form=document.getElementById("userCreateFormStep"),terms=document.getElementById("userTermsStep");pendingUserRegisterData=null;if(form)form.style.display="block";if(terms)terms.style.display="none"}
 function getUserCreateData(){return {nome:(document.getElementById("uNome")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("uWhatsapp")?.value||""),email:(document.getElementById("uEmail")?.value||"").trim(),cpf:onlyDigits(document.getElementById("uCpf")?.value||""),codigo:(document.getElementById("newUserCode")?.value||"").trim()}}
 function showUserTermsStep(){const data=getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuário para continuar.");return}pendingUserRegisterData=data;document.getElementById("userCreateFormStep").style.display="none";document.getElementById("userTermsStep").style.display="block"}
-async function createUserAccount(){const data=pendingUserRegisterData||getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuário para continuar.");return}showLoader("Criando conta de usuário...");const res=await api("registerUser",data);hideLoader();if(!res.ok){alert("Código de acesso inválido. Escolha outro código.");return}await loginByCode(data.codigo,"usuario",data.email,true)}
-async function loginSelected(type){const codigo=type==="empresa"?document.getElementById("companyLoginCode").value.trim():document.getElementById("userLoginCode").value.trim();const email=type==="empresa"?(document.getElementById("companyLoginEmail")?.value||"").trim().toLowerCase():(document.getElementById("userLoginEmail")?.value||"").trim().toLowerCase();if(!email)return alert("Digite seu e-mail.");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return alert("Digite um e-mail válido.");if(!codigo)return alert("Digite seu código de acesso.");await loginByCode(codigo,type,email)}
-async function loginByCode(codigo,expectedType,email="",isNewAccount=false){session=null;localStorage.removeItem("pegaleva_client");showLoader("Carregando seu painel...");const res=await api("loginClient",{codigo,email,expectedType});hideLoader();if(!res.ok){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return}if(res.type!==expectedType){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return}const perfilEmail=String(res.profile?.Email||"").trim().toLowerCase();if(perfilEmail!==String(email||"").trim().toLowerCase()){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return}session=res;localStorage.setItem("pegaleva_client",JSON.stringify(session));openPanel();if(isNewAccount)setTimeout(showNewAccountWelcomeModal,180)}
+async function createUserAccount(){const data=pendingUserRegisterData||getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuário para continuar.");return}showLoader("Criando conta de usuário...");const res=await api("registerUser",data);hideLoader();if(!res.ok){alert("Código de acesso inválido. Escolha outro código.");return}const ok=await loginByCode(data.codigo,"usuario",data.email,true);if(ok)saveQuickAccess("usuario",data.email,data.codigo)}
+async function loginSelected(type){const codigo=type==="empresa"?document.getElementById("companyLoginCode").value.trim():document.getElementById("userLoginCode").value.trim();const email=type==="empresa"?(document.getElementById("companyLoginEmail")?.value||"").trim().toLowerCase():(document.getElementById("userLoginEmail")?.value||"").trim().toLowerCase();if(!email)return alert("Digite seu e-mail.");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return alert("Digite um e-mail válido.");if(!codigo)return alert("Digite seu código de acesso.");const remember=type==="empresa"?document.getElementById("rememberCompanyAccess")?.checked:document.getElementById("rememberUserAccess")?.checked;const ok=await loginByCode(codigo,type,email);if(ok&&remember)saveQuickAccess(type,email,codigo)}
+async function loginByCode(codigo,expectedType,email="",isNewAccount=false){session=null;localStorage.removeItem("pegaleva_client");showLoader("Carregando seu painel...");const res=await api("loginClient",{codigo,email,expectedType});hideLoader();if(!res.ok){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}if(res.type!==expectedType){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}const perfilEmail=String(res.profile?.Email||"").trim().toLowerCase();if(perfilEmail!==String(email||"").trim().toLowerCase()){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}session=res;localStorage.setItem("pegaleva_client",JSON.stringify(session));openPanel();if(isNewAccount)setTimeout(showNewAccountWelcomeModal,180);return true}
 function showNewAccountWelcomeModal(){if(!session)return;const p=session.profile||{};const fullName=String(session.type==="empresa"?(p.Responsavel||""):(p.Nome||"")).trim();const firstName=fullName.split(/\s+/)[0]||"";const feminine=session.type==="empresa"||/[aáàâã]$/i.test(firstName);const title=document.getElementById("newAccountWelcomeTitle"),text=document.getElementById("newAccountWelcomeText"),modal=document.getElementById("newAccountWelcomeModal");if(title)title.innerText=(feminine?"Bem-vinda, ":"Bem-vindo, ")+(firstName||"ao Pega&Leva")+"!";if(text)text.innerText=session.type==="empresa"?"Seu negócio foi cadastrado com sucesso no Pega&Leva. Agora você já pode acessar o painel e começar a solicitar suas entregas.":"Sua conta foi criada com sucesso no Pega&Leva. Agora você já pode acessar o painel e solicitar sua primeira entrega.";if(modal)modal.classList.add("active")}
 function closeNewAccountWelcomeModal(){document.getElementById("newAccountWelcomeModal")?.classList.remove("active")}
 function openPanel(){setTimeout(updateBairroOptions,0);document.querySelector(".history-chat-btn").style.display="grid";document.getElementById("accessScreen").classList.remove("active");document.getElementById("appScreen").classList.add("active");
