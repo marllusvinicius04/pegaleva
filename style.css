@@ -551,3 +551,72 @@ html,body{
     padding:18px 14px!important;
   }
 }
+
+/* ============================================================
+   CORREÇÃO DO CHAT DE ATENDIMENTO
+   ============================================================ */
+.support-float{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+  user-select:none!important;
+}
+
+.support-chat{
+  contain:layout paint!important;
+  overscroll-behavior:contain!important;
+  transform:translateZ(0)!important;
+  -webkit-transform:translateZ(0)!important;
+  will-change:auto!important;
+}
+
+.support-chat:not(.active){
+  display:none!important;
+  pointer-events:none!important;
+}
+
+.support-chat.active{
+  display:flex!important;
+  flex-direction:column!important;
+  pointer-events:auto!important;
+}
+
+.support-head{
+  flex:0 0 auto!important;
+}
+
+.support-body{
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  scroll-behavior:auto!important;
+}
+
+.support-options button,
+.support-head button,
+.support-cta button{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+
+body:not(:has(#accessScreen.active)) .support-float,
+body:not(:has(#accessScreen.active)) .support-chat{
+  display:none!important;
+}
+
+@media(max-width:600px){
+  .support-chat{
+    position:fixed!important;
+    inset:7px!important;
+    width:auto!important;
+    height:auto!important;
+    max-width:none!important;
+    max-height:none!important;
+    border-radius:20px!important;
+  }
+
+  .support-body{
+    flex:1 1 auto!important;
+  }
+}
