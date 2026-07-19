@@ -59,8 +59,8 @@
     <h1 id="accessTitle">Olá, bem-vindo</h1><p id="accessSubtitle">Escolha uma opção para </p>
     <button class="back-btn" id="backBtn" onclick="backToOptions()"><i class="fa-solid fa-arrow-left"></i> Voltar para opções</button>
     <div class="access-options" id="accessOptions">
-      <button class="option-card" onclick="selectAccessType('usuario')"><i class="fa-solid fa-user"></i><strong>Solicitar entrega</strong><span>Entre ou crie sua conta para pedir uma entrega.</span></button>
-      <button class="option-card" onclick="selectAccessType('empresa')"><i class="fa-solid fa-building"></i><strong>Entrar como empresa</strong><span>Entrar com código de empresa.</span></button>
+      <button class="option-card" onclick="selectAccessType('usuario')"><i class="fa-solid fa-user"></i><strong>Entrar como usuário</strong><span>Usuários cadastrados Pega&amp;Leva</span></button>
+      <button class="option-card" onclick="selectAccessType('empresa')"><i class="fa-solid fa-building"></i><strong>Entrar como empresa</strong><span>Empresas cadastradas Pega&amp;Leva</span></button>
     </div>
     <div id="userAccess" style="display:none">
       <div class="tabs"><button class="active" id="tabUserLogin" onclick="showUserTab('login')">Entrar</button><button id="tabUserCreate" onclick="showUserTab('create')">Criar conta</button></div>
@@ -137,7 +137,7 @@
         <div class="section-kicker" style="background:rgba(255,255,255,.16);color:white"><i class="fa-solid fa-store"></i> Para empresas parceiras</div>
         <h2>Venda mais sem se preocupar com a entrega.</h2>
         <p>Empresas podem usar o Pega e Leva para solicitar entregas com prioridade, desconto nos fretes e mais organização no atendimento dos clientes.</p>
-        <a class="btn light" href="https://wa.me/5589994372011?text=Ol%C3%A1%2C%20quero%20entrar%20como%20empresa%20no%20Pega%20e%20Leva" target="_blank" style="width:auto;margin-top:18px;display:inline-flex"><i class="fa-solid fa-building"></i> Entrar como empresa</a>
+        <button type="button" class="btn light" onclick="openCompanyRegistration()" style="width:auto;margin-top:18px;display:inline-flex"><i class="fa-solid fa-building"></i> Cadastrar meu negócio</button>
       </div>
       <div class="company-list">
         <div class="company-item"><i class="fa-solid fa-percent"></i><div><strong>Desconto em fretes</strong><span>Planos podem liberar entregas com desconto para reduzir o custo operacional.</span></div></div>
@@ -397,6 +397,18 @@
   </div>
 </section>
 
+  </div>
+</div>
+
+
+<div class="modal" id="newAccountWelcomeModal">
+  <div class="modal-box" style="max-width:430px;text-align:center;padding:28px 22px">
+    <div style="width:118px;height:118px;border-radius:50%;margin:0 auto 16px;overflow:hidden;border:5px solid #eef4ff;box-shadow:0 10px 28px rgba(0,68,195,.16);background:#fff">
+      <img src="https://i.ibb.co/4gpQMy4V/PEGA-E-LEVA-MKT.png" alt="Pega e Leva" style="width:100%;height:100%;object-fit:cover;display:block">
+    </div>
+    <h2 id="newAccountWelcomeTitle">Bem-vindo!</h2>
+    <p class="muted" id="newAccountWelcomeText" style="margin-top:10px;line-height:1.55">Sua conta foi criada com sucesso.</p>
+    <button type="button" class="btn green" onclick="closeNewAccountWelcomeModal()" style="margin-top:20px">Começar agora</button>
   </div>
 </div>
 
