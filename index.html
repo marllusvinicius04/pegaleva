@@ -68,7 +68,7 @@
       <div class="login-box" id="userCreateBox">
         <div id="userCreateFormStep">
           <label>Nome completo</label><input id="uNome" placeholder="Nome completo">
-          <label>DDD + WhatsApp</label><input id="uWhatsapp" placeholder="DDD + WhatsApp">
+          <label><i class="fa-brands fa-whatsapp"></i> DDD + WhatsApp</label><input id="uWhatsapp" inputmode="tel" placeholder="DDD + WhatsApp">
           <label>E-mail</label><input id="uEmail" placeholder="E-mail">
           <label>CPF</label><input id="uCpf" placeholder="CPF">
           <label>Criar código de acesso</label><input id="newUserCode" placeholder="Criar código de acesso" oninput="checkCodeLive('newUserCode','userCodeMsg')">
@@ -85,7 +85,36 @@
         </div>
       </div>
     </div>
-    <div id="companyAccess" style="display:none"><div class="login-box" style="display:block"><label>E-mail cadastrado da empresa</label><input id="companyLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite o e-mail cadastrado"><label>Código de acesso da empresa</label><input id="companyLoginCode" autocomplete="current-password" placeholder="Ex: EMPRESA123"><button class="btn" onclick="loginSelected('empresa')">Entrar como empresa</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button></div></div>
+    <div id="companyAccess" style="display:none">
+      <div class="tabs"><button class="active" id="tabCompanyLogin" onclick="showCompanyTab('login')">Entrar</button><button id="tabCompanyCreate" onclick="showCompanyTab('create')">Criar conta</button></div>
+      <div class="login-box" id="companyLoginBox" style="display:block"><label>E-mail cadastrado da empresa</label><input id="companyLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite o e-mail cadastrado"><label>Código de acesso da empresa</label><input id="companyLoginCode" autocomplete="current-password" placeholder="Ex: EMPRESA123"><button class="btn" onclick="loginSelected('empresa')">Entrar como empresa</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button></div>
+      <div class="login-box" id="companyCreateBox" style="display:none">
+        <div id="companyCreateStep1">
+          <div class="mini-title"><i class="fa-solid fa-building"></i> Etapa 1 de 3</div>
+          <label>Nome da empresa</label><input id="cNomeEmpresa" placeholder="Nome da empresa">
+          <label>CPF/CNPJ</label><input id="cCpfCnpj" inputmode="numeric" placeholder="CPF ou CNPJ">
+          <label>E-mail</label><input id="cEmail" type="email" inputmode="email" autocomplete="email" placeholder="E-mail da empresa">
+          <label><i class="fa-brands fa-whatsapp"></i> DDD + WhatsApp</label><input id="cWhatsapp" inputmode="tel" placeholder="DDD + WhatsApp">
+          <button type="button" class="btn green" onclick="showCompanyCreateStep(2)">Próximo</button>
+        </div>
+        <div id="companyCreateStep2" style="display:none">
+          <div class="mini-title"><i class="fa-solid fa-location-dot"></i> Etapa 2 de 3</div>
+          <label>Selecionar a cidade</label><select id="cCidade"><option value="">Selecione</option><option value="Uruçuí">Uruçuí</option><option value="Benedito Leite">Benedito Leite</option></select>
+          <label>Rua</label><input id="cRua" placeholder="Rua">
+          <label>Número</label><input id="cNumero" placeholder="Número">
+          <label>Referência</label><input id="cReferencia" placeholder="Ponto de referência">
+          <button type="button" class="btn gray" onclick="showCompanyCreateStep(1)">Voltar</button>
+          <button type="button" class="btn green" onclick="showCompanyCreateStep(3)">Próximo</button>
+        </div>
+        <div id="companyCreateStep3" style="display:none">
+          <div class="mini-title"><i class="fa-solid fa-key"></i> Etapa 3 de 3</div>
+          <label>Criar código de acesso</label><input id="newCompanyCode" placeholder="Criar código de acesso" oninput="checkCodeLive('newCompanyCode','companyCodeMsg')">
+          <div class="mini-error" id="companyCodeMsg"></div>
+          <button type="button" class="btn gray" onclick="showCompanyCreateStep(2)">Voltar</button>
+          <button type="button" class="btn green" onclick="createCompanyAccount()">Cadastrar empresa</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
