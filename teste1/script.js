@@ -329,11 +329,68 @@ function playSuccessNotification(){
     setTimeout(()=>ctx.close&&ctx.close(),1200);
   }catch(e){}
 }
-function selectAccessType(type){document.getElementById("accessOptions").style.display="none";document.getElementById("backBtn").style.display="block";if(type==="usuario"){document.getElementById("accessTitle").innerText="Acesso do usuário";document.getElementById("accessSubtitle").innerText="Entre ou crie sua conta para solicitar uma entrega.";document.getElementById("userAccess").style.display="block";document.getElementById("companyAccess").style.display="none";showUserTab("login")}else{document.getElementById("accessTitle").innerText="Acesso da empresa";document.getElementById("accessSubtitle").innerText="Entre ou cadastre sua empresa.";document.getElementById("userAccess").style.display="none";document.getElementById("companyAccess").style.display="block";showCompanyTab("login")}}
-function backToOptions(){document.getElementById("accessTitle").innerText="Olá, bem-vindo";document.getElementById("accessSubtitle").innerText="Escolha uma opção para iniciar";document.getElementById("accessOptions").style.display="grid";document.getElementById("backBtn").style.display="none";document.getElementById("userAccess").style.display="none";document.getElementById("companyAccess").style.display="none"}
+function selectAccessType(type){
+  const accessOptions=document.getElementById("accessOptions");
+  const backBtn=document.getElementById("backBtn");
+  const accessTitle=document.getElementById("accessTitle");
+  const accessSubtitle=document.getElementById("accessSubtitle");
+  const userAccess=document.getElementById("userAccess");
+  const companyAccess=document.getElementById("companyAccess");
+
+  if(accessOptions)accessOptions.style.display="none";
+  if(backBtn)backBtn.style.display="block";
+
+  if(type==="usuario"){
+    if(accessTitle)accessTitle.innerText="Acesso do usuário";
+    if(accessSubtitle)accessSubtitle.innerText="Entre ou crie sua conta para solicitar uma entrega.";
+    if(userAccess)userAccess.style.display="block";
+    if(companyAccess)companyAccess.style.display="none";
+    showUserTab("login");
+  }else{
+    if(accessTitle)accessTitle.innerText="Acesso da empresa";
+    if(accessSubtitle)accessSubtitle.innerText="Entre ou cadastre sua empresa.";
+    if(userAccess)userAccess.style.display="none";
+    if(companyAccess)companyAccess.style.display="block";
+    showCompanyTab("login");
+  }
+}
+function backToOptions(){
+  const accessTitle=document.getElementById("accessTitle");
+  const accessSubtitle=document.getElementById("accessSubtitle");
+  const accessOptions=document.getElementById("accessOptions");
+  const backBtn=document.getElementById("backBtn");
+  const userAccess=document.getElementById("userAccess");
+  const companyAccess=document.getElementById("companyAccess");
+  if(accessTitle)accessTitle.innerText="Olá, bem-vindo";
+  if(accessSubtitle)accessSubtitle.innerText="Escolha uma opção para iniciar";
+  if(accessOptions)accessOptions.style.display="grid";
+  if(backBtn)backBtn.style.display="none";
+  if(userAccess)userAccess.style.display="none";
+  if(companyAccess)companyAccess.style.display="none";
+}
 function openCompanyRegistration(){document.getElementById("loginArea")?.scrollIntoView({behavior:"smooth",block:"center"});selectAccessType("empresa");showCompanyTab("create")}
-function showUserTab(tab){document.getElementById("tabUserLogin").classList.toggle("active",tab==="login");document.getElementById("tabUserCreate").classList.toggle("active",tab==="create");document.getElementById("userLoginBox").style.display=tab==="login"?"block":"none";document.getElementById("userCreateBox").style.display=tab==="create"?"block":"none";if(tab==="create")resetUserCreateSteps()}
-function showCompanyTab(tab){document.getElementById("tabCompanyLogin").classList.toggle("active",tab==="login");document.getElementById("tabCompanyCreate").classList.toggle("active",tab==="create");document.getElementById("companyLoginBox").style.display=tab==="login"?"block":"none";document.getElementById("companyCreateBox").style.display=tab==="create"?"block":"none";if(tab==="create")resetCompanyCreateSteps()}
+function showUserTab(tab){
+  const tabLogin=document.getElementById("tabUserLogin");
+  const tabCreate=document.getElementById("tabUserCreate");
+  const loginBox=document.getElementById("userLoginBox");
+  const createBox=document.getElementById("userCreateBox");
+  if(tabLogin)tabLogin.classList.toggle("active",tab==="login");
+  if(tabCreate)tabCreate.classList.toggle("active",tab==="create");
+  if(loginBox)loginBox.style.display=tab==="login"?"block":"none";
+  if(createBox)createBox.style.display=tab==="create"?"block":"none";
+  if(tab==="create")resetUserCreateSteps();
+}
+function showCompanyTab(tab){
+  const tabLogin=document.getElementById("tabCompanyLogin");
+  const tabCreate=document.getElementById("tabCompanyCreate");
+  const loginBox=document.getElementById("companyLoginBox");
+  const createBox=document.getElementById("companyCreateBox");
+  if(tabLogin)tabLogin.classList.toggle("active",tab==="login");
+  if(tabCreate)tabCreate.classList.toggle("active",tab==="create");
+  if(loginBox)loginBox.style.display=tab==="login"?"block":"none";
+  if(createBox)createBox.style.display=tab==="create"?"block":"none";
+  if(tab==="create")resetCompanyCreateSteps();
+}
 function resetCompanyCreateSteps(){showCompanyCreateStep(1)}
 function getCompanyCreateData(){return {responsavel:(document.getElementById("cNomeEmpresa")?.value||"").trim(),cpfCnpj:onlyDigits(document.getElementById("cCpfCnpj")?.value||""),email:(document.getElementById("cEmail")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("cWhatsapp")?.value||""),cidade:(document.getElementById("cCidade")?.value||"").trim(),rua:(document.getElementById("cRua")?.value||"").trim(),numero:(document.getElementById("cNumero")?.value||"").trim(),referencia:(document.getElementById("cReferencia")?.value||"").trim(),codigo:(document.getElementById("newCompanyCode")?.value||"").trim()}}
 function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail válido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informações de endereço para continuar.");return}[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
@@ -1292,3 +1349,25 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },200);
 })();
+
+
+document.addEventListener("DOMContentLoaded",function(){
+  const userButton=document.querySelector('[onclick="selectAccessType(\'usuario\')"]');
+  const companyButton=document.querySelector('[onclick="selectAccessType(\'empresa\')"]');
+
+  if(userButton&&!userButton.dataset.accessBound){
+    userButton.dataset.accessBound="1";
+    userButton.addEventListener("click",function(event){
+      event.preventDefault();
+      selectAccessType("usuario");
+    });
+  }
+
+  if(companyButton&&!companyButton.dataset.accessBound){
+    companyButton.dataset.accessBound="1";
+    companyButton.addEventListener("click",function(event){
+      event.preventDefault();
+      selectAccessType("empresa");
+    });
+  }
+});
