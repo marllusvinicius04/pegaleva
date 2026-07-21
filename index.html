@@ -496,6 +496,15 @@
 
 <div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()">Enviar</button></div><button class="btn gray" onclick="closeChatModal()">Fechar</button></div></div>
 <div class="modal" id="forgotModal"><div class="modal-box"><h2>Esqueci meu código</h2><p class="muted">Digite seu e-mail de cadastro para recuperar o código.</p><label style="text-align:left">E-mail</label><input id="forgotEmail" placeholder="email@email.com"><button class="btn green" onclick="recoverCode()">Verificar código</button><button class="btn gray" onclick="closeForgotModal()">Fechar</button><p class="muted" id="forgotResult" style="margin-top:12px;font-weight:900"></p></div></div>
+<div class="modal" id="systemRecoveryModal">
+  <div class="modal-box" style="max-width:430px;text-align:center;padding:28px 22px">
+    <i class="fa-solid fa-rotate" style="font-size:42px;color:#0044c3;margin-bottom:12px"></i>
+    <h2>O sistema está um pouco lento</h2>
+    <p class="muted" style="margin-top:10px;line-height:1.55">Para melhorar sua experiência, vamos atualizar a página. Seus dados preenchidos e sua solicitação em andamento serão preservados.</p>
+    <button type="button" class="btn green" onclick="safeReloadPage()" style="margin-top:20px"><i class="fa-solid fa-rotate"></i> OK, atualizar</button>
+  </div>
+</div>
+
 <div class="modal" id="statusModal"><div class="modal-box"><i id="statusIcon" class="fa-solid fa-circle-check"></i><h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p><button class="btn green" onclick="closeStatusModal()">OK</button></div></div>
 
 <div class="modal" id="clientPaymentModal">
