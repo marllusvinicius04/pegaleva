@@ -1,6 +1,111 @@
 
 const QUICK_ACCESS_KEY="pegaleva_quick_access";
 
+const DELIVERY_RECOVERY_KEY="pegaleva_delivery_recovery_v1";
+const DELIVERY_RECOVERY_FIELDS=[
+  "coletaRua","coletaNumero","coletaReferencia","coletaCidade",
+  "destinoRua","destinoNumero","destinoReferencia","destinoCidade",
+  "bairroColeta","bairroDestino","nomeDestino","whatsappDestino",
+  "conteudo","volumes","rotaRetorno","ofertaEntrega","pagamento",
+  "observacaoPagamento","cupom"
+];
+let recoverySaveTimer=null;
+let recoveryNoticeOpen=false;
+let lastRecoveryNoticeAt=0;
+
+function getDeliveryRecoveryData(){
+  try{return JSON.parse(localStorage.getItem(DELIVERY_RECOVERY_KEY)||"null")}catch(e){return null}
+}
+function saveDeliveryProgress(){
+  if(!session)return;
+  const values={};
+  DELIVERY_RECOVERY_FIELDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)values[id]=el.value;
+  });
+  localStorage.setItem(DELIVERY_RECOVERY_KEY,JSON.stringify({
+    values,
+    currentStep:Number(currentStep||0),
+    currentSearchingId:String(currentSearchingId||""),
+    savedAt:Date.now()
+  }));
+}
+function scheduleDeliveryProgressSave(){
+  clearTimeout(recoverySaveTimer);
+  recoverySaveTimer=setTimeout(saveDeliveryProgress,180);
+}
+function clearDeliveryProgress(){
+  localStorage.removeItem(DELIVERY_RECOVERY_KEY);
+}
+function restoreDeliveryProgress(){
+  if(!session)return;
+  const saved=getDeliveryRecoveryData();
+  if(!saved||!saved.values)return;
+  const values=saved.values;
+  ["coletaCidade","destinoCidade"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&values[id]!=null)el.value=values[id];
+  });
+  updateBairroOptions();
+  DELIVERY_RECOVERY_FIELDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&values[id]!=null)el.value=values[id];
+  });
+  if(saved.currentSearchingId)currentSearchingId=String(saved.currentSearchingId);
+  if(Number.isFinite(Number(saved.currentStep)))setStep(Number(saved.currentStep));
+  if(document.getElementById("pagamento"))toggleCashObs();
+  if(currentSearchingId){
+    showLoader("Atualizando sua solicitação...",true);
+    refreshBusy=false;
+    refreshPanel().finally(()=>hideLoader());
+  }
+}
+function showSystemDelayNotice(){
+  const now=Date.now();
+  if(recoveryNoticeOpen||now-lastRecoveryNoticeAt<15000)return;
+  recoveryNoticeOpen=true;
+  lastRecoveryNoticeAt=now;
+  saveDeliveryProgress();
+  hideLoader();
+  const modal=document.getElementById("systemRecoveryModal");
+  if(modal)modal.classList.add("active");
+  else if(confirm("O sistema está um pouco lento. Atualizar a página sem perder seus dados?"))safeReloadPage();
+}
+function safeReloadPage(){
+  saveDeliveryProgress();
+  location.reload();
+}
+function installDeliveryRecovery(){
+  document.addEventListener("input",e=>{
+    if(e.target&&DELIVERY_RECOVERY_FIELDS.includes(e.target.id))scheduleDeliveryProgressSave();
+  },true);
+  document.addEventListener("change",e=>{
+    if(e.target&&DELIVERY_RECOVERY_FIELDS.includes(e.target.id))scheduleDeliveryProgressSave();
+  },true);
+  window.addEventListener("beforeunload",saveDeliveryProgress);
+  window.addEventListener("offline",()=>{
+    if(session)showSystemDelayNotice();
+  });
+  window.addEventListener("online",()=>{
+    if(session){
+      saveDeliveryProgress();
+      refreshBusy=false;
+      refreshPanel();
+    }
+  });
+  let hiddenAt=0;
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden){hiddenAt=Date.now();saveDeliveryProgress();return}
+    if(session&&hiddenAt&&Date.now()-hiddenAt>15000){
+      refreshBusy=false;
+      refreshPanel();
+    }
+  });
+  setTimeout(restoreDeliveryProgress,250);
+}
+document.addEventListener("DOMContentLoaded",installDeliveryRecovery);
+
+
 function getQuickAccessData(){
   try{return JSON.parse(localStorage.getItem(QUICK_ACCESS_KEY)||"{}")||{}}catch(e){return {}}
 }
@@ -128,24 +233,8 @@ function hideSlowLoaderWarning(){
   if(box)box.style.display="none";
 }
 async function updateWithoutLosingProgress(){
-
-  try{
-    if(currentSearchingId){
-      await tryAgainCurrentSearch();
-      return;
-    }
-    if(session){
-      refreshBusy=false;
-      showLoader("Atualizando sem sair da tela...");
-      await refreshPanel();
-      hideLoader();
-      return;
-    }
-    hideLoader();
-  }catch(e){
-    hideLoader();
-    alert("Não foi possível atualizar agora. Tente novamente em alguns segundos.");
-  }
+  saveDeliveryProgress();
+  showSystemDelayNotice();
 }
 
 
@@ -203,13 +292,13 @@ function showLoader(text,search=false){
   document.getElementById("searchActions").style.display=search?"block":"none";
   loader.classList.toggle("searching",!!search);
   loader.classList.add("active");
-
+  startSlowLoaderWarning();
 }
 function hideLoader(){
   const loader=document.getElementById("loader");
   loader.classList.remove("active","searching");
   document.getElementById("searchActions").style.display="none";
-
+  hideSlowLoaderWarning();
 }
 function playSuccessNotification(){
   try{
@@ -726,7 +815,7 @@ function toggleCashObs(){
   document.getElementById("cashObs").style.display=pg==="Espécie"?"block":"none";
   document.getElementById("paymentNotice").style.display=pg?"block":"none";
 }
-async function confirmDelivery(){if(!validateStep())return;const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";if(cupom){showLoader("Verificando cupom...");const check=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto:0,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!check.ok){document.getElementById("cupomMsg").style.color="#ef4444";document.getElementById("cupomMsg").innerText="Cupom inválido";return}}showLoader("Buscando entregador...",true);const res=await api("createDelivery",{tipoCliente:session.type,codigoCliente:session.profile.CodigoAcesso,enderecoColeta:fullAddress("coleta"),bairroColeta:document.getElementById("bairroColeta").value,coletaCidade:document.getElementById("coletaCidade").value,enderecoDestino:fullAddress("destino"),referenciaColeta:pontoReferencia("coleta"),referenciaDestino:pontoReferencia("destino"),bairroDestino:document.getElementById("bairroDestino").value,destinoCidade:document.getElementById("destinoCidade").value,nomeDestino:document.getElementById("nomeDestino").value,whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),conteudo:document.getElementById("conteudo").value,volumes:document.getElementById("volumes").value,pagamento:document.getElementById("pagamento").value,observacaoPagamento:document.getElementById("observacaoPagamento").value,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,ofertaEntrega:document.getElementById("ofertaEntrega")?document.getElementById("ofertaEntrega").value:"normal"});if(!res.ok){hideLoader();showPanelMessage(res.error||"Não foi possível criar entrega.","bad");return}currentSearchingId=res.delivery.ID;resetDeliveryForm(false);refreshPanel()}
+async function confirmDelivery(){if(!validateStep())return;const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";if(cupom){showLoader("Verificando cupom...");const check=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto:0,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!check.ok){document.getElementById("cupomMsg").style.color="#ef4444";document.getElementById("cupomMsg").innerText="Cupom inválido";return}}showLoader("Buscando entregador...",true);const res=await api("createDelivery",{tipoCliente:session.type,codigoCliente:session.profile.CodigoAcesso,enderecoColeta:fullAddress("coleta"),bairroColeta:document.getElementById("bairroColeta").value,coletaCidade:document.getElementById("coletaCidade").value,enderecoDestino:fullAddress("destino"),referenciaColeta:pontoReferencia("coleta"),referenciaDestino:pontoReferencia("destino"),bairroDestino:document.getElementById("bairroDestino").value,destinoCidade:document.getElementById("destinoCidade").value,nomeDestino:document.getElementById("nomeDestino").value,whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),conteudo:document.getElementById("conteudo").value,volumes:document.getElementById("volumes").value,pagamento:document.getElementById("pagamento").value,observacaoPagamento:document.getElementById("observacaoPagamento").value,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,ofertaEntrega:document.getElementById("ofertaEntrega")?document.getElementById("ofertaEntrega").value:"normal"});if(!res.ok){hideLoader();showPanelMessage(res.error||"Não foi possível criar entrega.","bad");return}currentSearchingId=res.delivery.ID;saveDeliveryProgress();resetDeliveryForm(false);saveDeliveryProgress();refreshPanel()}
 function closeSearchLoader(){hideLoader()}
 async function tryAgainCurrentSearch(){
   if(!currentSearchingId){hideLoader();return}
@@ -777,6 +866,7 @@ showLoader("Saindo...");
 setTimeout(()=>{
 if(refreshTimer)clearTimeout(refreshTimer);
 localStorage.removeItem("pegaleva_client");
+clearDeliveryProgress();
 session=null;
 hideLoader();
 document.getElementById("appScreen").classList.remove("active");
@@ -929,15 +1019,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   }catch(e){}
 });
 
-// Aviso amigável apenas para falhas de sistema/planilha
-function showSystemDelayNotice(){
-  let box=ensureSlowLoaderNotice();
-  if(box){
-    box.style.display="block";
-  }else{
-    alert("Ops, parece que está demorando mais que o esperado. Tente novamente.");
-  }
-}
+// O aviso de recuperação é definido no início do arquivo.
 
 
 /* =========================================================
