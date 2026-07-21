@@ -818,7 +818,9 @@ function toggleCashObs(){
 async function confirmDelivery(){
   if(!validateStep())return;
 
-  const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
+  const cupom=session.type==="usuario"
+    ?(document.getElementById("cupom")?.value.trim()||"")
+    :"";
 
   if(cupom){
     showLoader("Verificando cupom...");
@@ -846,49 +848,115 @@ async function confirmDelivery(){
   const nomeSolicitante=session.type==="empresa"
     ?(perfil.Responsavel||perfil.NomeEmpresa||perfil.Empresa||"Empresa")
     :(perfil.Nome||perfil.Responsavel||"Usuário");
-  const whatsappSolicitante=perfil.WhatsApp||perfil.Whatsapp||perfil.whatsapp||"Não informado";
-  const codigoCliente=perfil.CodigoAcesso||perfil.codigoAcesso||perfil.codigo||"Não informado";
-  const oferta=(document.getElementById("ofertaEntrega")?.value||"normal")==="promocional"
-    ?"Promocional"
-    :"Normal";
+  const whatsappSolicitante=perfil.WhatsApp||perfil.Whatsapp||perfil.whatsapp||"";
+  const ofertaValor=(document.getElementById("ofertaEntrega")?.value||"normal");
+  const oferta=ofertaValor==="promocional"?"Promocional":"Normal";
   const observacao=(document.getElementById("observacaoPagamento")?.value||"").trim();
 
+  const enderecoColeta=fullAddress("coleta");
+  const enderecoDestino=fullAddress("destino");
+  const mapaColeta="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(enderecoColeta);
+  const mapaDestino="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(enderecoDestino);
+
+  showLoader("Registrando sua entrega...");
+
+  const res=await api("createDelivery",{
+    tipoCliente:session.type,
+    codigoCliente:session.profile.CodigoAcesso,
+    enderecoColeta,
+    bairroColeta:document.getElementById("bairroColeta").value,
+    coletaCidade:document.getElementById("coletaCidade").value,
+    enderecoDestino,
+    referenciaColeta:pontoReferencia("coleta"),
+    referenciaDestino:pontoReferencia("destino"),
+    bairroDestino:document.getElementById("bairroDestino").value,
+    destinoCidade:document.getElementById("destinoCidade").value,
+    nomeDestino:document.getElementById("nomeDestino").value,
+    whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),
+    conteudo:document.getElementById("conteudo").value,
+    volumes:document.getElementById("volumes").value,
+    pagamento:document.getElementById("pagamento").value,
+    observacaoPagamento:observacao,
+    cupom,
+    rotaRetorno:document.getElementById("rotaRetorno").value,
+    ofertaEntrega:ofertaValor
+  });
+
+  if(!res.ok){
+    hideLoader();
+    showPanelMessage(res.error||"Não foi possível registrar a entrega.","bad");
+    return;
+  }
+
+  const entregaId=res.delivery?.ID||"";
+  const nomeDestino=document.getElementById("nomeDestino").value;
+  const whatsappDestino=onlyDigits(document.getElementById("whatsappDestino").value);
+  const conteudo=document.getElementById("conteudo").value;
+  const volumes=document.getElementById("volumes").value;
+  const rotaRetorno=document.getElementById("rotaRetorno").value;
+  const pagamento=document.getElementById("pagamento").value;
+  const referenciaColeta=pontoReferencia("coleta")||"Não informada";
+  const referenciaDestino=pontoReferencia("destino")||"Não informada";
+
   const mensagem=[
-    "🏍️ *NOVA SOLICITAÇÃO DE ENTREGA — PEGA E LEVA*",
+    "══════════════════════",
+    "🛵 *PEGA E LEVA DELIVERY*",
+    "📦 *NOVA SOLICITAÇÃO DE ENTREGA*",
+    entregaId?`🧾 Pedido: *${entregaId}*`:"",
+    "══════════════════════",
     "",
-    `👤 *Tipo de cliente:* ${tipoCliente}`,
-    `*Solicitante:* ${nomeSolicitante}`,
-    `*WhatsApp do solicitante:* ${whatsappSolicitante}`,
-    `*Código de acesso:* ${codigoCliente}`,
+    "👤 *SOLICITANTE*",
+    "━━━━━━━━━━━━━━━━━━━━",
+    `Tipo: ${tipoCliente}`,
+    `Nome: ${nomeSolicitante}`,
+    `WhatsApp: https://wa.me/55${onlyDigits(whatsappSolicitante)}`,
+    "",
+    "👥 *DESTINATÁRIO*",
+    "━━━━━━━━━━━━━━━━━━━━",
+    `Nome: ${nomeDestino}`,
+    `WhatsApp: https://wa.me/55${whatsappDestino}`,
     "",
     "📍 *COLETA*",
-    `*Endereço:* ${fullAddress("coleta")}`,
-    `*Referência:* ${pontoReferencia("coleta")||"Não informada"}`,
-    `*Bairro:* ${document.getElementById("bairroColeta").value}`,
-    `*Cidade:* ${document.getElementById("coletaCidade").value}`,
+    "━━━━━━━━━━━━━━━━━━━━",
+    enderecoColeta,
+    `Referência: ${referenciaColeta}`,
+    "",
+    "🗺️ *ABRIR COLETA NO GOOGLE MAPS*",
+    mapaColeta,
     "",
     "📍 *DESTINO*",
-    `*Endereço:* ${fullAddress("destino")}`,
-    `*Referência:* ${pontoReferencia("destino")||"Não informada"}`,
-    `*Bairro:* ${document.getElementById("bairroDestino").value}`,
-    `*Cidade:* ${document.getElementById("destinoCidade").value}`,
-    `*Quem recebe:* ${document.getElementById("nomeDestino").value}`,
-    `*WhatsApp de quem recebe:* ${onlyDigits(document.getElementById("whatsappDestino").value)}`,
+    "━━━━━━━━━━━━━━━━━━━━",
+    enderecoDestino,
+    `Referência: ${referenciaDestino}`,
     "",
-    "📦 *PEDIDO*",
-    `*Conteúdo:* ${document.getElementById("conteudo").value}`,
-    `*Volumes:* ${document.getElementById("volumes").value}`,
-    `*Rota de retorno:* ${document.getElementById("rotaRetorno").value}`,
-    `*Tipo de entrega:* ${oferta}`,
-    `*Valor do frete:* ${money(lastPrice)}`,
-    `*Pagamento:* ${document.getElementById("pagamento").value}`,
-    `*Cupom:* ${cupom||"Nenhum"}`,
-    `*Observação do pagamento:* ${observacao||"Nenhuma"}`,
+    "🗺️ *ABRIR DESTINO NO GOOGLE MAPS*",
+    mapaDestino,
     "",
-    "✅ Solicitação preenchida pelo sistema Pega e Leva."
-  ].join("\n");
+    "📦 *INFORMAÇÕES DO PEDIDO*",
+    "━━━━━━━━━━━━━━━━━━━━",
+    `Conteúdo: ${conteudo}`,
+    `Volumes: ${volumes}`,
+    `Rota de retorno: ${rotaRetorno}`,
+    `Tipo de entrega: ${oferta}`,
+    `Valor do frete: ${money(lastPrice)}`,
+    "",
+    "💳 *PAGAMENTO*",
+    "━━━━━━━━━━━━━━━━━━━━",
+    `Forma: ${pagamento}`,
+    `Observação: ${observacao||"Nenhuma"}`,
+    "",
+    "══════════════════════",
+    "✅ Pedido registrado no painel Pega e Leva.",
+    "⚠️ Confira os endereços antes de iniciar a corrida.",
+    "══════════════════════"
+  ].filter(Boolean).join("\n");
 
+  currentSearchingId=entregaId;
   saveDeliveryProgress();
+  resetDeliveryForm();
+  clearDeliveryProgress();
+  hideLoader();
+  refreshPanel();
 
   const whatsappUrl="https://wa.me/5589994372011?text="+encodeURIComponent(mensagem);
   window.location.href=whatsappUrl;
