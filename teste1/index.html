@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Pega e Leva Delivery - Motoboy, Entregas Rápidas e Coletas em Uruçuí</title>
+  <meta name="description" content="PegaLeva Delivery oferece motoboy, entregas rápidas, coletas, delivery para empresas e usuários, transporte de documentos, encomendas e pequenos volumes em Uruçuí, Benedito Leite e região. Solicite sua entrega de forma rápida, prática e segura.">
+
+  <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <link rel="stylesheet" href="style.css?v=hero-azul-secoes-claras-20260719">
+
+
+
+
+
+<style>
+.quick-access-box{display:none;margin:0 0 14px;padding:12px;border:1px solid #dbe7ff;border-radius:16px;background:#f8fbff;text-align:left}
+.quick-access-box.active{display:block}
+.quick-access-box strong{display:block;color:#0044c3;font-size:13px}
+.quick-access-box span{display:block;color:#64748b;font-size:11px;margin-top:3px}
+.quick-access-actions{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:9px}
+.quick-access-actions button{margin:0!important}
+.remember-access{display:flex;align-items:flex-start;gap:8px;margin:11px 0 2px;color:#475569;font-size:12px;line-height:1.35;text-align:left}
+.remember-access input{width:auto!important;margin:2px 0 0!important;flex:0 0 auto}
+
+.support-float{position:fixed;right:18px;top:96px;z-index:1005;display:flex;align-items:center;gap:9px;border:0;background:white;border-radius:999px;padding:7px 13px 7px 7px;box-shadow:0 12px 35px rgba(15,23,42,.22);cursor:pointer;color:#0044c3;font-weight:900}
+.support-float img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:3px solid #eaf1ff}
+.support-float small{display:block;color:#64748b;font-size:10px;font-weight:700;margin-top:1px}
+.support-chat{position:fixed;right:18px;top:88px;width:min(390px,calc(100vw - 28px));height:min(610px,calc(100vh - 110px));z-index:1010;background:#fff;border-radius:24px;box-shadow:0 24px 70px rgba(15,23,42,.3);display:none;overflow:hidden;border:1px solid #e2e8f0}
+.support-chat.active{display:flex;flex-direction:column}
+.support-head{background:linear-gradient(135deg,#0044c3,#1769e8);color:white;padding:15px;display:flex;align-items:center;gap:11px}
+.support-head img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.75)}
+.support-head div{flex:1}.support-head strong{display:block;font-size:15px}.support-head span{font-size:11px;opacity:.9}
+.support-head button{border:0;background:rgba(255,255,255,.16);color:white;width:34px;height:34px;border-radius:50%;cursor:pointer}
+.support-body{padding:14px;overflow:auto;flex:1;background:#f7f9fc}
+.support-bubble{background:white;border:1px solid #e5eaf2;border-radius:5px 18px 18px 18px;padding:12px;color:#334155;font-size:13px;line-height:1.45;box-shadow:0 5px 16px rgba(15,23,42,.05)}
+.support-options{display:grid;gap:8px;margin-top:12px}
+.support-options button{border:1px solid #dbe7ff;background:white;color:#0044c3;border-radius:14px;padding:11px;text-align:left;font-weight:850;cursor:pointer}
+.support-options button:hover{background:#eef4ff}
+.support-answer{margin-top:10px;background:#eaf2ff;color:#17365f;border-radius:18px 5px 18px 18px;padding:12px;font-size:13px;line-height:1.5}
+.support-cta{display:grid;gap:8px;margin-top:12px}
+.support-cta button{margin:0!important}
+.support-footer{padding:11px 14px;background:white;border-top:1px solid #edf0f5;font-size:10px;color:#64748b;text-align:center}
+@media(max-width:600px){
+  .support-float{right:12px;top:auto;bottom:18px;padding-right:10px}
+  .support-float img{width:44px;height:44px}
+  .support-chat{right:7px;top:auto;bottom:7px;width:calc(100vw - 14px);height:min(650px,calc(100vh - 14px));border-radius:22px}
+}
+</style>
+
+</head>
+<body>
+
+<button type="button" class="support-float" id="supportFloat" onclick="openSupportChat()" aria-label="Abrir atendimento">
+  <img src="https://i.ibb.co/4gpQMy4V/PEGA-E-LEVA-MKT.png" alt="Atendimento Pega e Leva">
+  <span>Atendimento<small>Tire suas dúvidas</small></span>
+</button>
+
+<div class="support-chat" id="supportChat" aria-live="polite">
+  <div class="support-head">
+    <img src="https://i.ibb.co/4gpQMy4V/PEGA-E-LEVA-MKT.png" alt="Atendimento">
+    <div><strong>Atendimento Pega&amp;Leva</strong><span>Respostas rápidas para você começar</span></div>
+    <button type="button" onclick="closeSupportChat()" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="support-body">
+    <div class="support-bubble">
+      Olá! 👋 Posso explicar como o Pega&amp;Leva funciona antes do seu cadastro. Escolha uma dúvida:
+    </div>
+    <div class="support-options">
+      <button onclick="answerSupport('como')">Como solicito uma entrega?</button>
+      <button onclick="answerSupport('horario')">Qual é o horário de atendimento?</button>
+      <button onclick="answerSupport('frota')">Os entregadores são da frota Pega&amp;Leva?</button>
+      <button onclick="answerSupport('agilidade')">A entrega é rápida?</button>
+      <button onclick="answerSupport('preco')">Como o valor do frete é calculado?</button>
+      <button onclick="answerSupport('empresa')">Quero cadastrar minha empresa</button>
+      <button onclick="answerSupport('seguranca')">Como acompanho minha entrega?</button>
+    </div>
+    <div id="supportAnswer"></div>
+  </div>
+  <div class="support-footer">Atendimento automático com informações do serviço.</div>
+</div>
+
+<div id='successToast' class='success-toast'>Informações adicionadas</div>
+<div class="loader" id="loader"><div><div class="moto-loader" id="motoLoader"><i class="fa-solid fa-motorcycle"></i></div><div class="spinner"></div><h2 id="loaderText">Carregando...</h2><p id="loaderSub">Aguarde um instante.</p><div id="searchActions" style="display:none;max-width:280px;margin:20px auto 0">
+  <button class="btn gray" onclick="closeSearchLoader()">Fechar</button>
+  <button class="btn light" onclick="tryAgainCurrentSearch()">Tentar novamente</button>
+</div></div></div>
+
+<section class="screen access active" id="accessScreen">
+  <div class="site-shell">
+    <header class="site-nav">
+      <div class="site-nav-inner">
+        <a class="site-brand" href="#topo" aria-label="Pega e Leva">
+          <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva">
+        </a>
+        <nav class="site-menu">
+          <a href="#vantagens">Vantagens</a>
+          <a href="#empresas">Empresas</a>
+          <a href="#regiao">Região</a>
+          <button onclick="openSimuladorFrete()">Simular frete</button>
+          <button class="nav-login" onclick="document.getElementById('loginArea').scrollIntoView({behavior:'smooth',block:'center'})">Entrar</button>
+        </nav>
+      </div>
+    </header>
+
+<div class="site-hero" id="topo">
+  <div class="hero-copy">
+    <div class="hero-badge"><i class="fa-solid fa-motorcycle"></i> Pediu, a gente pega. Precisou, a gente leva.</div>
+    <h1>Entrega rápida para <span>Uruçuí</span> e região.</h1>
+    <p>O Pega e Leva conecta clientes, empresas e entregadores em uma experiência simples: solicite pelo site, acompanhe pelo painel e receba atualizações da sua entrega.</p>
+    <div class="hero-actions">
+      <button class="btn light" onclick="document.getElementById('loginArea').scrollIntoView({behavior:'smooth',block:'center'})"><i class="fa-solid fa-motorcycle"></i> Solicitar entrega</button>
+      <button class="btn green" onclick="openSimuladorFrete()"><i class="fa-solid fa-calculator"></i> Simular frete</button>
+    </div>
+
+  </div>
+
+  <div class="login-card site-login" id="loginArea">
+    <div class="mini-title"><i class="fa-solid fa-lock"></i> Área de acesso</div>
+    <div class="logo-top"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"></div>
+    <h1 id="accessTitle">Olá, bem-vindo</h1><p id="accessSubtitle">Escolha uma opção para Entrar ou Cadastrar </p>
+    <button class="back-btn" id="backBtn" onclick="backToOptions()"><i class="fa-solid fa-arrow-left"></i> Voltar para opções</button>
+    <div class="access-options" id="accessOptions">
+      <button class="option-card" onclick="selectAccessType('usuario')"><i class="fa-solid fa-user"></i><strong>Entrar como usuário</strong><span>Usuários cadastrados Pega&amp;Leva</span></button>
+      <button class="option-card" onclick="selectAccessType('empresa')"><i class="fa-solid fa-building"></i><strong>Entrar como empresa</strong><span>Empresas cadastradas Pega&amp;Leva</span></button>
+    </div>
+    <div id="userAccess" style="display:none">
+      <div class="tabs"><button class="active" id="tabUserLogin" onclick="showUserTab('login')">Entrar</button><button id="tabUserCreate" onclick="showUserTab('create')">Criar conta</button></div>
+      <div class="login-box" id="userLoginBox" style="display:block">
+        <div class="quick-access-box" id="quickAccessUser"></div>
+        <label>E-mail</label><input id="userLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite seu e-mail">
+        <label>Código de acesso do usuário</label><input id="userLoginCode" autocomplete="current-password" placeholder="Digite seu código de acesso">
+        <label class="remember-access"><input type="checkbox" id="rememberUserAccess"> <span>Salvar meu acesso neste aparelho para entrar mais rápido nas próximas vezes.</span></label>
+        <button class="btn" onclick="loginSelected('usuario')">Entrar como usuário</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button>
+      </div>
+      <div class="login-box" id="userCreateBox">
+        <div id="userCreateFormStep">
+          <label>Nome completo</label><input id="uNome" placeholder="Nome completo">
+          <label><i class="fa-brands fa-whatsapp"></i> DDD + WhatsApp</label><input id="uWhatsapp" inputmode="tel" placeholder="DDD + WhatsApp">
+          <label>E-mail</label><input id="uEmail" placeholder="E-mail">
+          <label>CPF</label><input id="uCpf" placeholder="CPF">
+          <label>Criar código de acesso</label><input id="newUserCode" placeholder="Criar código de acesso" oninput="checkCodeLive('newUserCode','userCodeMsg')">
+          <div class="mini-error" id="userCodeMsg"></div>
+          <button type="button" class="btn green" id="nextUserTermsBtn" onclick="showUserTermsStep()">Próximo</button>
+        </div>
+        <div id="userTermsStep" style="display:none">
+          <div style="margin-top:4px;background:#f8fbff;border:1px solid #dbe7ff;border-radius:18px;padding:14px">
+            <strong style="display:block;color:#0044c3;margin-bottom:8px">Termos e Política de Uso</strong>
+            <p class="muted" style="margin-bottom:10px">Leia os termos abaixo antes de finalizar seu cadastro.</p>
+            <div style="max-height:280px;overflow:auto;background:white;border:1px solid #e2e8f0;border-radius:14px;padding:12px;color:#334155;font-size:12px;line-height:1.55;text-align:left">TERMOS E POLÍTICA DE USO – PEGA&amp;LEVA USUÁRIOS<br><br>Última atualização: Julho de 2026<br><br>Ao utilizar os serviços do Pega&amp;Leva, o usuário declara que leu, compreendeu e concorda com os termos e condições abaixo.<br><br>1. OBJETIVO DO SERVIÇO<br><br>O Pega&amp;Leva é uma plataforma de solicitação de entregas urbanas, conectando usuários aos entregadores cadastrados em nossa frota.<br><br>Nosso compromisso é oferecer praticidade, segurança e rapidez para suas entregas.<br><br>2. HORÁRIO DE FUNCIONAMENTO<br><br>As solicitações de entrega serão atendidas conforme disponibilidade da frota.<br><br>Funcionamento:<br><br>Segunda-feira a Sábado<br>Das 08h00 às 22h00<br><br>Domingos<br><br>A frota encontra-se em período de descanso, não havendo atendimento regular aos domingos, salvo comunicação oficial do Pega&amp;Leva.<br><br>3. SOLICITAÇÃO DAS ENTREGAS<br><br>Todas as entregas deverão ser solicitadas exclusivamente pelo sistema oficial do Pega&amp;Leva.<br><br>Não serão aceitas solicitações realizadas por:<br><br>WhatsApp;<br>Ligações telefônicas;<br>Redes sociais;<br>Mensagens particulares;<br>Contato direto com entregadores.<br><br>Todas as entregas deverão estar registradas na plataforma.<br><br>4. VALOR DAS ENTREGAS<br><br>O valor do frete é calculado automaticamente pelo sistema conforme a tabela vigente.<br><br>Os valores poderão variar conforme:<br><br>bairro de coleta;<br>bairro de entrega;<br>zona da cidade;<br>regras de precificação cadastradas na plataforma.<br><br>Não serão aceitas negociações particulares de valores entre usuários e entregadores.<br><br>5. FORMAS DE PAGAMENTO<br><br>As formas de pagamento disponíveis serão apresentadas durante a solicitação da entrega.<br><br>O usuário deverá selecionar a forma de pagamento antes da confirmação da solicitação.<br><br>6. RESPONSABILIDADE DO USUÁRIO<br><br>É responsabilidade do usuário informar corretamente:<br><br>endereço de coleta;<br>endereço de entrega;<br>nome do destinatário;<br>telefone do destinatário;<br>conteúdo da entrega;<br>observações importantes para localização.<br><br>Informações incorretas poderão causar atrasos, cancelamentos ou impossibilidade de conclusão da entrega.<br><br>7. CAPACIDADE DAS ENTREGAS<br><br>Cada solicitação possui limite operacional.<br><br>As entregas deverão respeitar:<br><br>até 4 volumes por solicitação;<br>capacidade máxima equivalente a uma bag de 45 litros utilizada pelos entregadores.<br><br>Caso a carga exceda essa capacidade, a entrega poderá ser recusada ou será necessário realizar uma nova solicitação.<br><br>8. ACOMPANHAMENTO DA ENTREGA<br><br>Após a solicitação, o usuário poderá acompanhar o andamento da entrega diretamente pelo sistema.<br><br>As atualizações dependerão das ações realizadas pelo entregador durante o processo de entrega.<br><br>9. CANCELAMENTO<br><br>O usuário poderá cancelar uma solicitação antes da aceitação por um entregador.<br><br>Caso o entregador já tenha aceitado a entrega ou esteja em deslocamento, o cancelamento poderá estar sujeito à análise operacional.<br><br>10. DISPONIBILIDADE DA FROTA<br><br>As entregas dependem da disponibilidade dos entregadores cadastrados.<br><br>Em períodos de alta demanda, condições climáticas adversas ou indisponibilidade da frota, poderá ocorrer aumento no tempo estimado para atendimento.<br><br>11. PRODUTOS NÃO ACEITOS<br><br>O Pega&amp;Leva poderá recusar solicitações que envolvam itens incompatíveis com o serviço, incluindo situações em que:<br><br>ultrapassem a capacidade máxima da bag do entregador;<br>apresentem risco à segurança do entregador;<br>contrariem a legislação vigente;<br>exijam transporte inadequado para motocicletas.<br><br>12. CONDUTA DO USUÁRIO<br><br>Não é permitido:<br><br>negociar valores diretamente com entregadores;<br>solicitar entregas fora da plataforma;<br>oferecer pagamentos diferentes dos registrados no sistema;<br>utilizar entregadores do Pega&amp;Leva para serviços não cadastrados na plataforma.<br><br>Caso seja identificada tentativa de burlar o funcionamento do sistema, o cadastro poderá ser suspenso ou cancelado.<br><br>13. ALTERAÇÃO DOS TERMOS<br><br>O Pega&amp;Leva poderá atualizar estes Termos e Política sempre que necessário para melhoria dos serviços.<br><br>As alterações entrarão em vigor a partir de sua publicação na plataforma.<br><br>14. ACEITE<br><br>Ao utilizar o sistema do Pega&amp;Leva e solicitar uma entrega, o usuário declara que leu, compreendeu e concorda integralmente com estes Termos e Política de Uso.</div>
+          </div>
+          <button type="button" class="btn green" id="createUserBtn" onclick="createUserAccount()">Confirmar e cadastrar</button>
+        </div>
+      </div>
+    </div>
+    <div id="companyAccess" style="display:none">
+      <div class="tabs"><button class="active" id="tabCompanyLogin" onclick="showCompanyTab('login')">Entrar</button><button id="tabCompanyCreate" onclick="showCompanyTab('create')">Criar conta</button></div>
+      <div class="login-box" id="companyLoginBox" style="display:block">
+        <div class="quick-access-box" id="quickAccessCompany"></div>
+        <label>E-mail cadastrado da empresa</label><input id="companyLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="Digite o e-mail cadastrado">
+        <label>Código de acesso da empresa</label><input id="companyLoginCode" autocomplete="current-password" placeholder="Ex: EMPRESA123">
+        <label class="remember-access"><input type="checkbox" id="rememberCompanyAccess"> <span>Salvar meu acesso neste aparelho para entrar mais rápido nas próximas vezes.</span></label>
+        <button class="btn" onclick="loginSelected('empresa')">Entrar como empresa</button><button class="btn light" onclick="openForgotModal()">Esqueci meu código</button>
+      </div>
+      <div class="login-box" id="companyCreateBox" style="display:none">
+        <div id="companyCreateStep1">
+          <div class="mini-title"><i class="fa-solid fa-building"></i> Etapa 1 de 3</div>
+          <label>Nome da empresa</label><input id="cNomeEmpresa" placeholder="Nome da empresa">
+          <label>CPF/CNPJ</label><input id="cCpfCnpj" inputmode="numeric" placeholder="CPF ou CNPJ">
+          <label>E-mail</label><input id="cEmail" type="email" inputmode="email" autocomplete="email" placeholder="E-mail da empresa">
+          <label><i class="fa-brands fa-whatsapp"></i> DDD + WhatsApp</label><input id="cWhatsapp" inputmode="tel" placeholder="DDD + WhatsApp">
+          <button type="button" class="btn green" onclick="showCompanyCreateStep(2)">Próximo</button>
+        </div>
+        <div id="companyCreateStep2" style="display:none">
+          <div class="mini-title"><i class="fa-solid fa-location-dot"></i> Etapa 2 de 3</div>
+          <label>Selecionar a cidade</label><select id="cCidade"><option value="">Selecione</option><option value="Uruçuí">Uruçuí</option><option value="Benedito Leite">Benedito Leite</option></select>
+          <label>Logradouro (Rua, avenida, alameda...)</label><input id="cRua" placeholder="Rua">
+          <label>Número</label><input id="cNumero" placeholder="Número">
+          <label>Referência</label><input id="cReferencia" placeholder="Ponto de referência">
+          <button type="button" class="btn gray" onclick="showCompanyCreateStep(1)">Voltar</button>
+          <button type="button" class="btn green" onclick="showCompanyCreateStep(3)">Próximo</button>
+        </div>
+        <div id="companyCreateStep3" style="display:none">
+          <div class="mini-title"><i class="fa-solid fa-key"></i> Etapa 3 de 3</div>
+          <label>Criar código de acesso</label><input id="newCompanyCode" placeholder="Criar código de acesso" oninput="checkCodeLive('newCompanyCode','companyCodeMsg')">
+          <div class="mini-error" id="companyCodeMsg"></div>
+          <button type="button" class="btn gray" onclick="showCompanyCreateStep(2)">Voltar</button>
+          <button type="button" class="btn green" onclick="createCompanyAccount()">Cadastrar empresa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-wrap">
+  <section class="site-section" id="vantagens">
+    <div class="section-head"><div class="section-kicker"><i class="fa-solid fa-star"></i> Por que usar?</div><h2>Vantagens do Pega e Leva</h2><p>Uma solução feita para facilitar o dia a dia de quem precisa enviar, buscar ou entregar pequenos itens com rapidez e organização.</p></div>
+    <div class="benefits-grid">
+      <div class="benefit-card"><i class="fa-solid fa-bolt"></i><strong>Entrega rápida</strong><span>Solicite pelo site e acompanhe sua entrega com atualizações no painel.</span></div>
+      <div class="benefit-card"><i class="fa-solid fa-mobile-screen-button"></i><strong>Tudo pelo celular</strong><span>Cliente e empresa acessam direto pelo navegador, sem precisar instalar aplicativo.</span></div>
+      <div class="benefit-card"><i class="fa-solid fa-route"></i><strong>Rota de retorno</strong><span>Ideal quando precisa devolver maquininha ou dinheiro para o estabelecimento.</span></div>
+      <div class="benefit-card"><i class="fa-solid fa-comments"></i><strong>Contato fácil</strong><span>O painel mostra informações importantes da entrega e facilita o acompanhamento.</span></div>
+      <div class="benefit-card"><i class="fa-solid fa-calculator"></i><strong>Simule antes</strong><span>Veja uma estimativa de frete antes de fazer sua solicitação.</span></div>
+      <div class="benefit-card"><i class="fa-solid fa-shield-heart"></i><strong>Mais praticidade</strong><span>Você pede, a gente busca e leva com mais agilidade na cidade.</span></div>
+    </div>
+  </section>
+
+  <section class="site-section" id="empresas">
+    <div class="company-section">
+      <div class="company-card">
+        <div class="section-kicker" style="background:rgba(255,255,255,.16);color:white"><i class="fa-solid fa-store"></i> Para empresas parceiras</div>
+        <h2>Venda mais sem se preocupar com a entrega.</h2>
+        <p>Empresas podem usar o Pega e Leva para solicitar entregas com prioridade, desconto nos fretes e mais organização no atendimento dos clientes.</p>
+        <button type="button" class="btn light" onclick="openCompanyRegistration()" style="width:auto;margin-top:18px;display:inline-flex"><i class="fa-solid fa-building"></i> Cadastrar meu negócio</button>
+      </div>
+      <div class="company-list">
+        <div class="company-item"><i class="fa-solid fa-percent"></i><div><strong>Desconto em fretes</strong><span>Planos podem liberar entregas com desconto para reduzir o custo operacional.</span></div></div>
+        <div class="company-item"><i class="fa-solid fa-ranking-star"></i><div><strong>Prioridade no atendimento</strong><span>Empresas parceiras podem ter prioridade na frota conforme o plano contratado.</span></div></div>
+        <div class="company-item"><i class="fa-solid fa-chart-line"></i><div><strong>Painel da empresa</strong><span>Acompanhe entregas, dados do perfil, valores pagos e pendências em um só lugar.</span></div></div>
+        <div class="company-item"><i class="fa-solid fa-handshake"></i><div><strong>Melhor experiência para o cliente</strong><span>Seu cliente compra, você solicita e o Pega e Leva faz o transporte.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="site-section" id="regiao">
+    <div class="coverage-box">
+      <div>
+        <div class="section-kicker"><i class="fa-solid fa-map-location-dot"></i> Área de atendimento</div>
+        <h2>Entregamos em toda Uruçuí e região</h2>
+        <p class="muted">Atendimento em Uruçuí, bairros cadastrados e rotas disponíveis para região conforme a tabela ativa do sistema.</p>
+        <div class="coverage-tags"><span>Centro</span><span>Aeroporto</span><span>Malvinas</span><span>Vaquejada</span><span>São Francisco</span><span>Benedito Leite</span></div>
+      </div>
+      <div class="coverage-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+    </div>
+  </section>
+
+  <section class="site-section">
+    <div class="section-head"><div class="section-kicker"><i class="fa-solid fa-list-check"></i> Como funciona</div><h2>Peça sua entrega em poucos passos</h2><p>O fluxo foi pensado para ser simples no celular, no computador e no atendimento das empresas.</p></div>
+    <div class="steps-grid">
+      <div class="step-site-card"><b>1</b><strong>Faça login</strong><span>Entre como usuário ou empresa usando seu código de acesso.</span></div>
+      <div class="step-site-card"><b>2</b><strong>Informe a rota</strong><span>Preencha coleta, destino, bairros e dados de quem recebe.</span></div>
+      <div class="step-site-card"><b>3</b><strong>Confirme o valor</strong><span>Veja o frete, escolha o pagamento e confirme sua solicitação.</span></div>
+      <div class="step-site-card"><b>4</b><strong>Acompanhe</strong><span>Veja status, entregador e histórico diretamente no painel.</span></div>
+    </div>
+  </section>
+
+  <section class="site-section">
+    <div class="simulator-call">
+      <div>
+        <h2>Simulador de fretes</h2>
+        <p>Veja uma estimativa do valor antes de solicitar sua entrega. Escolha cidade, bairro, tipo de solicitação e rota de retorno.</p>
+      </div>
+      <button class="btn green" onclick="openSimuladorFrete()"><i class="fa-solid fa-calculator"></i> Abrir simulador</button>
+    </div>
+  </section>
+</div>
+
+
+  <section class="site-section" id="entregador">
+    <div class="company-section">
+      <div class="company-card">
+        <div class="section-kicker" style="background:rgba(255,255,255,.16);color:white"><i class="fa-solid fa-motorcycle"></i> Trabalhe conosco</div>
+        <h2>Quero ser entregador</h2>
+        <p>Faça parte da equipe Pega e Leva. Cadastre-se e comece a realizar entregas utilizando nossa plataforma.</p>
+        <a class="btn green" href="https://wa.me/5589994372011?text=Ol%C3%A1%2C%20quero%20ser%20entregador%20do%20Pega%20e%20Leva" target="_blank" style="width:auto;margin-top:18px;display:inline-flex">
+          <i class="fa-brands fa-whatsapp"></i> Falar no WhatsApp
+        </a>
+      </div>
+      <div class="company-list">
+        <div class="company-item"><i class="fa-solid fa-clock"></i><div><strong>Horários flexíveis</strong><span>Escolha sua disponibilidade para realizar entregas.</span></div></div>
+        <div class="company-item"><i class="fa-solid fa-money-bill-wave"></i><div><strong>Ganhos por entrega</strong><span>Receba conforme as entregas realizadas pela plataforma.</span></div></div>
+        <div class="company-item"><i class="fa-solid fa-motorcycle"></i><div><strong>Faça parte da frota</strong><span>Entre em contato pelo WhatsApp e saiba como se cadastrar.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva">
+      <div><h3>Pega e Leva</h3><p>Pediu, a gente pega. Precisou, a gente leva. Entregas rápidas em Uruçuí e região.</p></div>
+    </div>
+    <div class="footer-col"><h3>Atendimento</h3><span>Uruçuí - Piauí</span><span>Usuários e empresas</span><span>Pequenos itens e documentos</span></div>
+    <div class="footer-col"><h3>Acesso rápido</h3><a href="#topo">Início</a><a href="#empresas">Empresas</a><a href="#regiao">Região</a><a href="javascript:void(0)" onclick="openSimuladorFrete()">Simular frete</a></div>
+  </div>
+  <div class="footer-bottom">© 2026 Pega e Leva. Todos os direitos reservados. <a href="javascript:void(0)" onclick="openLegalModal('termos')">Termos de uso</a> • <a href="javascript:void(0)" onclick="openLegalModal('privacidade')">Política de privacidade</a></div>
+</footer>
+
+  </div>
+</section>
+
+<section class="screen app" id="appScreen">
+  <div class="topbar"><button onclick="logout()" style="float:right;background:transparent;border:0;color:white;font-weight:800;font-size:14px;box-shadow:none;margin:0;padding:0"><i class="fa-solid fa-right-from-bracket"></i> Sair</button><div class="app-head"><div class="brand"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"><div><strong id="welcomeName">PegaLeva</strong><span id="welcomeType">Painel</span></div></div></div></div>
+
+  <div class="client-app-nav" id="clientAppNav">
+    <button type="button" onclick="openCouponsModal()"><i class="fa-solid fa-ticket"></i><span>Cupons</span><em class="nav-dot" id="couponDot">0</em></button>
+    <button type="button" onclick="openAnnouncementsModal()"><i class="fa-solid fa-comments"></i><span>Mensagem</span><em class="nav-dot" id="messageDot">0</em></button>
+    <button type="button" onclick="openSavedOrdersPage()"><i class="fa-solid fa-users"></i><span>Meus pedidos</span><em class="nav-dot" id="savedClientsDot">0</em></button>
+    <button type="button" onclick="openSimuladorFrete()"><i class="fa-solid fa-calculator"></i><span>Simular</span></button>
+  </div>
+
+  <div class="container">
+    <main>
+      <div class="card">
+        <h2>Solicitar entrega</h2><p class="muted"></p>
+        <div class="form-progress"><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="step active">
+          <h3>Endereço de coleta</h3><button class="btn light" onclick="useRegisteredAddress()" id="useAddressBtn">Usar meu endereço de cadastro</button>
+          <label>Logradouro (Rua, avenida, alameda...)</label><input id="coletaRua"><label>Número</label><input id="coletaNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="coletaReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="coletaCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
+          <button class="btn" onclick="nextStepWithLoading('Carregando destino...')">Continuar</button>
+        </div>
+        <div class="step"><h3>Endereço de destino</h3><label>Logradouro (Rua, avenida, alameda...)</label><input id="destinoRua"><label>Número</label><input id="destinoNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="destinoReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="destinoCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando bairros...')">Continuar</button></div></div>
+        <div class="step"><h3>Confirmar bairros</h3><label>Bairro de coleta</label><select id="bairroColeta"><option value="">Selecione</option></select><label>Bairro de destino</label><select id="bairroDestino"><option value="">Selecione</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando recebedor...')">Continuar</button></div></div>
+        <div class="step"><h3>Dados de quem vai receber</h3><label>Nome da pessoa de destino</label><input id="nomeDestino"><label>Telefone / WhatsApp com DDD</label><input id="whatsappDestino"><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando conteúdo...')">Continuar</button></div></div>
+        <div class="step"><h3>Conteúdo</h3><div class="grid2"><div class="choice" onclick="selectChoice(this,'conteudo','Comidas e bebidas')"><i class="fa-solid fa-burger"></i><strong>Comidas e bebidas</strong><small>Lanches e bebidas</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Frios')"><i class="fa-solid fa-snowflake"></i><strong>Frios</strong><small>Sorvetes e gelados</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Documentos e papéis')"><i class="fa-solid fa-file-lines"></i><strong>Documentos</strong><small>Papéis e envelopes</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Outros')"><i class="fa-solid fa-box"></i><strong>Outros</strong><small>Pequenos itens</small></div></div><input type="hidden" id="conteudo"><label>Volumes</label><select id="volumes"><option value="1">1 volume</option><option value="2">2 volumes</option><option value="3">3 volumes</option><option value="4">4 volumes</option></select><div class="pay-alert">Capacidade da entrega: até 4 itens apenas, dentro da bag de 45L do entregador. Não serão aceitas entregas ou ofertas de valores que não sejam solicitadas pelo sistema.</div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando rota de retorno...')">Continuar</button></div></div>
+        <div class="step"><h3>Deseja acionar rota de retorno?</h3><p class="muted">A rota de retorno é usada quando o cliente vai pagar por maquininha ou dinheiro. O entregador coleta o produto com a maquininha da empresa e depois devolve a maquininha e/ou o dinheiro em espécie no estabelecimento.</p><input type="hidden" id="rotaRetorno" value="Não"><div class="grid2"><div class="choice" onclick="selectRotaRetorno(this,'Sim')"><i class="fa-solid fa-route"></i><strong>Sim, acionar retorno</strong></div><div class="choice active" onclick="selectRotaRetorno(this,'Não')"><i class="fa-solid fa-circle-xmark"></i><strong>Não precisa</strong></div></div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="loadPrice()">Continuar para valor</button></div></div>
+        <div class="step"><h3>Valor e pagamento</h3><input type="hidden" id="ofertaEntrega" value="normal"><div class="price-card"><p class="muted">Valor da viagem</p><div class="price" id="priceText">R$0,00</div><span class="eco" id="ecoText" style="display:none">Frete com economia</span><div class="company-offers" id="companyOfferBox"><button type="button" class="company-offer active" onclick="selectCompanyOffer('normal')">Entrega Normal<small>Serviço normal</small><b id="companyNormalPrice">R$0,00</b></button><button type="button" class="company-offer" onclick="selectCompanyOffer('promocional')">Entrega Promocional<small>Oferta para usuários e empresas</small><b id="companyPromoPrice">R$0,00</b></button></div></div><label>Forma de pagamento</label><select id="pagamento" onchange="toggleCashObs()"><option>PIX</option><option>Espécie</option></select><div id="cupomArea" style="display:none"><label>Inserir cupom</label><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center"><input id="cupom" data-optional="true" placeholder="Digite seu cupom" oninput="onCouponInput()"><button id="cupomBtn" type="button" onclick="applyCouponPrice()" style="display:none;width:auto;margin:0;padding:0 14px;min-height:48px;border-radius:14px;background:#eef4ff;color:#0044c3;font-weight:900">Confirmar</button></div><div class="mini-error" id="cupomMsg"></div></div><div id="paymentNotice" class="pay-alert" style="display:none">O PAGAMENTO DEVE SER REALIZADO NO ATO DA COLETA DO ITEM PELO CODIGO DO ENTREGADOR INFORMADO</div><div id="cashObs" style="display:none"><label>Observação para dinheiro trocado</label><textarea id="observacaoPagamento"></textarea></div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn green" onclick="confirmDelivery()">Confirmar entrega</button></div></div>
+      </div>
+      <div class="card" style="margin-top:18px"><h3>Minhas entregas</h3><div id="deliveriesBox"><p class="muted">Sem entregas aqui (0) Solicite agora</p></div></div>
+    </main>
+    <aside><div class="card"><h3>Meus dados</h3><div id="profileBox"></div></div><div class="card" style="margin-top:18px" id="companyBox"><h3>Painel empresa</h3><div id="companyStats"></div></div></aside>
+  </div>
+
+  <div class="saved-orders-page" id="savedOrdersPage">
+    <div class="saved-orders-shell">
+      <div class="saved-orders-top">
+        <div>
+          <h2>Meus pedidos</h2>
+          <p class="muted">Veja seus pedidos cadastrados, acompanhe os preenchidos e solicite direto por aqui.</p>
+        </div>
+        <div class="saved-orders-actions">
+          <button type="button" class="btn gray" onclick="closeSavedOrdersPage()"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+          <button type="button" class="btn green" onclick="openCreateSavedOrderModal()"><i class="fa-solid fa-plus"></i> Criar pedido</button>
+        </div>
+      </div>
+      <div id="savedOrdersPageBody"><p class="muted">Carregando pedidos...</p></div>
+    </div>
+  </div>
+</section>
+
+<button class="history-chat-btn" onclick="openHistoryChat()" title="Histórico de entregas"><i class="fa-solid fa-motorcycle"></i></button>
+
+<div class="history-panel" id="historyPanel">
+  <div class="history-panel-head">
+    <div><h2>Histórico</h2><p class="muted">Entregas realizadas com sucesso e canceladas deste acesso.</p></div>
+    <button class="btn gray" onclick="closeHistoryChat()">Fechar</button>
+  </div>
+  <p class="pay-alert">O histórico fica permanente por 24H. Após 24H, as entregas finalizadas ou canceladas podem ser removidas do sistema para não lotar.</p>
+  <div id="historyChatBox" style="margin-top:12px"><p class="muted">Nenhum histórico encontrado.</p></div>
+</div>
+
+
+
+<div class="modal" id="savedClientsModal">
+  <div class="message-chat-box">
+    <div class="message-chat-head" style="align-items:flex-start;flex-direction:column">
+      <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div class="message-chat-brand"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"><div><strong>Criar pedido</strong><small>Gere um código para o cliente preencher</small></div></div>
+        <button onclick="closeSavedClientsModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p style="margin:4px 0 0;color:rgba(255,255,255,.90);font-size:11px;line-height:1.35;font-weight:800">Cadastre o pedido com nome, bairro de coleta e rota. O sistema gera um código único para enviar junto com o link ao cliente.</p>
+    </div>
+    <div class="message-chat-body">
+      <div style="width:100%;background:white;border-radius:14px;padding:10px">
+        <label style="color:#0f172a;margin:0 0 6px;font-size:11px">Nome do novo pedido</label>
+        <input id="newSavedOrderName" placeholder="Ex: Pedido mesa 4, João, balcão..." style="min-height:42px;padding:10px;border-radius:12px">
+        <label style="color:#0f172a;margin:8px 0 6px;font-size:11px">Cidade da coleta</label>
+        <select id="newSavedOrderCity" onchange="updateNewSavedOrderBairros()" style="min-height:42px;padding:10px;border-radius:12px"><option>Uruçuí</option><option>Benedito Leite</option></select>
+        <label style="color:#0f172a;margin:8px 0 6px;font-size:11px">Bairro de coleta</label>
+        <select id="newSavedOrderBairro" style="min-height:42px;padding:10px;border-radius:12px"></select>
+        <label style="color:#0f172a;margin:8px 0 6px;font-size:11px">Rota de entrega</label>
+        <select id="newSavedOrderRota" style="min-height:42px;padding:10px;border-radius:12px"><option value="">Sem rota de retorno</option><option value="sim">Com rota de retorno</option></select>
+        <button class="btn green" style="width:100%;margin-top:8px;box-shadow:none!important;padding:10px 12px!important;border-radius:14px!important;font-size:12px!important" onclick="createSavedOrderFromPanel()"><i class="fa-solid fa-plus"></i> Cadastrar novo pedido</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="couponsModal">
+  <div class="message-chat-box">
+    <div class="message-chat-head">
+      <div class="message-chat-brand"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"><div><strong>Cupons disponíveis</strong><small>PegaLeva</small></div></div>
+      <button onclick="closeCouponsModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="message-chat-body" id="couponsBody"><p class="muted">Ops, 0 cupons por aqui!</p></div>
+  </div>
+</div>
+
+<div class="modal" id="announcementsModal">
+  <div class="message-chat-box">
+    <div class="message-chat-head">
+      <div class="message-chat-brand"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"><div><strong>PegaLeva</strong><small>Comunicados</small></div></div>
+      <button onclick="closeAnnouncementsModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="message-chat-body" id="announcementsBody"><p class="muted">Nenhum comunicado disponível.</p></div>
+  </div>
+</div>
+
+
+<div class="modal" id="simuladorFreteModal">
+  <div class="modal-box" style="max-width:560px;text-align:left;max-height:92vh;overflow:auto">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
+      <div>
+        <h2>Simulador de Frete</h2>
+        <p class="muted">Simule o valor da entrega com base na tabela atual do Pega&Leva.</p>
+      </div>
+      <button class="btn gray" onclick="closeSimuladorFrete()" style="width:auto;margin:0;padding:10px 13px"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+<div class="sim-progress">
+  <div class="bar active"></div><div class="bar"></div><div class="bar"></div>
+</div>
+
+<input type="hidden" id="simTipoSolicitacao" value="">
+<input type="hidden" id="simRotaRetorno" value="Não">
+
+<section class="sim-step active" id="simStepComoSolicitar">
+  <div class="sim-step-title"><i class="fa-solid fa-hand-pointer"></i> Etapa 1 • Como solicitar</div>
+  <div class="sim-box">
+    <label>Escolha o tipo de solicitação</label>
+    <div class="grid2">
+      <button type="button" class="choice" onclick="simSelectTipoSolicitacao(this,'empresa')"><i class="fa-solid fa-building"></i><strong>Solicitar como empresa</strong><small>Simula o valor para empresa parceira com desconto.</small></button>
+      <button type="button" class="choice" onclick="simSelectTipoSolicitacao(this,'usuario')"><i class="fa-solid fa-user"></i><strong>Solicitar como usuário</strong><small>Simula o valor normal da tabela pública.</small></button>
+    </div>
+  </div>
+  <button class="btn" onclick="simGoStep(1)"><i class="fa-solid fa-arrow-right"></i> Continuar</button>
+</section>
+
+<section class="sim-step" id="simStepLocais">
+  <div class="sim-step-title"><i class="fa-solid fa-location-dot"></i> Etapa 2 • Locais</div>
+  <div class="sim-box">
+    <label>Cidade de coleta <span>(Cidade que você está)</span></label>
+    <select id="simColetaCidade" onchange="simUpdateBairros()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
+    <label>Bairro de coleta <span>(Bairro que você está)</span></label>
+    <select id="simBairroColeta"><option value="">Selecione a cidade primeiro</option></select>
+    <label>Cidade de entrega (Cidade que vai entregar)</label>
+    <select id="simDestinoCidade" onchange="simUpdateBairros()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
+    <label>Bairro de entrega <span>(Bairro do seu cliente)</span></label>
+    <select id="simBairroDestino"><option value="">Selecione a cidade primeiro</option></select>
+  </div>
+
+  <div class="sim-box">
+    <label>Deseja acionar rota de retorno?</label>
+    <div class="grid2">
+      <button type="button" class="choice" onclick="simSelectRotaRetorno(this,'Sim')"><i class="fa-solid fa-route"></i><strong>Sim, acionar retorno</strong><small>Usado quando precisa devolver dinheiro ou maquininha.</small></button>
+      <button type="button" class="choice active" onclick="simSelectRotaRetorno(this,'Não')"><i class="fa-solid fa-circle-xmark"></i><strong>Não precisa</strong><small>Calcula somente o valor normal da entrega.</small></button>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <button class="btn gray" onclick="simGoStep(0)"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+    <button class="btn" onclick="simCalcularFrete()"><i class="fa-solid fa-calculator"></i> Calcular valor</button>
+  </div>
+</section>
+
+<section class="sim-step" id="simStepValor">
+  <div class="sim-step-title"><i class="fa-solid fa-money-bill-wave"></i> Etapa 3 • Valor</div>
+  <div class="sim-loader" id="simLoader"><div class="spinner"></div><span>Consultando</span></div>
+  <div class="sim-error" id="simErrorBox"></div>
+
+  <div class="sim-result active" id="simResultBox">
+    <div class="muted">Valor estimado do frete</div>
+    <div class="sim-price" id="simPriceText">R$ 0,00</div>
+    <div class="sim-route" id="simRouteText"><i class="fa-solid fa-motorcycle"></i> Pega&Leva</div>
+    <button class="btn green" onclick="closeSimuladorFrete();document.getElementById('loginArea').scrollIntoView({behavior:'smooth',block:'center'})"><i class="fa-solid fa-motorcycle"></i> Solicitar agora</button>
+  </div>
+
+  <div class="grid2">
+    <button class="btn gray" onclick="simGoStep(1)"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+    <button class="btn" onclick="simCalcularFrete()"><i class="fa-solid fa-rotate"></i> Recalcular</button>
+  </div>
+</section>
+
+  </div>
+</div>
+
+
+<div class="modal" id="newAccountWelcomeModal">
+  <div class="modal-box" style="max-width:430px;text-align:center;padding:28px 22px">
+    <div style="width:118px;height:118px;border-radius:50%;margin:0 auto 16px;overflow:hidden;border:5px solid #eef4ff;box-shadow:0 10px 28px rgba(0,68,195,.16);background:#fff">
+      <img src="https://i.ibb.co/4gpQMy4V/PEGA-E-LEVA-MKT.png" alt="Pega e Leva" style="width:100%;height:100%;object-fit:cover;display:block">
+    </div>
+    <h2 id="newAccountWelcomeTitle">Bem-vindo!</h2>
+    <p class="muted" id="newAccountWelcomeText" style="margin-top:10px;line-height:1.55">Sua conta foi criada com sucesso.</p>
+    <button type="button" class="btn green" onclick="closeNewAccountWelcomeModal()" style="margin-top:20px">Começar agora</button>
+  </div>
+</div>
+
+<div class="modal" id="legalModal"><div class="modal-box" style="max-width:560px;text-align:left"><h2 id="legalTitle">Termos</h2><p class="muted" id="legalText"></p><button class="btn" onclick="closeLegalModal()">Entendi</button></div></div>
+
+<div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()">Enviar</button></div><button class="btn gray" onclick="closeChatModal()">Fechar</button></div></div>
+<div class="modal" id="forgotModal"><div class="modal-box"><h2>Esqueci meu código</h2><p class="muted">Digite seu e-mail de cadastro para recuperar o código.</p><label style="text-align:left">E-mail</label><input id="forgotEmail" placeholder="email@email.com"><button class="btn green" onclick="recoverCode()">Verificar código</button><button class="btn gray" onclick="closeForgotModal()">Fechar</button><p class="muted" id="forgotResult" style="margin-top:12px;font-weight:900"></p></div></div>
+<div class="modal" id="systemRecoveryModal">
+  <div class="modal-box" style="max-width:430px;text-align:center;padding:28px 22px">
+    <i class="fa-solid fa-rotate" style="font-size:42px;color:#0044c3;margin-bottom:12px"></i>
+    <h2>O sistema está um pouco lento</h2>
+    <p class="muted" style="margin-top:10px;line-height:1.55">Para melhorar sua experiência, vamos atualizar a página. Seus dados preenchidos e sua solicitação em andamento serão preservados.</p>
+    <button type="button" class="btn green" onclick="safeReloadPage()" style="margin-top:20px"><i class="fa-solid fa-rotate"></i> OK, atualizar</button>
+  </div>
+</div>
+
+<div class="modal" id="statusModal"><div class="modal-box"><i id="statusIcon" class="fa-solid fa-circle-check"></i><h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p><button class="btn green" onclick="closeStatusModal()">OK</button></div></div>
+
+<div class="modal" id="clientPaymentModal">
+  <div class="modal-box client-pay-box" style="text-align:left">
+    <h2>Pagamento pendente</h2>
+    <div id="clientPaymentBody"></div>
+    <button class="btn gray" onclick="closeClientPaymentModal()">Fechar</button>
+  </div>
+</div>
+
+<script src="script.js?v=chat-atendimento-corrigido-20260719"></script>
+
+<script>
+/* Correção isolada do chat de atendimento */
+(function(){
+  let supportChatBusy=false;
+
+  function getSupportElements(){
+    return {
+      chat:document.getElementById("supportChat"),
+      float:document.getElementById("supportFloat"),
+      body:document.querySelector("#supportChat .support-body"),
+      answer:document.getElementById("supportAnswer")
+    };
+  }
+
+  window.openSupportChat=function(){
+    if(supportChatBusy)return;
+    supportChatBusy=true;
+
+    const {chat,float}=getSupportElements();
+    if(!chat){
+      supportChatBusy=false;
+      return;
+    }
+
+    chat.style.display="";
+    chat.classList.add("active");
+    chat.setAttribute("aria-hidden","false");
+
+    if(float){
+      float.style.display="none";
+      float.setAttribute("aria-expanded","true");
+    }
+
+    requestAnimationFrame(()=>{
+      const closeButton=chat.querySelector(".support-head button");
+      if(closeButton)closeButton.focus({preventScroll:true});
+      supportChatBusy=false;
+    });
+  };
+
+  window.closeSupportChat=function(){
+    if(supportChatBusy)return;
+    supportChatBusy=true;
+
+    const {chat,float}=getSupportElements();
+
+    if(chat){
+      chat.classList.remove("active");
+      chat.setAttribute("aria-hidden","true");
+    }
+
+    if(float){
+      float.style.display="flex";
+      float.setAttribute("aria-expanded","false");
+      requestAnimationFrame(()=>{
+        float.focus({preventScroll:true});
+        supportChatBusy=false;
+      });
+    }else{
+      supportChatBusy=false;
+    }
+  };
+
+  window.answerSupport=function(topic){
+    const answers={
+      como:{
+        text:"É simples: crie sua conta gratuita, informe o endereço de coleta e destino, confira o valor e confirme. A solicitação vai para os entregadores disponíveis e você acompanha tudo pelo painel.",
+        cta:"Criar conta e solicitar",
+        action:"user"
+      },
+      horario:{
+        text:"O atendimento regular funciona de segunda a sábado, das 08h às 22h, conforme disponibilidade da frota. Aos domingos não há atendimento regular, salvo comunicação oficial do Pega&Leva.",
+        cta:"Criar minha conta",
+        action:"user"
+      },
+      frota:{
+        text:"As entregas são realizadas por entregadores cadastrados na frota Pega&Leva. A aceitação depende da disponibilidade dos entregadores no momento da solicitação, e todo o pedido fica registrado na plataforma.",
+        cta:"Solicitar uma entrega",
+        action:"user"
+      },
+      agilidade:{
+        text:"O sistema envia sua solicitação aos entregadores disponíveis para acelerar o atendimento. O tempo pode variar conforme demanda, distância, clima e disponibilidade, mas você acompanha cada atualização pelo painel.",
+        cta:"Começar agora",
+        action:"user"
+      },
+      preco:{
+        text:"O frete é calculado automaticamente conforme cidade, bairros de coleta e destino, rota de retorno e regras ativas. Você pode simular o valor antes de criar a conta ou confirmar a entrega.",
+        cta:"Simular meu frete",
+        action:"sim"
+      },
+      empresa:{
+        text:"Empresas têm um painel próprio para organizar pedidos e entregas, acompanhar valores e solicitar serviços diretamente pela plataforma.",
+        cta:"Cadastrar meu negócio",
+        action:"company"
+      },
+      seguranca:{
+        text:"Após solicitar, você acompanha status, entregador e histórico diretamente no painel. As informações da coleta e do destino ficam registradas no sistema para facilitar o acompanhamento.",
+        cta:"Criar conta gratuita",
+        action:"user"
+      }
+    };
+
+    const selected=answers[topic]||answers.como;
+    const {answer,body}=getSupportElements();
+    if(!answer)return;
+
+    answer.innerHTML=
+      '<div class="support-answer">'+selected.text+
+      '<div class="support-cta">'+
+      '<button type="button" class="btn green" onclick="supportCta(\''+selected.action+'\')">'+selected.cta+'</button>'+
+      '<button type="button" class="btn light" onclick="closeSupportChat()">Continuar navegando</button>'+
+      '</div></div>';
+
+    /* Não usa scrollIntoView no elemento fixo, pois isso travava alguns celulares. */
+    requestAnimationFrame(()=>{
+      if(body)body.scrollTop=body.scrollHeight;
+    });
+  };
+
+  window.supportCta=function(action){
+    window.closeSupportChat();
+
+    setTimeout(()=>{
+      if(action==="company" && typeof window.openCompanyRegistration==="function"){
+        window.openCompanyRegistration();
+        return;
+      }
+
+      if(action==="sim" && typeof window.openSimuladorFrete==="function"){
+        window.openSimuladorFrete();
+        return;
+      }
+
+      const login=document.getElementById("loginArea");
+      if(login)login.scrollIntoView({block:"center"});
+
+      if(typeof window.selectAccessType==="function"){
+        window.selectAccessType("usuario");
+      }
+      if(typeof window.showUserTab==="function"){
+        window.showUserTab("create");
+      }
+    },80);
+  };
+
+  document.addEventListener("DOMContentLoaded",function(){
+    const {chat,float}=getSupportElements();
+
+    if(chat){
+      chat.setAttribute("aria-hidden","true");
+    }
+
+    if(float){
+      float.setAttribute("aria-expanded","false");
+    }
+
+    document.addEventListener("keydown",function(event){
+      if(event.key==="Escape" && chat && chat.classList.contains("active")){
+        window.closeSupportChat();
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
