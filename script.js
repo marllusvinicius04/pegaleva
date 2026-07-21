@@ -691,17 +691,18 @@ function renderCompanyOffers(res){
   const promo=document.getElementById("companyPromoPrice");
   const oferta=document.getElementById("ofertaEntrega");
   if(!box)return;
-  if(session&&session.type==="empresa"){
-    const temDesconto=Number(session.profile.EntregasComDescontoRestantes||0)>0;
+  if(session){
+    const isEmpresa=session.type==="empresa";
+    const temDescontoEmpresa=!isEmpresa||Number(session.profile.EntregasComDescontoRestantes||0)>0;
     box.style.display="grid";
     if(normal)normal.innerText=money(res.valorNormal||res.valor);
     if(promo)promo.innerText=money(res.valorPromocional||res.valor);
     if(oferta)oferta.value="normal";
     box.querySelectorAll(".company-offer").forEach((btn,i)=>{
       btn.classList.toggle("active",i===0);
-      if(i===1)btn.style.display=temDesconto?"":"none";
+      if(i===1)btn.style.display=temDescontoEmpresa?"":"none";
     });
-    if(!temDesconto)document.getElementById("priceText").innerText=money(res.valorNormal||res.valor);
+    if(!temDescontoEmpresa)document.getElementById("priceText").innerText=money(res.valorNormal||res.valor);
   }else{
     box.style.display="none";
     if(oferta)oferta.value="normal";
