@@ -951,7 +951,8 @@ async function confirmDelivery(){
     "══════════════════════"
   ].filter(Boolean).join("\n");
 
-  currentSearchingId=entregaId;
+  // Não inicia busca automática por entregador.
+  currentSearchingId="";
   saveDeliveryProgress();
   resetDeliveryForm();
   clearDeliveryProgress();
