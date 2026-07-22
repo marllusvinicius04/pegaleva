@@ -1,73 +1,87 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro do Pedido - PegaLeva</title>
-
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
-
-  <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Rastrear entrega - PegaLeva</title>
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="icon" href="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="style.css?v=20260722-rastreio-ct4">
 </head>
 <body>
-<div class="loader" id="loader"><div><div class="spinner"></div><h2 id="loaderText">Carregando...</h2></div></div>
-<div class="card">
-  <div class="logo"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"></div>
-
-  <div class="success" id="successBox">
-    <i class="fa-solid fa-circle-check"></i>
-    <h1>Pedido salvo!</h1>
-    <p>Suas informações foram registradas para a empresa. Agora ela poderá localizar esse pedido no painel em <b>Meus pedidos</b>.</p>
+<div class="shell">
+  <div class="brand">
+    <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva">
+    <div><strong>PegaLeva</strong><span>Rastreamento de entrega em tempo real</span></div>
   </div>
 
-  <div id="formBox">
-    <div class="step active" id="stepCodigo">
-      <h1>Informe o código do pedido</h1>
-      <p>Digite o código de 4 caracteres enviado pela empresa. Exemplo: <b>M9M3</b>.</p>
-      <label>Código do pedido</label>
-      <input id="pedidoCodigo" maxlength="4" placeholder="M9M3" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4)">
-      <button class="btn green" onclick="checkPedido()">Localizar pedido</button>
+  <section class="card login-card" id="loginCard">
+    <div class="login-icon"><i class="fa-solid fa-location-dot"></i></div>
+    <h1>Acompanhe sua entrega</h1>
+    <p style="color:var(--muted)">Digite o código do cliente, da empresa ou o Código CT de 4 caracteres.</p>
+    <div class="input-wrap">
+      <input id="trackingCode" placeholder="Código do cliente, empresa ou CT" autocomplete="off">
+      <button id="trackButton" onclick="startTracking()"><i class="fa-solid fa-magnifying-glass-location"></i> Rastrear</button>
     </div>
+    <div id="loginError"></div>
+  </section>
 
-    <div class="step" id="stepEndereco">
-      <h1 id="pedidoTitulo">Cadastro para entrega</h1>
-      <p>Preencha os dados de entrega para a empresa finalizar sua solicitação.</p>
-      <div class="notice" id="empresaInfo">Pedido localizado.</div>
-      <label>Rua/Avenida, endereço</label><input id="rua">
-      <label>Número</label><input id="numero" placeholder="Se não tiver número, coloque 0">
-      <label>Ponto de referência</label><input id="referencia" placeholder="Ex: portão branco, ao lado disso...">
-      <label>Cidade</label><select id="cidade" onchange="updateBairros()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
-      <label>Bairro</label><select id="bairro"><option value="">Selecione</option></select>
-      <div class="grid2"><button class="btn gray" onclick="goStep('stepCodigo')">Voltar</button><button class="btn" onclick="nextEndereco()">Continuar</button></div>
-    </div>
-
-    <div class="step" id="stepRecebedor">
-      <h1>Quem vai receber</h1>
-      <label>Nome de quem vai receber</label><input id="nomeDestino">
-      <label>DDD + WhatsApp de quem vai receber</label><input id="whatsappDestino">
-      <div class="grid2"><button class="btn gray" onclick="goStep('stepEndereco')">Voltar</button><button class="btn" onclick="loadFrete()">Escolher frete</button></div>
-    </div>
-
-    <div class="step" id="stepFrete">
-      <h1>Escolha o valor do frete</h1>
-      <p>Escolha uma das opções de entrega disponíveis para este pedido.</p>
-      <div class="offers">
-        <button class="offer active" id="offerNormal" onclick="selectFrete('normal')"><strong>Entrega normal</strong><small>Opção padrão</small><b id="valorNormal">R$ 0,00</b></button>
-        <button class="offer promo" id="offerPromo" onclick="selectFrete('promocional')"><strong>Entrega econômica</strong><small>Melhor valor disponível</small><b id="valorPromo">R$ 0,00</b></button>
+  <section id="trackingPanel" class="hidden">
+    <div class="card hero">
+      <div class="top-row">
+        <div>
+          <span class="status-pill" id="statusPill"><i class="fa-solid fa-motorcycle"></i><span id="statusLabel">Em andamento</span></span>
+          <h2 id="clientName" style="margin:16px 0 5px">Cliente</h2>
+          <p class="muted" id="recordCode">Entrega</p>
+        </div>
+        <div class="estimate"><small>Tempo estimado</small><strong id="estimateText">Até 20 min</strong></div>
       </div>
-      <div class="grid2"><button class="btn gray" onclick="goStep('stepRecebedor')">Voltar</button><button class="btn green" onclick="submitSaved()">Salvar pedido</button></div>
+      <div class="driver">
+        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+        <div><strong id="driverName">Aguardando entregador</strong><small id="driverPlate">O entregador aparecerá aqui</small></div>
+      </div>
     </div>
 
-    <div class="step" id="stepAcompanhar">
-      <h1>Acompanhar pedido</h1>
-      <p>Esse pedido já foi solicitado pela empresa. Você pode acompanhar o andamento por aqui.</p>
-      <div class="track-box" id="trackBox">Carregando acompanhamento...</div>
-      <button class="btn green" onclick="checkPedido()">Atualizar acompanhamento</button>
+    <div class="card">
+      <div class="timeline">
+        <div class="timeline-progress" id="timelineProgress"></div>
+        <div class="step" data-step="0"><i class="fa-solid fa-receipt"></i><span>Pedido recebido</span></div>
+        <div class="step" data-step="1"><i class="fa-solid fa-user-check"></i><span>Entregador responsável</span></div>
+        <div class="step" data-step="2"><i class="fa-solid fa-motorcycle"></i><span>A caminho</span></div>
+        <div class="step" data-step="3"><i class="fa-solid fa-location-dot"></i><span>No local</span></div>
+        <div class="step" data-step="4"><i class="fa-solid fa-circle-check"></i><span>Finalizada</span></div>
+      </div>
+      <div class="current-box">
+        <strong id="currentTitle">Situação da entrega</strong>
+        <span id="currentMessage">Carregando informações...</span>
+      </div>
+
+      <div id="routeBox">
+        <div class="route">
+          <div class="route-line"><div class="dot"></div></div>
+          <div><strong>Coleta</strong><p id="pickupText">Local de coleta</p></div>
+        </div>
+        <div class="route">
+          <div class="route-line"><div class="dot destination"></div></div>
+          <div><strong>Destino</strong><p id="destinationText">Local de entrega</p></div>
+        </div>
+      </div>
+      <div class="refresh-note" id="refreshNote">Atualização automática a cada 5 segundos.</div>
     </div>
-  </div>
+
+    <div class="card">
+      <div class="top-row">
+        <div><h3 style="margin-bottom:5px">Histórico recente</h3><p style="color:var(--muted);font-size:13px">Últimas entregas vinculadas ao código.</p></div>
+        <button onclick="changeCode()" style="background:#eef3ff;color:var(--blue);padding:11px 13px"><i class="fa-solid fa-pen"></i></button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+  </section>
 </div>
 
-<script src="script.js"></script>
+<script src="script.js?v=20260722-rastreio-ct4"></script>
 </body>
 </html>
