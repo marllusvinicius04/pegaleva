@@ -335,8 +335,27 @@ function openCompanyRegistration(){document.getElementById("loginArea")?.scrollI
 function showUserTab(tab){document.getElementById("tabUserLogin").classList.toggle("active",tab==="login");document.getElementById("tabUserCreate").classList.toggle("active",tab==="create");document.getElementById("userLoginBox").style.display=tab==="login"?"block":"none";document.getElementById("userCreateBox").style.display=tab==="create"?"block":"none";if(tab==="create")resetUserCreateSteps()}
 function showCompanyTab(tab){document.getElementById("tabCompanyLogin").classList.toggle("active",tab==="login");document.getElementById("tabCompanyCreate").classList.toggle("active",tab==="create");document.getElementById("companyLoginBox").style.display=tab==="login"?"block":"none";document.getElementById("companyCreateBox").style.display=tab==="create"?"block":"none";if(tab==="create")resetCompanyCreateSteps()}
 function resetCompanyCreateSteps(){showCompanyCreateStep(1)}
+function normalizeAddressText(value){return String(value||"").trim().replace(/\s+/g," ")}
+function logradouroHasExtraData(value){
+  const text=normalizeAddressText(value);
+  if(!text)return false;
+  const lower=text.toLocaleLowerCase("pt-BR");
+  const bairroWords=[...BAIRROS_URUCUÍ,"Benedito Leite","Centro"].map(x=>String(x).toLocaleLowerCase("pt-BR"));
+  const hasSeparator=/[,;|]/.test(text);
+  const hasHouseNumber=/(?:\b(?:n[º°o]?|numero|número)\s*[:.-]?\s*\d+\b|\s[-–—]?\s*\d+[a-z]?\s*$)/i.test(text);
+  const hasBairro=bairroWords.some(b=>lower!==b&&(lower.endsWith(" "+b)||lower.endsWith(" - "+b)||lower.endsWith(", "+b)));
+  return hasSeparator||hasHouseNumber||hasBairro;
+}
+function validateLogradouroField(id){
+  const field=document.getElementById(id);
+  if(!field||!field.value.trim())return true;
+  if(!logradouroHasExtraData(field.value))return true;
+  field.focus();
+  alert("Neste campo informe somente o nome da rua, avenida ou alameda.\n\nNão coloque número, bairro, cidade ou ponto de referência junto. Use os campos separados abaixo.\n\nExemplo correto: Rua Alameda do Sol");
+  return false;
+}
 function getCompanyCreateData(){return {responsavel:(document.getElementById("cNomeEmpresa")?.value||"").trim(),cpfCnpj:onlyDigits(document.getElementById("cCpfCnpj")?.value||""),email:(document.getElementById("cEmail")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("cWhatsapp")?.value||""),cidade:(document.getElementById("cCidade")?.value||"").trim(),rua:(document.getElementById("cRua")?.value||"").trim(),numero:(document.getElementById("cNumero")?.value||"").trim(),referencia:(document.getElementById("cReferencia")?.value||"").trim(),codigo:(document.getElementById("newCompanyCode")?.value||"").trim()}}
-function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail válido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informações de endereço para continuar.");return}[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
+function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail válido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informações de endereço para continuar.");return}if(step===3&&!validateLogradouroField("cRua"))return;[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
 async function createCompanyAccount(){const data=getCompanyCreateData();if(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp||!data.cidade||!data.rua||!data.numero||!data.referencia||!data.codigo){alert("Preencha todos os dados da empresa.");return}showLoader("Cadastrando empresa...");const res=await api("adminRegisterCompany",data);hideLoader();if(!res.ok){alert(res.error||"Não foi possível cadastrar a empresa.");return}const ok=await loginByCode(data.codigo,"empresa",data.email,true);if(ok)saveQuickAccess("empresa",data.email,data.codigo)}
 let codeTimer;function checkCodeLive(inputId,msgId){clearTimeout(codeTimer);codeTimer=setTimeout(async()=>{const codigo=document.getElementById(inputId).value.trim();if(!codigo){document.getElementById(msgId).innerText="";return}const res=await api("checkCode",{codigo});document.getElementById(msgId).innerText=res.message||"";document.getElementById(msgId).style.color=res.available?"#047857":"#ef4444"},350)}
 let pendingUserRegisterData=null;
@@ -351,7 +370,7 @@ function closeNewAccountWelcomeModal(){document.getElementById("newAccountWelcom
 function openPanel(){setSupportVisibility(false);setTimeout(updateBairroOptions,0);document.querySelector(".history-chat-btn").style.display="grid";document.getElementById("accessScreen").classList.remove("active");document.getElementById("appScreen").classList.add("active");
   const clientNav=document.getElementById("clientAppNav");
   if(clientNav) clientNav.style.display="";
-const p=session.profile,name=session.type==="empresa"?p.Responsavel:p.Nome;const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";document.getElementById("welcomeName").innerText="Olá, "+primeiroNome;document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuário";document.getElementById("companyBox").style.display=session.type==="empresa"?"block":"none";document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";toggleCouponArea();renderProfile();loadClientTools();startAutoRefresh()}
+const p=session.profile,name=session.type==="empresa"?p.Responsavel:p.Nome;const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";document.getElementById("welcomeName").innerText="Olá, "+primeiroNome;document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuário";document.getElementById("companyBox").style.display=session.type==="empresa"?"block":"none";document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";const savedAddressTip=document.getElementById("savedAddressTip");if(savedAddressTip)savedAddressTip.style.display=session.type==="empresa"?"block":"none";toggleCouponArea();renderProfile();loadClientTools();startAutoRefresh()}
 
 
 async function loadSavedClientContacts(){
@@ -498,7 +517,7 @@ function startSavedOrderDelivery(id){
       <p class="muted" style="margin-top:6px"><b>Frete:</b> ${c.FreteEscolhido||"Normal"} • R$ ${Number(c.ValorFrete||0).toFixed(2).replace(".",",")}</p>
       <div style="margin-top:12px;background:#f8fbff;border:1px solid #e5edf8;border-radius:18px;padding:12px">
         <button class="btn light" style="margin-top:0;margin-bottom:8px" onclick="useSavedCompanyAddressForOrder()"><i class="fa-solid fa-location-dot"></i> Usar meu endereço salvo</button>
-        <label>Rua/Avenida da coleta</label><input id="savedOrderRuaColeta" placeholder="Endereço de coleta">
+        <label>Logradouro da coleta (somente o nome da rua)</label><input id="savedOrderRuaColeta" placeholder="Ex.: Rua Alameda do Sol"><small style="display:block;margin:5px 0 10px;color:#b45309;font-size:11px;font-weight:700">Não coloque número, bairro, cidade ou referência neste campo.</small>
         <label>Número da coleta</label><input id="savedOrderNumeroColeta" placeholder="Se não tiver número, coloque 0">
         <label>Ponto de referência da coleta</label><input id="savedOrderReferenciaColeta" placeholder="Obrigatório">
         <label>Cidade da coleta</label><select id="savedOrderCidadeColeta"><option>${c.CidadeColeta||"Uruçuí"}</option><option>Uruçuí</option><option>Benedito Leite</option></select>
@@ -816,7 +835,7 @@ function renderClientHistory(list){
   </div>`).join("");
 }
 
-function validateStep(){const s=steps()[currentStep],fields=s.querySelectorAll("input,select,textarea");for(const f of fields){if(f.type!=="hidden"&&f.offsetParent!==null&&!f.dataset.optional&&!f.value.trim()){f.focus();alert("Preencha os campos desta etapa.");return false}}if(currentStep===4&&!document.getElementById("conteudo").value){alert("Selecione o tipo de conteúdo.");return false}return true}
+function validateStep(){const s=steps()[currentStep],fields=s.querySelectorAll("input,select,textarea");for(const f of fields){if(f.type!=="hidden"&&f.offsetParent!==null&&!f.dataset.optional&&!f.value.trim()){f.focus();alert("Preencha os campos desta etapa.");return false}}if(currentStep===0&&!validateLogradouroField("coletaRua"))return false;if(currentStep===1&&!validateLogradouroField("destinoRua"))return false;if(currentStep===4&&!document.getElementById("conteudo").value){alert("Selecione o tipo de conteúdo.");return false}return true}
 function setStep(n){const total=steps().length;n=Math.max(0,Math.min(n,total-1));steps().forEach((s,i)=>s.classList.toggle("active",i===n));dots().forEach((d,i)=>d.classList.toggle("active",i<=n));currentStep=n}
 function nextStepWithLoading(text){if(!validateStep())return;showLoader(text);setTimeout(()=>{hideLoader();setStep(currentStep+1)},500)}
 function prevStep(){if(currentStep>0)setStep(currentStep-1)}
