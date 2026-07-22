@@ -1450,3 +1450,123 @@ body.wa-confirm-screen::after{
   display:none!important;
   content:none!important;
 }
+
+/* ===== BOTÃO PREMIUM DE CONFIRMAÇÃO DA ENTREGA ===== */
+.delivery-confirm-btn{
+  position:relative;
+  width:100%;
+  min-height:76px;
+  margin-top:14px;
+  padding:11px 14px;
+  border:0;
+  border-radius:22px;
+  display:flex;
+  align-items:center;
+  gap:13px;
+  overflow:hidden;
+  color:#fff;
+  background:linear-gradient(135deg,#075e54 0%,#128c7e 45%,#25d366 100%);
+  box-shadow:0 16px 34px rgba(18,140,126,.28);
+  transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;
+}
+.delivery-confirm-btn:before{
+  content:"";
+  position:absolute;
+  top:-50%;
+  left:-45%;
+  width:34%;
+  height:200%;
+  transform:rotate(24deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);
+  transition:left .55s ease;
+}
+.delivery-confirm-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 22px 42px rgba(18,140,126,.34);
+  filter:saturate(1.05);
+}
+.delivery-confirm-btn:hover:before{left:115%}
+.delivery-confirm-btn:active{transform:scale(.985)}
+.delivery-confirm-btn:disabled{cursor:wait;opacity:.9}
+.delivery-confirm-icon{
+  position:relative;
+  z-index:1;
+  flex:0 0 52px;
+  width:52px;
+  height:52px;
+  border-radius:17px;
+  display:grid;
+  place-items:center;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.25);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
+}
+.delivery-confirm-icon i{
+  margin:0!important;
+  color:#fff!important;
+  font-size:25px!important;
+  width:auto!important;
+  height:auto!important;
+}
+.delivery-confirm-copy{
+  position:relative;
+  z-index:1;
+  flex:1;
+  min-width:0;
+  text-align:left;
+}
+.delivery-confirm-copy strong{
+  display:block;
+  color:#fff!important;
+  font-size:16px;
+  font-weight:950;
+  line-height:1.15;
+}
+.delivery-confirm-copy small{
+  display:block;
+  margin-top:4px;
+  color:rgba(255,255,255,.84);
+  font-size:11px;
+  font-weight:800;
+  line-height:1.25;
+}
+.delivery-confirm-arrow{
+  position:relative;
+  z-index:1;
+  flex:0 0 38px;
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:rgba(255,255,255,.17);
+  transition:transform .2s ease;
+}
+.delivery-confirm-arrow i{
+  margin:0!important;
+  color:#fff!important;
+  font-size:16px!important;
+  width:auto!important;
+  height:auto!important;
+}
+.delivery-confirm-btn:hover .delivery-confirm-arrow{transform:translateX(3px)}
+.delivery-confirm-btn.loading{justify-content:center;background:linear-gradient(135deg,#075e54,#128c7e)}
+.delivery-confirm-btn.confirmed{background:linear-gradient(135deg,#047857,#10b981)}
+.delivery-confirm-spinner{
+  position:relative;
+  z-index:1;
+  flex:0 0 27px;
+  width:27px;
+  height:27px;
+  border-radius:50%;
+  border:3px solid rgba(255,255,255,.32);
+  border-top-color:#fff;
+  animation:deliveryConfirmSpin .7s linear infinite;
+}
+@keyframes deliveryConfirmSpin{to{transform:rotate(360deg)}}
+@media(max-width:560px){
+  .delivery-confirm-btn{min-height:72px;border-radius:20px;padding:10px 12px}
+  .delivery-confirm-icon{flex-basis:48px;width:48px;height:48px;border-radius:15px}
+  .delivery-confirm-copy strong{font-size:15px}
+  .delivery-confirm-copy small{font-size:10px}
+}
