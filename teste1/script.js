@@ -623,38 +623,50 @@ function renderDeliveries(list){
 
 
 function notifyDeliveryWhatsApp(id){
-  const d=(ultimaEntregaLocal&&String(ultimaEntregaLocal.ID)===String(id))
+  const d=(ultimaEntregaLocal&&(String(ultimaEntregaLocal.CodigoCliente)===String(id)||String(ultimaEntregaLocal.ID)===String(id)))
     ?ultimaEntregaLocal
     :(window.lastClientDeliveries||[]).find(x=>String(x.ID)===String(id));
   if(!d)return alert("Dados da solicitação não encontrados.");
 
+  const acompanhar=d.AcompanharUrl||"https://pegaelevadelivery.com.br/rastreioentrega";
   const linhas=[
     "🛵 *PEGA E LEVA DELIVERY*",
-    "*Nova solicitação de entrega*",
-    `Código: *${d.Codigo||d.ID||""}*`,
+    "*NOVA SOLICITAÇÃO DE ENTREGA*",
     "",
-    d.Empresa?`Empresa: ${d.Empresa}`:`Solicitante: ${d.NomeSolicitante||""}`,
+    `Código da empresa: *${d.CodigoEmpresa||""}*`,
+    `Código do cliente: *${d.CodigoCliente||d.Codigo||d.ID||""}*`,
+    "",
+    `*VALOR DA ENTREGA: ${money(d.Valor||0)}*`,
+    "",
+    `🔗 *Acompanhar entrega*`,
+    acompanhar,
+    "",
+    "*INFORMAÇÕES*",
+    `Empresa: ${d.Empresa||d.NomeSolicitante||""}`,
     `WhatsApp: ${d.WhatsAppSolicitante||""}`,
-    `Recebedor: ${d.NomeDestino||""}`,
+    "",
+    "*RECEBEDOR*",
+    `Nome: ${d.NomeDestino||""}`,
     `WhatsApp: ${d.WhatsAppDestino||""}`,
     "",
-    `Coleta: ${d.EnderecoColeta||""}`,
-    `Mapa da coleta: ${d.MapsColeta||linkGoogleMaps(d.EnderecoColeta||"")}`,
+    "*ENDEREÇO DE COLETA*",
+    `${d.EnderecoColeta||""}`,
+    `Mapa: ${d.MapsColeta||linkGoogleMaps(d.EnderecoColeta||"")}`,
     "",
-    `Entrega: ${d.EnderecoDestino||""}`,
-    `Mapa da entrega: ${d.MapsDestino||linkGoogleMaps(d.EnderecoDestino||"")}`,
+    "*ENDEREÇO DE ENTREGA*",
+    `${d.EnderecoDestino||""}`,
+    `Mapa: ${d.MapsDestino||linkGoogleMaps(d.EnderecoDestino||"")}`,
     "",
-    `Melhor rota: ${d.MapsRota||linkRotaGoogleMaps(d.EnderecoColeta||"",d.EnderecoDestino||"")}`,
+    "*MELHOR ROTA*",
+    `${d.MapsRota||linkRotaGoogleMaps(d.EnderecoColeta||"",d.EnderecoDestino||"")}`,
     "",
+    "*INFORMAÇÕES EXTRAS*",
     `Conteúdo: ${d.Conteudo||""}`,
     `Volumes: ${d.Volumes||""}`,
-    `Pagamento: ${d.Pagamento||d.FormaPagamento||""}`,
-    d.ObservacaoPagamento?`Observação: ${d.ObservacaoPagamento}`:"",
-    `Valor: ${money(d.Valor||0)}`,
+    `Forma de pagamento: ${d.Pagamento||d.FormaPagamento||""}`,
     "",
-    "Solicitação gerada via Pega e Leva.",
-    `Acompanhar entrega: ${d.AcompanharUrl||"https://pegaelevadelivery.com.br/rastreioentrega"}`
-  ].filter(Boolean);
+    "*SOLICITAÇÃO GERADA VIA PEGA E LEVA*"
+  ];
 
   window.open(`https://wa.me/5589994029572?text=${encodeURIComponent(linhas.join("\n"))}`,"_blank");
 }
@@ -856,13 +868,18 @@ function toggleCashObs(){
 }
 let ultimaEntregaLocal=null;
 
-function gerarCodigoEntregaLocal(){
+function gerarCodigosEntregaLocal(){
   const letras="ABCDEFGHJKLMNPQRSTUVWXYZ";
   const numeros="23456789";
-  return letras.charAt(Math.floor(Math.random()*letras.length))+
+  const inicial=letras.charAt(Math.floor(Math.random()*letras.length));
+  const codigoEmpresa=inicial+
+    numeros.charAt(Math.floor(Math.random()*numeros.length))+
+    numeros.charAt(Math.floor(Math.random()*numeros.length));
+  const codigoCliente=inicial+
     letras.charAt(Math.floor(Math.random()*letras.length))+
     numeros.charAt(Math.floor(Math.random()*numeros.length))+
     numeros.charAt(Math.floor(Math.random()*numeros.length));
+  return {codigoEmpresa,codigoCliente};
 }
 
 function enderecoMapa(prefix){
@@ -907,11 +924,15 @@ async function confirmDelivery(){
   const p=session.profile||{};
   const coleta=enderecoMapa("coleta");
   const destino=enderecoMapa("destino");
-  const codigo=gerarCodigoEntregaLocal();
+  const codigos=gerarCodigosEntregaLocal();
+  const codigoEmpresa=codigos.codigoEmpresa;
+  const codigoCliente=codigos.codigoCliente;
 
   ultimaEntregaLocal={
-    ID:codigo,
-    Codigo:codigo,
+    ID:codigoCliente,
+    Codigo:codigoCliente,
+    CodigoEmpresa:codigoEmpresa,
+    CodigoCliente:codigoCliente,
     NomeSolicitante:(session.type==="empresa"?p.Responsavel:p.Nome)||"",
     Empresa:session.type==="empresa"?(p.Responsavel||p.NomeEmpresa||""):"",
     WhatsAppSolicitante:p.WhatsApp||"",
@@ -938,7 +959,7 @@ async function confirmDelivery(){
     hideLoader();
     resetDeliveryForm(false);
     playSuccessNotification();
-    showAcceptedStatus(codigo);
+    showAcceptedStatus(codigoCliente);
   },4000);
 }
 
@@ -982,7 +1003,11 @@ function showAcceptedStatus(id){
     icon.style.color="#10b981";
     icon.style.animation="motoSuccessJump .75s ease-in-out infinite alternate";
   }
-  if(text)text.innerHTML=`<p class="muted" style="margin-bottom:14px">Código da solicitação: <b>${id}</b></p><button type="button" class="btn whatsapp-notify-btn" onclick="notifyDeliveryWhatsApp('${id}')"><i class="fa-brands fa-whatsapp"></i> Notificar via WhatsApp</button>`;
+  if(text){
+    const empresa=ultimaEntregaLocal?.CodigoEmpresa||"";
+    const cliente=ultimaEntregaLocal?.CodigoCliente||id||"";
+    text.innerHTML=`<div style="display:grid;gap:6px;margin-bottom:16px"><p class="muted" style="margin:0">Código da empresa: <b>${empresa}</b></p><p class="muted" style="margin:0">Código do cliente: <b>${cliente}</b></p></div><button type="button" class="btn whatsapp-notify-btn" onclick="notifyDeliveryWhatsApp('${cliente}')"><i class="fa-brands fa-whatsapp"></i> Notificar via WhatsApp</button>`;
+  }
   if(!document.getElementById("motoSuccessAnimation")){
     const style=document.createElement("style");
     style.id="motoSuccessAnimation";
