@@ -310,60 +310,68 @@ function installMotoPreparationStyles(){
   const style=document.createElement("style");
   style.id="motoPreparationStyles";
   style.textContent=`
-    .moto-preparation-box{
-      display:grid;
-      place-items:center;
-      gap:12px;
-      min-width:min(320px,88vw);
-      padding:24px 20px;
+    #motoPreparationOverlay{
+      position:fixed;
+      inset:0;
+      z-index:999999;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      background:rgba(2,6,23,.72);
+      backdrop-filter:blur(5px);
+    }
+
+    #motoPreparationOverlay.active{display:flex}
+
+    .moto-preparation-modal{
+      width:min(390px,94vw);
+      padding:24px 20px 22px;
+      border-radius:24px;
+      background:#fff;
+      box-shadow:0 28px 80px rgba(0,0,0,.34);
       text-align:center;
     }
 
     .moto-preparation-road{
       position:relative;
-      width:min(280px,76vw);
-      height:76px;
+      width:100%;
+      height:105px;
       overflow:hidden;
-      border-radius:18px;
-      background:linear-gradient(180deg,#eff6ff 0 55%,#334155 55% 100%);
-      box-shadow:inset 0 -1px 0 rgba(255,255,255,.2);
+      border-radius:20px;
+      background:linear-gradient(180deg,#dbeafe 0 54%,#334155 54% 100%);
     }
 
-    .moto-preparation-road::after{
+    .moto-preparation-road::before{
       content:"";
       position:absolute;
       left:0;
       right:0;
-      bottom:13px;
-      height:4px;
-      background:repeating-linear-gradient(
-        90deg,
-        #fff 0 20px,
-        transparent 20px 38px
-      );
-      opacity:.85;
+      bottom:20px;
+      height:5px;
+      background:repeating-linear-gradient(90deg,#fff 0 25px,transparent 25px 49px);
       animation:motoRoadMove .65s linear infinite;
     }
 
     .moto-preparation-bike{
       position:absolute;
       left:50%;
-      bottom:24px;
+      bottom:34px;
       z-index:2;
-      font-size:38px;
+      font-size:48px;
       color:#10b981;
-      filter:drop-shadow(0 7px 8px rgba(15,23,42,.28));
+      filter:drop-shadow(0 8px 7px rgba(15,23,42,.35));
       animation:motoLoadingRide .55s ease-in-out infinite alternate;
     }
 
-    .moto-preparation-title{
-      margin:0;
-      font-size:18px;
-      font-weight:950;
+    .moto-preparation-modal h2{
+      margin:18px 0 5px;
       color:#0f172a;
+      font-size:21px;
+      font-weight:950;
     }
 
-    .moto-preparation-subtitle{
+    .moto-preparation-modal p{
       margin:0;
       color:#64748b;
       font-size:13px;
@@ -374,63 +382,66 @@ function installMotoPreparationStyles(){
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      min-width:68px;
-      padding:8px 12px;
+      min-width:74px;
+      margin-top:15px;
+      padding:9px 15px;
       border-radius:999px;
+      border:1px solid #a7f3d0;
       background:#ecfdf5;
       color:#047857;
-      font-size:15px;
+      font-size:17px;
       font-weight:950;
-      border:1px solid #a7f3d0;
     }
 
     @keyframes motoLoadingRide{
-      from{transform:translate(-55%,-1px) rotate(-3deg)}
-      to{transform:translate(-45%,-8px) rotate(3deg)}
+      from{transform:translate(-58%,0) rotate(-4deg)}
+      to{transform:translate(-42%,-10px) rotate(4deg)}
     }
 
     @keyframes motoRoadMove{
       from{transform:translateX(0)}
-      to{transform:translateX(-38px)}
+      to{transform:translateX(-49px)}
     }
   `;
   document.head.appendChild(style);
 }
 
-function showMotoPreparationLoader(durationSeconds=20){
+function showMotoPreparationLoader(durationSeconds){
   installMotoPreparationStyles();
-  hideSlowLoaderWarning();
 
-  const loader=document.getElementById("loader");
-  if(!loader)return Promise.resolve();
+  let overlay=document.getElementById("motoPreparationOverlay");
+  if(!overlay){
+    overlay=document.createElement("div");
+    overlay.id="motoPreparationOverlay";
+    overlay.innerHTML=`
+      <div class="moto-preparation-modal" role="dialog" aria-modal="true" aria-label="Preparando solicitação">
+        <div class="moto-preparation-road">
+          <i class="fa-solid fa-motorcycle moto-preparation-bike"></i>
+        </div>
+        <h2>Preparando sua solicitação</h2>
+        <p>Organizando os dados para enviar pelo WhatsApp.</p>
+        <span class="moto-preparation-counter" id="motoPreparationCounter">20s</span>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
 
-  const originalHtml=loader.innerHTML;
-  let remaining=Math.max(1,Number(durationSeconds)||20);
+  const seconds=Math.max(1,Number(durationSeconds)||20);
+  let remaining=seconds;
+  const counter=overlay.querySelector("#motoPreparationCounter");
+  if(counter)counter.innerText=remaining+"s";
 
-  loader.classList.remove("searching");
-  loader.classList.add("active");
-  loader.innerHTML=`
-    <div class="moto-preparation-box">
-      <div class="moto-preparation-road">
-        <i class="fa-solid fa-motorcycle moto-preparation-bike"></i>
-      </div>
-      <p class="moto-preparation-title">Preparando sua solicitação</p>
-      <p class="moto-preparation-subtitle">
-        Organizando os dados para abrir no WhatsApp.
-      </p>
-      <span class="moto-preparation-counter" id="motoPreparationCounter">${remaining}s</span>
-    </div>`;
+  overlay.classList.add("active");
+  document.body.style.overflow="hidden";
 
   return new Promise(resolve=>{
     const timer=setInterval(()=>{
       remaining--;
-      const counter=document.getElementById("motoPreparationCounter");
       if(counter)counter.innerText=Math.max(0,remaining)+"s";
 
       if(remaining<=0){
         clearInterval(timer);
-        loader.classList.remove("active","searching");
-        loader.innerHTML=originalHtml;
+        overlay.classList.remove("active");
+        document.body.style.overflow="";
         resolve();
       }
     },1000);
@@ -1230,52 +1241,63 @@ function linkRotaGoogleMaps(origem,destino){
   return "https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origem||"")+"&destination="+encodeURIComponent(destino||"")+"&travelmode=driving";
 }
 
+let confirmDeliveryBusy=false;
+
 async function confirmDelivery(){
+  if(confirmDeliveryBusy)return;
   if(!validateStep())return;
 
-  const coleta=enderecoMapa("coleta");
-  const destino=enderecoMapa("destino");
-  const profile=session&&session.profile?session.profile:{};
-  const nomeSolicitante=session&&session.type==="empresa"
-    ?(profile.Responsavel||profile.NomeEmpresa||"")
-    :(profile.Nome||"");
+  confirmDeliveryBusy=true;
 
-  clearDeliveryProgress();
+  try{
+    const coleta=enderecoMapa("coleta");
+    const destino=enderecoMapa("destino");
+    const profile=session&&session.profile?session.profile:{};
+    const nomeSolicitante=session&&session.type==="empresa"
+      ?(profile.Responsavel||profile.NomeEmpresa||"")
+      :(profile.Nome||"");
 
-  ultimaEntregaLocal={
-    ID:"LOCAL-"+Date.now(),
-    CodigoID:profile.CodigoID||"",
-    TipoCliente:session?.type||"",
-    CodigoCliente:profile.CodigoAcesso||"",
-    NomeSolicitante:nomeSolicitante,
-    WhatsAppSolicitante:profile.WhatsApp||"",
-    Empresa:session?.type==="empresa"?nomeSolicitante:"",
-    EnderecoColeta:coleta,
-    BairroColeta:document.getElementById("bairroColeta").value,
-    EnderecoDestino:destino,
-    BairroDestino:document.getElementById("bairroDestino").value,
-    NomeDestino:document.getElementById("nomeDestino").value,
-    WhatsAppDestino:onlyDigits(document.getElementById("whatsappDestino").value),
-    Conteudo:document.getElementById("conteudo").value,
-    Volumes:document.getElementById("volumes").value,
-    RotaRetorno:document.getElementById("rotaRetorno").value,
-    OfertaEntrega:document.getElementById("ofertaEntrega")?.value||"",
-    Pagamento:document.getElementById("pagamento").value,
-    ObservacaoPagamento:document.getElementById("observacaoPagamento").value,
-    Valor:lastPrice,
-    MapsColeta:linkGoogleMaps(coleta),
-    MapsDestino:linkGoogleMaps(destino),
-    MapsRota:linkRotaGoogleMaps(coleta,destino),
-    AcompanharUrl:""
-  };
+    ultimaEntregaLocal={
+      ID:"LOCAL-"+Date.now(),
+      CodigoID:profile.CodigoID||"",
+      TipoCliente:session?.type||"",
+      CodigoCliente:profile.CodigoAcesso||"",
+      NomeSolicitante:nomeSolicitante,
+      WhatsAppSolicitante:profile.WhatsApp||"",
+      Empresa:session?.type==="empresa"?nomeSolicitante:"",
+      EnderecoColeta:coleta,
+      BairroColeta:document.getElementById("bairroColeta")?.value||"",
+      EnderecoDestino:destino,
+      BairroDestino:document.getElementById("bairroDestino")?.value||"",
+      NomeDestino:document.getElementById("nomeDestino")?.value||"",
+      WhatsAppDestino:onlyDigits(document.getElementById("whatsappDestino")?.value||""),
+      Conteudo:document.getElementById("conteudo")?.value||"",
+      Volumes:document.getElementById("volumes")?.value||"",
+      RotaRetorno:document.getElementById("rotaRetorno")?.value||"",
+      OfertaEntrega:document.getElementById("ofertaEntrega")?.value||"",
+      Pagamento:document.getElementById("pagamento")?.value||"",
+      ObservacaoPagamento:document.getElementById("observacaoPagamento")?.value||"",
+      Valor:lastPrice,
+      MapsColeta:linkGoogleMaps(coleta),
+      MapsDestino:linkGoogleMaps(destino),
+      MapsRota:linkRotaGoogleMaps(coleta,destino),
+      AcompanharUrl:""
+    };
 
-  currentSearchingId="";
+    clearDeliveryProgress();
+    currentSearchingId="";
 
-  await showMotoPreparationLoader(20);
+    await showMotoPreparationLoader(20);
 
-  resetDeliveryForm(false);
-  playSuccessNotification();
-  showAcceptedStatus(ultimaEntregaLocal.ID);
+    playSuccessNotification();
+    showAcceptedStatus(ultimaEntregaLocal.ID);
+    resetDeliveryForm(false);
+  }catch(err){
+    console.error("Erro ao preparar solicitação:",err);
+    alert("Não foi possível preparar a solicitação. Tente novamente.");
+  }finally{
+    confirmDeliveryBusy=false;
+  }
 }
 
 async function retryDelivery(id){
@@ -1309,41 +1331,33 @@ async function cancelDelivery(id){
 }
 function resetDeliveryForm(){["coletaRua","coletaNumero","coletaReferencia","coletaCidade","destinoRua","destinoNumero","destinoReferencia","destinoCidade","nomeDestino","whatsappDestino","conteudo","observacaoPagamento","cupom"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});updateBairroOptions();document.getElementById("bairroColeta").value="";document.getElementById("bairroDestino").value="";document.getElementById("volumes").value="1";if(document.getElementById("rotaRetorno"))document.getElementById("rotaRetorno").value="Não";lastPrice=0;if(document.getElementById("ofertaEntrega"))document.getElementById("ofertaEntrega").value="normal";if(document.getElementById("companyOfferBox"))document.getElementById("companyOfferBox").style.display="none";document.getElementById("paymentNotice").style.display="none";if(document.getElementById("cupomMsg"))document.getElementById("cupomMsg").innerText="";if(document.getElementById("cupomBtn"))document.getElementById("cupomBtn").style.display="none";toggleCouponArea();document.querySelectorAll(".choice").forEach(c=>c.classList.remove("active"));const rr=document.getElementById("rotaRetorno");if(rr){const rotaStep=rr.closest(".step");if(rotaStep){const choices=rotaStep.querySelectorAll(".choice");if(choices[1])choices[1].classList.add("active");}}setStep(0)}
 function showAcceptedStatus(id){
+  const modal=document.getElementById("statusModal");
   const title=document.getElementById("statusTitle");
   const text=document.getElementById("statusText");
   const icon=document.getElementById("statusIcon");
 
-  if(title)title.innerText="Solicitação pronta!";
+  if(!modal||!title||!text){
+    return alert("Solicitação pronta. Clique novamente em Confirmar entrega para abrir o WhatsApp.");
+  }
+
+  title.innerText="Solicitação pronta";
+
   if(icon){
     icon.className="fa-solid fa-motorcycle";
     icon.style.color="#10b981";
-    icon.style.animation="motoSuccessJump .75s ease-in-out infinite alternate";
   }
 
-  if(text){
-    const codigoId=ultimaEntregaLocal?.CodigoID||session?.profile?.CodigoID||"";
-    text.innerHTML=`
-      <div style="display:grid;gap:6px;margin-bottom:16px">
-        <p class="muted" style="margin:0">
-          Código ID da empresa/usuário: <b>${codigoId}</b>
-        </p>
-        <p class="muted" style="margin:0">
-          Agora confirme para enviar a solicitação pelo WhatsApp.
-        </p>
-      </div>
-      ${whatsappSlideHtml(ultimaEntregaLocal?.ID||id)}`;
+  const codigoId=ultimaEntregaLocal?.CodigoID||session?.profile?.CodigoID||"";
+  const deliveryId=ultimaEntregaLocal?.ID||id;
 
-    setTimeout(()=>installWhatsAppSliders(document),0);
-  }
+  text.innerHTML=`
+    <div style="display:grid;gap:7px;margin-bottom:15px">
+      ${codigoId?`<p class="muted" style="margin:0">Código ID: <b>${codigoId}</b></p>`:""}
+      <p class="muted" style="margin:0">Confirme abaixo para abrir a solicitação no WhatsApp.</p>
+    </div>
+    ${whatsappSlideHtml(deliveryId)}`;
 
-  if(!document.getElementById("motoSuccessAnimation")){
-    const style=document.createElement("style");
-    style.id="motoSuccessAnimation";
-    style.textContent="@keyframes motoSuccessJump{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-10px) rotate(3deg)}}";
-    document.head.appendChild(style);
-  }
-
-  document.getElementById("statusModal").classList.add("active");
+  modal.classList.add("active");
 }
 
 function showStatus(title,text,type){document.getElementById("statusTitle").innerText=title;document.getElementById("statusText").innerText=text;document.getElementById("statusIcon").className=type==="bad"?"fa-solid fa-circle-xmark":"fa-solid fa-circle-check";document.getElementById("statusIcon").style.color=type==="bad"?"#ef4444":"#10b981";document.getElementById("statusModal").classList.add("active")}
