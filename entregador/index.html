@@ -6,11 +6,11 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Entregador - PegaLeva</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=20260706-impecavel">
+  <link rel="stylesheet" href="style.css?v=20260721-finalizar-manual">
 
   <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
   <script>
-    const APP_VERSION = "20260706-impecavel";
+    const APP_VERSION = "20260721-finalizar-manual";
     async function clearAppCache(){
       try{
         if("caches" in window){
@@ -33,6 +33,36 @@
     }
     clearAppCache();
   </script>
+
+  <style>
+    #manualDeliveryModal .modal-content{max-width:560px;max-height:94vh;overflow:auto;text-align:left}
+    .manual-title-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+    .manual-title-icon{width:48px;height:48px;border-radius:16px;background:#eef4ff;color:#0044c3;display:grid;place-items:center;font-size:22px}
+    .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .manual-field{margin-top:12px}
+    .manual-field label{display:block;font-weight:900;font-size:13px;margin-bottom:7px}
+    .manual-search-wrap{position:relative}
+    .manual-results{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #dbe3f0;border-radius:15px;box-shadow:0 18px 44px rgba(15,23,42,.18);max-height:230px;overflow:auto;z-index:30}
+    .manual-results.active{display:block}
+    .manual-company-result{width:100%;background:#fff;color:#0f172a;text-align:left;padding:12px;border:0;border-bottom:1px solid #edf2f7;cursor:pointer}
+    .manual-company-result:last-child{border-bottom:0}
+    .manual-company-result:hover{background:#f4f8ff}
+    .manual-company-result strong{display:block}
+    .manual-company-result small{display:block;color:#64748b;margin-top:3px}
+    .manual-selected{display:none;margin-top:9px;padding:11px 12px;border-radius:14px;background:#dcfce7;color:#047857;font-size:13px;font-weight:900}
+    .manual-selected.active{display:block}
+    .manual-payment-step{display:none;margin-top:16px}
+    .manual-payment-step.active{display:block}
+    .manual-pix-card{background:#f8fbff;border:1px solid #dbe7ff;border-radius:22px;padding:16px;text-align:center}
+    .manual-pix-card img{display:block;width:min(240px,75vw);max-height:280px;object-fit:contain;margin:12px auto;border-radius:16px;background:white}
+    .manual-payment-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+    .manual-payment-options button{margin:0}
+    .manual-payment-options button.selected{outline:4px solid rgba(0,68,195,.14)}
+    .manual-summary{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;text-align:left;line-height:1.6;font-size:13px;margin-top:12px}
+    #manualDeliveryModal textarea{min-height:85px;resize:vertical}
+    #manualDeliveryModal select,#manualDeliveryModal textarea{width:100%;box-sizing:border-box}
+    @media(max-width:600px){.manual-grid,.manual-payment-options{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
 <div class="loader" id="loader"><div><div class="spinner" id="loaderSpinner"></div><div class="loader-bike" id="loaderBike" style="display:none"><i class="fa-solid fa-motorcycle"></i><div class="loader-road"></div></div><h2 id="loaderText">Carregando...</h2></div></div>
@@ -49,16 +79,10 @@
 
 <section class="screen app" id="appScreen">
   <div class="top">
-    <button class="top-icon-btn refresh" onclick="forceAppUpdate()" title="Atualizar sistema">
-<i class="fa-solid fa-rotate-right"></i>
-</button>
-    <button class="top-icon-btn logout" onclick="logout()" title="Sair">
-<i class="fa-solid fa-right-from-bracket"></i>
-</button>
-    <button class="top-icon-btn menu" onclick="openSideMenu()" title="Menu">
-<i class="fa-solid fa-bars"></i>
-</button>
-<div class="head">
+    <button class="top-icon-btn refresh" onclick="forceAppUpdate()" title="Atualizar sistema"><i class="fa-solid fa-rotate-right"></i></button>
+    <button class="top-icon-btn logout" onclick="logout()" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+    <button class="top-icon-btn menu" onclick="openSideMenu()" title="Menu"><i class="fa-solid fa-bars"></i></button>
+    <div class="head">
       <div class="brand">
         <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
         <div><strong id="driverName">Entregador</strong><span id="driverPlate">Placa</span></div>
@@ -68,7 +92,6 @@
 
   <div class="wrap">
     <aside>
-
       <div class="saldo">
         <small>Saldo Atual</small>
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
@@ -77,7 +100,6 @@
         </div>
         <button class="btn green" onclick="openDriverHistoryModal()"><i class="fa-solid fa-chart-column"></i> Resumo</button>
       </div>
-
 
       <div class="card">
         <h3>Status do entregador</h3>
@@ -112,35 +134,107 @@
   </div>
 </section>
 
-<div class="bottom-offer" id="bottomOfferBar">
-  <div id="bottomOfferBody"></div>
-</div>
+<div class="bottom-offer" id="bottomOfferBar"><div id="bottomOfferBody"></div></div>
 
 <div class="side-menu-backdrop" id="sideMenuBackdrop" onclick="closeSideMenu()"></div>
 <nav class="side-menu" id="sideMenu">
   <button class="side-close" onclick="closeSideMenu()"><i class="fa-solid fa-xmark"></i></button>
   <div class="side-profile">
     <div class="side-avatar"><i class="fa-solid fa-circle-user"></i></div>
-    <div>
-      <strong id="sideDriverName">Entregador</strong>
-      <span id="sideDriverPlate">Placa: -</span>
-    </div>
+    <div><strong id="sideDriverName">Entregador</strong><span id="sideDriverPlate">Placa: -</span></div>
   </div>
-  <div class="side-balance">
-    <small>Meu saldo</small>
-    <h2 id="sideSaldoText">R$0,00</h2>
-  </div>
+  <div class="side-balance"><small>Meu saldo</small><h2 id="sideSaldoText">R$0,00</h2></div>
+
+  <button class="side-menu-btn" onclick="openManualDeliveryModal()"><i class="fa-solid fa-flag-checkered"></i> Finalizar entrega</button>
   <button class="side-menu-btn" onclick="openPaymentsModal()"><i class="fa-solid fa-wallet"></i> Meus pagamentos</button>
   <button class="side-menu-btn" onclick="openDriverHistoryModal()"><i class="fa-solid fa-clock-rotate-left"></i> Meu histórico</button>
   <button class="side-menu-btn" onclick="cancelDriverRegistration()"><i class="fa-solid fa-user-slash"></i> Cancelar entregador</button>
   <button class="side-menu-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
 </nav>
 
+<div class="modal" id="manualDeliveryModal">
+  <div class="modal-content" style="position:relative">
+    <button class="side-close" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i></button>
+
+    <div class="manual-title-row">
+      <span class="manual-title-icon"><i class="fa-solid fa-flag-checkered"></i></span>
+      <div>
+        <h2>Finalizar entrega</h2>
+        <p class="muted">Registre uma entrega recebida pela Central no WhatsApp.</p>
+      </div>
+    </div>
+
+    <div id="manualDeliveryFormStep">
+      <div class="manual-field">
+        <label>Nome da empresa</label>
+        <div class="manual-search-wrap">
+          <input id="manualCompanySearch" autocomplete="off" placeholder="Digite para pesquisar na planilha">
+          <div class="manual-results" id="manualCompanyResults"></div>
+        </div>
+        <div class="manual-selected" id="manualCompanySelected"></div>
+      </div>
+
+      <div class="manual-grid">
+        <div class="manual-field">
+          <label>Valor da entrega</label>
+          <input id="manualDeliveryValue" inputmode="decimal" placeholder="Ex.: 15,00">
+        </div>
+        <div class="manual-field">
+          <label>Forma de pagamento</label>
+          <select id="manualPaymentMethod">
+            <option value="PIX">PIX</option>
+            <option value="Espécie">Espécie</option>
+            <option value="Cartão">Cartão</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="manual-grid">
+        <div class="manual-field">
+          <label>Bairro de coleta</label>
+          <select id="manualPickupNeighborhood"></select>
+        </div>
+        <div class="manual-field">
+          <label>Bairro de entrega</label>
+          <select id="manualDropoffNeighborhood"></select>
+        </div>
+      </div>
+
+      <div class="manual-field">
+        <label>Observação opcional</label>
+        <textarea id="manualDeliveryNote" placeholder="Nome do cliente, endereço ou referência"></textarea>
+      </div>
+
+      <button class="btn green" type="button" onclick="showManualPaymentStep()"><i class="fa-solid fa-qrcode"></i> Continuar para pagamento</button>
+      <button class="btn gray" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+    </div>
+
+    <div class="manual-payment-step" id="manualDeliveryPaymentStep">
+      <div class="manual-pix-card">
+        <h3>Pagamento da entrega</h3>
+        <div id="manualDeliverySummary" class="manual-summary"></div>
+        <img src="https://i.ibb.co/Nd0HHzGc/Whats-App-Image-2026-07-02-at-22-17-59.jpg" alt="QR Code PIX">
+        <p class="info"><b>Chave PIX:</b> 57293143000156</p>
+        <p class="info"><b>Banco:</b> MERCADO PAGO LTDA</p>
+        <p class="info"><b>Recebedor:</b> 57.293.143 Marllus Vinicius Silva Araujo</p>
+      </div>
+
+      <div class="manual-payment-options">
+        <button id="manualPaidBtn" class="btn green" type="button" onclick="chooseManualPayment('Pago')"><i class="fa-solid fa-circle-check"></i> Foi pago</button>
+        <button id="manualPendingBtn" class="btn red" type="button" onclick="chooseManualPayment('Pendente')"><i class="fa-solid fa-clock"></i> Não foi pago</button>
+      </div>
+
+      <button class="btn" type="button" onclick="saveManualFinalizedDelivery()"><i class="fa-solid fa-floppy-disk"></i> Finalizar e registrar na planilha</button>
+      <button class="btn light" type="button" onclick="backManualDeliveryForm()"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="paymentsModal">
   <div class="modal-content" style="position:relative">
     <button class="side-close" onclick="closePaymentsModal()"><i class="fa-solid fa-xmark"></i></button>
-    <h2>Meus pagamentos</h2>
-    <p class="muted">Histórico de saques solicitados.</p>
+    <h2>Meus pagamentos</h2><p class="muted">Histórico de saques solicitados.</p>
     <div id="paymentsHistoryBox"></div>
   </div>
 </div>
@@ -148,21 +242,17 @@
 <div class="modal" id="driverHistoryModal">
   <div class="modal-content" style="position:relative">
     <button class="side-close" onclick="closeDriverHistoryModal()"><i class="fa-solid fa-xmark"></i></button>
-    <h2>Meu histórico</h2>
-    <p class="muted">Corridas finalizadas, rotas e valores.</p>
+    <h2>Meu histórico</h2><p class="muted">Corridas finalizadas, rotas e valores.</p>
     <div id="driverHistoryListBox"></div>
   </div>
 </div>
 
-
 <div class="modal" id="statusModal">
   <div class="modal-content" style="text-align:center">
-    <h2 id="statusTitle">Status</h2>
-    <p class="muted" id="statusText"></p>
+    <h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p>
     <button class="btn green" onclick="closeStatusModal()"><i class="fa-solid fa-check"></i> OK</button>
   </div>
 </div>
-
 
 <div class="modal" id="paymentModal">
   <div class="modal-content">
@@ -194,7 +284,6 @@
 
 <div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> Enviar</button></div><button class="btn gray" onclick="closeChatModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div></div>
 
-
-<script src="script.js?v=20260706-impecavel"></script>
+<script src="script.js?v=20260721-finalizar-manual"></script>
 </body>
 </html>
