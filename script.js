@@ -1,4 +1,4 @@
-const PEGALEVA_SCRIPT_VERSION="2026-07-21-createDelivery";
+const PEGALEVA_SCRIPT_VERSION="2026-07-22-registra-aceita-depois-whatsapp";
 
 const QUICK_ACCESS_KEY="pegaleva_quick_access";
 
@@ -242,7 +242,7 @@ async function updateWithoutLosingProgress(){
 const PIX_KEY="57293143000156";
 const API_URL="https://script.google.com/macros/s/AKfycbx739xcgwZ0NTYdtj0pjFN0QAqyNh94PV96PxKRy90pOvKHOg1V0LFf-gjkrIsKaL1w/exec";
 let session=JSON.parse(localStorage.getItem("pegaleva_client")||"null"),
-chatDeliveryId="",currentStep=0,lastPrice=0,currentSearchingId="",showAllClientDeliveries=false,knownStatuses=JSON.parse(localStorage.getItem("pegaleva_status_client")||"{}"),refreshTimer=null,refreshBusy=false,clientCoupons=[],clientAnnouncements=[],clientSavedContacts=[];
+chatDeliveryId="",currentStep=0,lastPrice=0,currentSearchingId="",pendingDeliveryWhatsappUrl="",showAllClientDeliveries=false,knownStatuses=JSON.parse(localStorage.getItem("pegaleva_status_client")||"{}"),refreshTimer=null,refreshBusy=false,clientCoupons=[],clientAnnouncements=[],clientSavedContacts=[];
 const steps=()=>document.querySelectorAll(".step"),dots=()=>document.querySelectorAll(".dot");
 if(session)openPanel();
 let consecutiveApiFailures=0;
@@ -818,10 +818,21 @@ function toggleCashObs(){
 }
 async function confirmDelivery(){
   if(!validateStep())return;
+  if(!session)return alert("Faça login novamente para continuar.");
+
   const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
   if(cupom){
     showLoader("Verificando cupom...");
-    const check=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto:0,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});
+    const check=await api("getPrice",{
+      bairroColeta:document.getElementById("bairroColeta").value,
+      bairroDestino:document.getElementById("bairroDestino").value,
+      coletaCidade:document.getElementById("coletaCidade").value,
+      destinoCidade:document.getElementById("destinoCidade").value,
+      desconto:0,
+      cupom,
+      rotaRetorno:document.getElementById("rotaRetorno").value,
+      forcePriceFresh:true
+    });
     hideLoader();
     if(!check.ok){
       document.getElementById("cupomMsg").style.color="#ef4444";
@@ -831,41 +842,6 @@ async function confirmDelivery(){
     lastPrice=Number(check.valor||lastPrice||0);
     document.getElementById("priceText").innerText=money(lastPrice);
   }
-  document.getElementById("whatsappDeliveryModal")?.classList.add("active");
-}
-function closeWhatsappDeliveryModal(){
-  document.getElementById("whatsappDeliveryModal")?.classList.remove("active");
-}
-function googleMapsPlaceLink(address){
-  return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(address);
-}
-function googleMapsRouteLink(origin,destination){
-  return "https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origin)+"&destination="+encodeURIComponent(destination)+"&travelmode=driving";
-}
-function createLocalDeliveryId(){
-  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code="";
-  if(window.crypto&&crypto.getRandomValues){
-    const values=new Uint32Array(8);crypto.getRandomValues(values);
-    values.forEach(v=>code+=chars[v%chars.length]);
-  }else{
-    for(let i=0;i<8;i++)code+=chars[Math.floor(Math.random()*chars.length)];
-  }
-  return "ENT-"+code;
-}
-function deliveryClientName(){
-  const p=session?.profile||{};
-  return String(session?.type==="empresa"?(p.Responsavel||p.NomeEmpresa||p.Empresa||""):(p.Nome||p.NomeCompleto||"")).trim()||"Cliente Pega&Leva";
-}
-function deliveryClientWhatsapp(){
-  const p=session?.profile||{};
-  return onlyDigits(p.Whatsapp||p.WhatsApp||p.Telefone||p.Celular||"");
-}
-async function sendDeliveryToWhatsapp(){
-  if(!session)return alert("Faça login novamente para continuar.");
-
-  const whatsappWindow=window.open("about:blank","_blank");
-  if(!whatsappWindow)return alert("Permita a abertura de pop-ups para enviar a solicitação pelo WhatsApp.");
 
   const coleta=fullAddress("coleta");
   const destino=fullAddress("destino");
@@ -880,14 +856,8 @@ async function sendDeliveryToWhatsapp(){
   const pagamento=(document.getElementById("pagamento")?.value||"").trim();
   const obsPagamento=(document.getElementById("observacaoPagamento")?.value||"").trim();
   const retorno=(document.getElementById("rotaRetorno")?.value||"").trim();
-  const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
   const valorNumero=Number(lastPrice||0);
-  const valor=money(valorNumero);
-  const coletaMaps=googleMapsPlaceLink(coleta);
-  const destinoMaps=googleMapsPlaceLink(destino);
-  const rotaMaps=googleMapsRouteLink(coleta,destino);
 
-  closeWhatsappDeliveryModal();
   showLoader("Registrando sua entrega...");
 
   const res=await api("createDelivery",{
@@ -912,18 +882,23 @@ async function sendDeliveryToWhatsapp(){
     cupom,
     rotaRetorno:retorno||"Não",
     ofertaEntrega:document.getElementById("ofertaEntrega")?document.getElementById("ofertaEntrega").value:"normal",
-    valor:valorNumero
+    valor:valorNumero,
+    whatsappCentral:true
   });
 
   hideLoader();
 
   if(!res||!res.ok){
-    try{whatsappWindow.close()}catch(e){}
     showStatus("Não foi possível registrar",res?.error||"A entrega não foi enviada para a planilha. Tente novamente.","bad");
     return;
   }
 
   const pedido=String(res.deliveryId||res.delivery?.ID||createLocalDeliveryId());
+  const valor=money(valorNumero);
+  const coletaMaps=googleMapsPlaceLink(coleta);
+  const destinoMaps=googleMapsPlaceLink(destino);
+  const rotaMaps=googleMapsRouteLink(coleta,destino);
+
   const linhas=[
     "*PEGA E LEVA DELIVERY*",
     "Nova solicitação de entrega",
@@ -969,18 +944,68 @@ async function sendDeliveryToWhatsapp(){
     cupom?"Cupom: "+cupom:"",
     "Valor: *"+valor+"*",
     "",
-    "Status no sistema: *Solicitação registrada*",
-    "Solicitação enviada pelo site Pega e Leva."
+    "Status no sistema: *Entrega aceita*",
+    "Entrega registrada no site Pega e Leva."
   ].filter(Boolean);
 
-  const url="https://wa.me/5589994029572?text="+encodeURIComponent(linhas.join("\n"));
+  pendingDeliveryWhatsappUrl="https://wa.me/5589994029572?text="+encodeURIComponent(linhas.join("\n"));
+
   clearDeliveryProgress();
-  whatsappWindow.location.href=url;
-  resetDeliveryForm(false);
   currentSearchingId="";
   refreshBusy=false;
   await refreshPanel();
-  showStatus("Entrega registrada","A entrega foi salva na planilha e já aparece em Minhas entregas. A Central continuará o atendimento pelo WhatsApp.","ok");
+
+  document.getElementById("whatsappDeliveryModal")?.classList.add("active");
+  showStatus("Entrega registrada e aceita","Agora clique no botão para enviar os dados à Central pelo WhatsApp.","ok");
+}
+function closeWhatsappDeliveryModal(){
+  document.getElementById("whatsappDeliveryModal")?.classList.remove("active");
+}
+function googleMapsPlaceLink(address){
+  return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(address);
+}
+function googleMapsRouteLink(origin,destination){
+  return "https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origin)+"&destination="+encodeURIComponent(destination)+"&travelmode=driving";
+}
+function createLocalDeliveryId(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code="";
+  if(window.crypto&&crypto.getRandomValues){
+    const values=new Uint32Array(8);crypto.getRandomValues(values);
+    values.forEach(v=>code+=chars[v%chars.length]);
+  }else{
+    for(let i=0;i<8;i++)code+=chars[Math.floor(Math.random()*chars.length)];
+  }
+  return "ENT-"+code;
+}
+function deliveryClientName(){
+  const p=session?.profile||{};
+  return String(session?.type==="empresa"?(p.Responsavel||p.NomeEmpresa||p.Empresa||""):(p.Nome||p.NomeCompleto||"")).trim()||"Cliente Pega&Leva";
+}
+function deliveryClientWhatsapp(){
+  const p=session?.profile||{};
+  return onlyDigits(p.Whatsapp||p.WhatsApp||p.Telefone||p.Celular||"");
+}
+async function sendDeliveryToWhatsapp(){
+  if(!pendingDeliveryWhatsappUrl){
+    alert("Primeiro registre a entrega para liberar o envio pelo WhatsApp.");
+    return;
+  }
+
+  const url=pendingDeliveryWhatsappUrl;
+  pendingDeliveryWhatsappUrl="";
+  closeWhatsappDeliveryModal();
+
+  const whatsappWindow=window.open(url,"_blank");
+  if(!whatsappWindow){
+    pendingDeliveryWhatsappUrl=url;
+    alert("Permita a abertura de pop-ups para enviar a solicitação pelo WhatsApp.");
+    return;
+  }
+
+  resetDeliveryForm(false);
+  refreshBusy=false;
+  await refreshPanel();
 }
 function closeSearchLoader(){hideLoader()}
 async function tryAgainCurrentSearch(){
