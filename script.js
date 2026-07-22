@@ -860,13 +860,16 @@ function deliveryClientWhatsapp(){
   const p=session?.profile||{};
   return onlyDigits(p.Whatsapp||p.WhatsApp||p.Telefone||p.Celular||"");
 }
-function sendDeliveryToWhatsapp(){
+async function sendDeliveryToWhatsapp(){
   if(!session)return alert("Faça login novamente para continuar.");
+
+  const whatsappWindow=window.open("about:blank","_blank");
+  if(!whatsappWindow)return alert("Permita a abertura de pop-ups para enviar a solicitação pelo WhatsApp.");
+
   const coleta=fullAddress("coleta");
   const destino=fullAddress("destino");
   const coletaRef=pontoReferencia("coleta")||"Não informado";
   const destinoRef=pontoReferencia("destino")||"Não informado";
-  const pedido=createLocalDeliveryId();
   const nomeCliente=deliveryClientName();
   const whatsappCliente=deliveryClientWhatsapp();
   const nomeDestino=(document.getElementById("nomeDestino")?.value||"").trim();
@@ -877,10 +880,49 @@ function sendDeliveryToWhatsapp(){
   const obsPagamento=(document.getElementById("observacaoPagamento")?.value||"").trim();
   const retorno=(document.getElementById("rotaRetorno")?.value||"").trim();
   const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
-  const valor=(document.getElementById("priceText")?.innerText||money(lastPrice)).trim();
+  const valorNumero=Number(lastPrice||0);
+  const valor=money(valorNumero);
   const coletaMaps=googleMapsPlaceLink(coleta);
   const destinoMaps=googleMapsPlaceLink(destino);
   const rotaMaps=googleMapsRouteLink(coleta,destino);
+
+  closeWhatsappDeliveryModal();
+  showLoader("Registrando sua entrega...");
+
+  const res=await api("createWhatsappAcceptedDelivery",{
+    tipoCliente:session.type,
+    codigoCliente:session.profile.CodigoAcesso,
+    nomeSolicitante:nomeCliente,
+    whatsappSolicitante:whatsappCliente,
+    enderecoColeta:coleta,
+    referenciaColeta:coletaRef,
+    bairroColeta:document.getElementById("bairroColeta").value,
+    coletaCidade:document.getElementById("coletaCidade").value,
+    enderecoDestino:destino,
+    referenciaDestino:destinoRef,
+    bairroDestino:document.getElementById("bairroDestino").value,
+    destinoCidade:document.getElementById("destinoCidade").value,
+    nomeDestino,
+    whatsappDestino,
+    conteudo,
+    volumes,
+    pagamento,
+    observacaoPagamento:obsPagamento,
+    cupom,
+    rotaRetorno:retorno||"Não",
+    ofertaEntrega:document.getElementById("ofertaEntrega")?document.getElementById("ofertaEntrega").value:"normal",
+    valor:valorNumero
+  });
+
+  hideLoader();
+
+  if(!res||!res.ok){
+    try{whatsappWindow.close()}catch(e){}
+    showStatus("Não foi possível registrar",res?.error||"A entrega não foi enviada para a planilha. Tente novamente.","bad");
+    return;
+  }
+
+  const pedido=String(res.deliveryId||res.delivery?.ID||createLocalDeliveryId());
   const linhas=[
     "*PEGA E LEVA DELIVERY*",
     "Nova solicitação de entrega",
@@ -926,15 +968,19 @@ function sendDeliveryToWhatsapp(){
     cupom?"Cupom: "+cupom:"",
     "Valor: *"+valor+"*",
     "",
+    "Status no sistema: *Entrega aceita*",
     "Solicitação enviada pelo site Pega e Leva."
   ].filter(Boolean);
-  const url="https://wa.me/5589994029572?text="+encodeURIComponent(linhas.join("\n"));
-  closeWhatsappDeliveryModal();
-  clearDeliveryProgress();
-  window.open(url,"_blank","noopener,noreferrer");
-  setTimeout(()=>{resetDeliveryForm(false);showStatus("Solicitação preparada","A notinha foi aberta no WhatsApp da Central. Toque em enviar para concluir.","ok")},250);
-}
 
+  const url="https://wa.me/5589994029572?text="+encodeURIComponent(linhas.join("\n"));
+  clearDeliveryProgress();
+  whatsappWindow.location.href=url;
+  resetDeliveryForm(false);
+  currentSearchingId="";
+  refreshBusy=false;
+  await refreshPanel();
+  showStatus("Entrega aceita","A entrega foi registrada na planilha e já aparece em Minhas entregas como aceita pela Central.","ok");
+}
 function closeSearchLoader(){hideLoader()}
 async function tryAgainCurrentSearch(){
   if(!currentSearchingId){hideLoader();return}
