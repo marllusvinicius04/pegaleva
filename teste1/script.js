@@ -420,12 +420,12 @@ function showMotoPreparationLoader(durationSeconds){
         </div>
         <h2>Preparando sua solicitação</h2>
         <p>Organizando os dados para enviar pelo WhatsApp.</p>
-        <span class="moto-preparation-counter" id="motoPreparationCounter">20s</span>
+        <span class="moto-preparation-counter" id="motoPreparationCounter">10s</span>
       </div>`;
     document.body.appendChild(overlay);
   }
 
-  const seconds=Math.max(1,Number(durationSeconds)||20);
+  const seconds=Math.max(1,Number(durationSeconds)||10);
   let remaining=seconds;
   const counter=overlay.querySelector("#motoPreparationCounter");
   if(counter)counter.innerText=remaining+"s";
@@ -1174,33 +1174,93 @@ function renderCompanyOffers(res){
   const normal=document.getElementById("companyNormalPrice");
   const promo=document.getElementById("companyPromoPrice");
   const oferta=document.getElementById("ofertaEntrega");
+
   if(!box)return;
+
+  const valorNormal=Number(
+    res.valorNormal!==undefined&&res.valorNormal!==null
+      ?res.valorNormal
+      :res.valor
+  )||0;
+
+  const valorPromocional=Number(
+    res.valorPromocional!==undefined&&res.valorPromocional!==null
+      ?res.valorPromocional
+      :res.valor
+  )||0;
+
+  box.dataset.valorNormal=String(valorNormal);
+  box.dataset.valorPromocional=String(valorPromocional);
+
   if(session){
     const isEmpresa=session.type==="empresa";
     const temDescontoEmpresa=!isEmpresa||Number(session.profile.EntregasComDescontoRestantes||0)>0;
+
     box.style.display="grid";
-    if(normal)normal.innerText=money(res.valorNormal||res.valor);
-    if(promo)promo.innerText=money(res.valorPromocional||res.valor);
+
+    if(normal)normal.innerText=money(valorNormal);
+    if(promo)promo.innerText=money(valorPromocional);
+
     if(oferta)oferta.value="normal";
+
+    lastPrice=valorNormal;
+    const priceText=document.getElementById("priceText");
+    if(priceText)priceText.innerText=money(valorNormal);
+
     box.querySelectorAll(".company-offer").forEach((btn,i)=>{
       btn.classList.toggle("active",i===0);
       if(i===1)btn.style.display=temDescontoEmpresa?"":"none";
     });
-    if(!temDescontoEmpresa)document.getElementById("priceText").innerText=money(res.valorNormal||res.valor);
+
+    if(!temDescontoEmpresa){
+      lastPrice=valorNormal;
+      if(priceText)priceText.innerText=money(valorNormal);
+    }
   }else{
     box.style.display="none";
     if(oferta)oferta.value="normal";
+    lastPrice=valorNormal;
   }
 }
 function selectCompanyOffer(tipo){
   const box=document.getElementById("companyOfferBox");
   const oferta=document.getElementById("ofertaEntrega");
-  if(session&&session.type==="empresa"&&Number(session.profile.EntregasComDescontoRestantes||0)<=0)tipo="normal";
-  if(oferta)oferta.value=tipo;
-  if(box)box.querySelectorAll(".company-offer").forEach(btn=>btn.classList.toggle("active",btn.textContent.toLowerCase().includes(tipo==="promocional"?"promocional":"normal")));
-  const priceEl=document.getElementById(tipo==="promocional"?"companyPromoPrice":"companyNormalPrice");
-  const val=priceEl?priceEl.innerText:"";
-  if(val)document.getElementById("priceText").innerText=val;
+  const priceText=document.getElementById("priceText");
+
+  if(
+    session&&
+    session.type==="empresa"&&
+    Number(session.profile.EntregasComDescontoRestantes||0)<=0
+  ){
+    tipo="normal";
+  }
+
+  const promocional=tipo==="promocional";
+
+  if(oferta)oferta.value=promocional?"promocional":"normal";
+
+  if(box){
+    box.querySelectorAll(".company-offer").forEach(btn=>{
+      const texto=String(btn.textContent||"").toLowerCase();
+      btn.classList.toggle(
+        "active",
+        promocional
+          ?texto.includes("promocional")
+          :texto.includes("normal")
+      );
+    });
+
+    const valor=Number(
+      promocional
+        ?box.dataset.valorPromocional
+        :box.dataset.valorNormal
+    );
+
+    if(Number.isFinite(valor)&&valor>=0){
+      lastPrice=valor;
+      if(priceText)priceText.innerText=money(valor);
+    }
+  }
 }
 async function loadPrice(){if(!validateStep())return;showLoader("Carregando valores...");const desconto=session.type==="empresa"&&Number(session.profile.EntregasComDescontoRestantes||0)>0?Number(session.profile.DescontoPercentual||0):0;const res=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto,cupom:"",rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!res.ok)return alert("Erro ao carregar preço.");lastPrice=res.valor;document.getElementById("priceText").innerText=money(lastPrice);renderCompanyOffers(res);document.getElementById("ecoText").style.display=res.desconto>0?"inline-block":"none";document.getElementById("ecoText").innerText=res.desconto>0?"Frete com economia "+res.desconto+"%":"Frete com economia";const c=document.getElementById("cupom");if(c)c.value="";const m=document.getElementById("cupomMsg");if(m)m.innerText="";const b=document.getElementById("cupomBtn");if(b)b.style.display="none";toggleCouponArea();setStep(6)}
 async function applyCouponPrice(){if(!session||session.type!=="usuario")return;const cupom=document.getElementById("cupom")?.value.trim()||"";const msg=document.getElementById("cupomMsg");const btn=document.getElementById("cupomBtn");if(!cupom){if(msg)msg.innerText="";if(btn)btn.style.display="none";return loadPriceWithoutStep()}showLoader("Verificando cupom...");const desconto=0;const res=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!res.ok){if(msg)msg.innerText="Cupom inválido";return}if(msg){msg.style.color="#047857";msg.innerText=res.cupomDesconto>0?"Cupom aplicado com sucesso":""}if(btn)btn.style.display="none";lastPrice=res.valor;document.getElementById("priceText").innerText=money(lastPrice);if(res.cupomDesconto>0){document.getElementById("ecoText").style.display="inline-block";document.getElementById("ecoText").innerText="Cupom aplicado "+res.cupomDesconto+"%"}else document.getElementById("ecoText").style.display="none"}
@@ -1277,17 +1337,28 @@ async function confirmDelivery(){
       OfertaEntrega:document.getElementById("ofertaEntrega")?.value||"",
       Pagamento:document.getElementById("pagamento")?.value||"",
       ObservacaoPagamento:document.getElementById("observacaoPagamento")?.value||"",
-      Valor:lastPrice,
+      Valor:(()=>{
+        const box=document.getElementById("companyOfferBox");
+        const tipo=document.getElementById("ofertaEntrega")?.value||"normal";
+        const escolhido=Number(
+          tipo==="promocional"
+            ?box?.dataset?.valorPromocional
+            :box?.dataset?.valorNormal
+        );
+        return Number.isFinite(escolhido)&&escolhido>=0?escolhido:lastPrice;
+      })(),
       MapsColeta:linkGoogleMaps(coleta),
       MapsDestino:linkGoogleMaps(destino),
       MapsRota:linkRotaGoogleMaps(coleta,destino),
       AcompanharUrl:""
     };
 
+    lastPrice=Number(ultimaEntregaLocal.Valor)||0;
+
     clearDeliveryProgress();
     currentSearchingId="";
 
-    await showMotoPreparationLoader(20);
+    await showMotoPreparationLoader(10);
 
     playSuccessNotification();
     showAcceptedStatus(ultimaEntregaLocal.ID);
