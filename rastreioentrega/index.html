@@ -4,56 +4,100 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>Rastrear entrega - PegaLeva</title>
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<title>Minhas entregas - PegaLeva</title>
 <link rel="icon" href="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=20260722-rastreio-ct4">
+<link rel="stylesheet" href="style.css?v=20260722-rastreio-lista-1">
+<style>
+.delivery-list-card{margin-bottom:16px}
+.delivery-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+.delivery-list-head h3{margin:0}
+.delivery-list-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.delivery-choice{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin-top:9px;padding:14px;border:1px solid #e2e8f0;border-radius:17px;background:#fff;color:#0f172a;text-align:left;cursor:pointer}
+.delivery-choice.active{border-color:#1769e8;background:#eef4ff;box-shadow:0 8px 20px rgba(23,105,232,.12)}
+.delivery-choice-index{display:grid;place-items:center;width:35px;height:35px;border-radius:50%;background:#eaf1ff;color:#0044c3;font-weight:950}
+.delivery-choice-copy strong{display:block;font-size:17px}
+.delivery-choice-copy small{display:block;margin-top:4px;color:#64748b;font-size:11px}
+.delivery-choice-arrow{color:#64748b}
+.waiting-card{display:grid;grid-template-columns:auto 1fr;gap:13px;padding:16px;border:1px solid #bfdbfe;border-radius:18px;background:#eff6ff}
+.waiting-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#fff;color:#1769e8;font-size:23px}
+.waiting-card strong{color:#0f3f91}
+.waiting-card p{margin:5px 0;color:#334155;line-height:1.45;font-size:13px}
+.waiting-card small{color:#64748b}
+.selected-value{margin-top:10px;font-size:24px;font-weight:950;color:#047857}
+</style>
 </head>
 <body>
 <div class="shell">
   <div class="brand">
     <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva">
-    <div><strong>PegaLeva</strong><span>Rastreamento de entrega em tempo real</span></div>
+    <div><strong>PegaLeva</strong><span>Suas entregas em tempo real</span></div>
   </div>
 
   <section class="card login-card" id="loginCard">
     <div class="login-icon"><i class="fa-solid fa-location-dot"></i></div>
-    <h1>Acompanhe sua entrega</h1>
-    <p style="color:var(--muted)">Digite o código do cliente, da empresa ou o Código CT de 4 caracteres.</p>
+    <h1>Acesse suas entregas</h1>
+    <p style="color:var(--muted)">Digite somente o Código ID de 3 caracteres da empresa ou usuário.</p>
     <div class="input-wrap">
-      <input id="trackingCode" placeholder="Código do cliente, empresa ou CT" autocomplete="off">
-      <button id="trackButton" onclick="startTracking()"><i class="fa-solid fa-magnifying-glass-location"></i> Rastrear</button>
+      <input id="trackingCode" maxlength="3" placeholder="Ex.: A48" autocomplete="off">
+      <button id="trackButton" onclick="startTracking()">
+        <i class="fa-solid fa-magnifying-glass-location"></i> Acessar entregas
+      </button>
     </div>
     <div id="loginError"></div>
   </section>
 
   <section id="trackingPanel" class="hidden">
-    <div class="card hero">
+    <div class="card delivery-list-card">
+      <div class="delivery-list-head">
+        <div>
+          <h3 id="clientName">Cliente</h3>
+          <p id="clientCodeLabel">Código ID</p>
+        </div>
+        <button onclick="changeCode()" style="background:#eef3ff;color:var(--blue);padding:11px 13px">
+          <i class="fa-solid fa-pen"></i>
+        </button>
+      </div>
+      <div id="deliveryList"></div>
+    </div>
+
+    <div class="card hero" id="trackingDetailCard">
       <div class="top-row">
         <div>
-          <span class="status-pill" id="statusPill"><i class="fa-solid fa-motorcycle"></i><span id="statusLabel">Em andamento</span></span>
-          <h2 id="clientName" style="margin:16px 0 5px">Cliente</h2>
-          <p class="muted" id="recordCode">Entrega</p>
+          <span class="status-pill" id="statusPill">
+            <i class="fa-solid fa-motorcycle"></i>
+            <span id="statusLabel">Em andamento</span>
+          </span>
+          <p class="muted" id="recordCode" style="margin-top:14px">Corrida</p>
+          <div class="selected-value" id="selectedValue">R$ 0,00</div>
         </div>
-        <div class="estimate"><small>Tempo estimado</small><strong id="estimateText">Até 20 min</strong></div>
+        <div class="estimate">
+          <small>Previsão</small>
+          <strong id="estimateText">Até 20 min</strong>
+        </div>
       </div>
+
       <div class="driver">
         <div class="avatar"><i class="fa-solid fa-user"></i></div>
-        <div><strong id="driverName">Aguardando entregador</strong><small id="driverPlate">O entregador aparecerá aqui</small></div>
+        <div>
+          <strong id="driverName">Entregador PegaLeva</strong>
+          <small id="driverPlate">Aguardando criação da corrida</small>
+        </div>
       </div>
     </div>
 
     <div class="card">
       <div class="timeline">
         <div class="timeline-progress" id="timelineProgress"></div>
-        <div class="step" data-step="0"><i class="fa-solid fa-receipt"></i><span>Pedido recebido</span></div>
-        <div class="step" data-step="1"><i class="fa-solid fa-user-check"></i><span>Entregador responsável</span></div>
-        <div class="step" data-step="2"><i class="fa-solid fa-motorcycle"></i><span>A caminho</span></div>
-        <div class="step" data-step="3"><i class="fa-solid fa-location-dot"></i><span>No local</span></div>
+        <div class="step" data-step="0"><i class="fa-solid fa-receipt"></i><span>Aguardando corrida</span></div>
+        <div class="step" data-step="1"><i class="fa-solid fa-person-biking"></i><span>Finalizando anterior</span></div>
+        <div class="step" data-step="2"><i class="fa-solid fa-motorcycle"></i><span>A caminho da coleta</span></div>
+        <div class="step" data-step="3"><i class="fa-solid fa-house"></i><span>A caminho do cliente</span></div>
         <div class="step" data-step="4"><i class="fa-solid fa-circle-check"></i><span>Finalizada</span></div>
       </div>
+
       <div class="current-box">
         <strong id="currentTitle">Situação da entrega</strong>
         <span id="currentMessage">Carregando informações...</span>
@@ -66,22 +110,17 @@
         </div>
         <div class="route">
           <div class="route-line"><div class="dot destination"></div></div>
-          <div><strong>Destino</strong><p id="destinationText">Local de entrega</p></div>
+          <div><strong>Casa do cliente</strong><p id="destinationText">Local de entrega</p></div>
         </div>
       </div>
-      <div class="refresh-note" id="refreshNote">Atualização automática a cada 5 segundos.</div>
-    </div>
 
-    <div class="card">
-      <div class="top-row">
-        <div><h3 style="margin-bottom:5px">Histórico recente</h3><p style="color:var(--muted);font-size:13px">Últimas entregas vinculadas ao código.</p></div>
-        <button onclick="changeCode()" style="background:#eef3ff;color:var(--blue);padding:11px 13px"><i class="fa-solid fa-pen"></i></button>
+      <div class="refresh-note" id="refreshNote">
+        Atualização automática a cada 5 segundos.
       </div>
-      <div id="historyList"></div>
     </div>
   </section>
 </div>
 
-<script src="script.js?v=20260722-rastreio-ct4"></script>
+<script src="script.js?v=20260722-rastreio-lista-1"></script>
 </body>
 </html>
