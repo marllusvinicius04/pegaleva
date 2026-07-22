@@ -238,7 +238,7 @@ async function updateWithoutLosingProgress(){
 
 
 const PIX_KEY="57293143000156";
-const API_URL="https://script.google.com/macros/s/AKfycby_9Le1vatkvIaikUipTuXlBZgvcmp-a9KDTrCWGmOxkG-KlZDU5l2Q7SIxPJuSe2Il/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbwjGFJDdxsbnJ1FCE5ZveSPhsc0ttFsmKKnMJyBnjug7DqJt0V7wMX0eNZs_2Y6JC6D/exec";
 let session=JSON.parse(localStorage.getItem("pegaleva_client")||"null"),
 chatDeliveryId="",currentStep=0,lastPrice=0,currentSearchingId="",showAllClientDeliveries=false,knownStatuses=JSON.parse(localStorage.getItem("pegaleva_status_client")||"{}"),refreshTimer=null,refreshBusy=false,clientCoupons=[],clientAnnouncements=[],clientSavedContacts=[];
 const steps=()=>document.querySelectorAll(".step"),dots=()=>document.querySelectorAll(".dot");
