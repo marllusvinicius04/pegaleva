@@ -678,14 +678,6 @@ function installWhatsAppSliders(){
   // A confirmação agora funciona com clique simples.
 }
 
-function addDeliveryToMyDeliveriesImmediately(delivery){
-  if(!delivery||!delivery.ID)return;
-  const atuais=Array.isArray(window.lastClientDeliveries)?window.lastClientDeliveries:[];
-  const semDuplicar=atuais.filter(item=>String(item.ID)!==String(delivery.ID));
-  window.lastClientDeliveries=[delivery,...semDuplicar];
-  renderDeliveries(window.lastClientDeliveries);
-}
-
 async function confirmAndOpenDeliveryWhatsApp(id,button){
   const d=(ultimaEntregaLocal&&String(ultimaEntregaLocal.ID)===String(id))
     ?ultimaEntregaLocal
@@ -697,17 +689,10 @@ async function confirmAndOpenDeliveryWhatsApp(id,button){
   if(button){
     button.disabled=true;
     button.classList.add("loading");
-    button.innerHTML='<span class="delivery-confirm-spinner"></span><span class="delivery-confirm-copy"><strong>Confirmando...</strong><small>Registrando em Minhas entregas</small></span>';
+    button.innerHTML='<span class="delivery-confirm-spinner"></span><span class="delivery-confirm-copy"><strong>Confirmando...</strong><small>Abrindo o WhatsApp</small></span>';
   }
 
   closeStatusModal();
-  addDeliveryToMyDeliveriesImmediately(d);
-
-  try{
-    refreshBusy=false;
-    await refreshPanel();
-  }catch(e){}
-
   const url=buildDeliveryWhatsAppUrl(d);
 
   if(button){
