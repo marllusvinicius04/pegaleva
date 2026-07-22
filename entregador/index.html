@@ -98,7 +98,7 @@
           <h1 id="saldoText">R$0,00</h1>
           <button id="toggleSaldoBtn" onclick="toggleSaldoVisibility()" style="width:auto;margin:0;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);color:white;border-radius:14px;padding:10px 12px;font-size:18px;box-shadow:none"><i class="fa-solid fa-eye"></i></button>
         </div>
-        <button class="btn green" onclick="openDriverHistoryModal()"><i class="fa-solid fa-chart-column"></i> Resumo</button>
+        <button class="btn green" onclick="openManualDeliveryModal()"><i class="fa-solid fa-plus"></i> Adicionar entrega</button>
       </div>
 
       <div class="card">
@@ -145,7 +145,7 @@
   </div>
   <div class="side-balance"><small>Meu saldo</small><h2 id="sideSaldoText">R$0,00</h2></div>
 
-  <button class="side-menu-btn" onclick="openManualDeliveryModal()"><i class="fa-solid fa-flag-checkered"></i> Finalizar entrega</button>
+  <button class="side-menu-btn" onclick="openManualDeliveryModal()"><i class="fa-solid fa-plus"></i> Adicionar entrega</button>
   <button class="side-menu-btn" onclick="openPaymentsModal()"><i class="fa-solid fa-wallet"></i> Meus pagamentos</button>
   <button class="side-menu-btn" onclick="openDriverHistoryModal()"><i class="fa-solid fa-clock-rotate-left"></i> Meu histórico</button>
   <button class="side-menu-btn" onclick="cancelDriverRegistration()"><i class="fa-solid fa-user-slash"></i> Cancelar entregador</button>
@@ -153,81 +153,23 @@
 </nav>
 
 <div class="modal" id="manualDeliveryModal">
-  <div class="modal-content" style="position:relative">
+  <div class="modal-content" style="position:relative;max-width:520px;text-align:left">
     <button class="side-close" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i></button>
-
     <div class="manual-title-row">
-      <span class="manual-title-icon"><i class="fa-solid fa-flag-checkered"></i></span>
-      <div>
-        <h2>Finalizar entrega</h2>
-        <p class="muted">Registre uma entrega recebida pela Central no WhatsApp.</p>
-      </div>
+      <span class="manual-title-icon"><i class="fa-solid fa-plus"></i></span>
+      <div><h2>Adicionar entrega</h2><p class="muted">Informe o Código ID cadastrado e o valor da entrega.</p></div>
     </div>
-
-    <div id="manualDeliveryFormStep">
-      <div class="manual-field">
-        <label>Nome da empresa</label>
-        <div class="manual-search-wrap">
-          <input id="manualCompanySearch" autocomplete="off" placeholder="Digite para pesquisar na planilha">
-          <div class="manual-results" id="manualCompanyResults"></div>
-        </div>
-        <div class="manual-selected" id="manualCompanySelected"></div>
-      </div>
-
-      <div class="manual-grid">
-        <div class="manual-field">
-          <label>Valor da entrega</label>
-          <input id="manualDeliveryValue" inputmode="decimal" placeholder="Ex.: 15,00">
-        </div>
-        <div class="manual-field">
-          <label>Forma de pagamento</label>
-          <select id="manualPaymentMethod">
-            <option value="PIX">PIX</option>
-            <option value="Espécie">Espécie</option>
-            <option value="Cartão">Cartão</option>
-            <option value="Outro">Outro</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="manual-grid">
-        <div class="manual-field">
-          <label>Bairro de coleta</label>
-          <select id="manualPickupNeighborhood"></select>
-        </div>
-        <div class="manual-field">
-          <label>Bairro de entrega</label>
-          <select id="manualDropoffNeighborhood"></select>
-        </div>
-      </div>
-
-      <div class="manual-field">
-        <label>Observação opcional</label>
-        <textarea id="manualDeliveryNote" placeholder="Nome do cliente, endereço ou referência"></textarea>
-      </div>
-
-      <button class="btn green" type="button" onclick="showManualPaymentStep()"><i class="fa-solid fa-qrcode"></i> Continuar para pagamento</button>
-      <button class="btn gray" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+    <div class="manual-field">
+      <label>Código ID da empresa ou usuário</label>
+      <input id="manualClientIdCode" autocomplete="off" placeholder="Digite o Código ID">
+      <div class="manual-selected" id="manualClientLocated"></div>
     </div>
-
-    <div class="manual-payment-step" id="manualDeliveryPaymentStep">
-      <div class="manual-pix-card">
-        <h3>Pagamento da entrega</h3>
-        <div id="manualDeliverySummary" class="manual-summary"></div>
-        <img src="https://i.ibb.co/Nd0HHzGc/Whats-App-Image-2026-07-02-at-22-17-59.jpg" alt="QR Code PIX">
-        <p class="info"><b>Chave PIX:</b> 57293143000156</p>
-        <p class="info"><b>Banco:</b> MERCADO PAGO LTDA</p>
-        <p class="info"><b>Recebedor:</b> 57.293.143 Marllus Vinicius Silva Araujo</p>
-      </div>
-
-      <div class="manual-payment-options">
-        <button id="manualPaidBtn" class="btn green" type="button" onclick="chooseManualPayment('Pago')"><i class="fa-solid fa-circle-check"></i> Foi pago</button>
-        <button id="manualPendingBtn" class="btn red" type="button" onclick="chooseManualPayment('Pendente')"><i class="fa-solid fa-clock"></i> Não foi pago</button>
-      </div>
-
-      <button class="btn" type="button" onclick="saveManualFinalizedDelivery()"><i class="fa-solid fa-floppy-disk"></i> Finalizar e registrar na planilha</button>
-      <button class="btn light" type="button" onclick="backManualDeliveryForm()"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+    <div class="manual-field">
+      <label>Valor da entrega</label>
+      <input id="manualDeliveryValue" inputmode="decimal" placeholder="Ex.: 15,00">
     </div>
+    <button class="btn green" type="button" onclick="createManualRace()"><i class="fa-solid fa-plus"></i> Criar entrega</button>
+    <button class="btn gray" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i> Cancelar</button>
   </div>
 </div>
 
