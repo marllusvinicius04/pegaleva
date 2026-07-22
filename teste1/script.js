@@ -303,6 +303,140 @@ function updateBairroOptions(){
 function cidadeRota(cidade){cidade=String(cidade||"").trim();if(cidade==="Uruçuí"||cidade==="Urucui"||cidade==="URUCUI")return "Uruçuí-PI";if(cidade==="Benedito Leite")return "Benedito Leite-MA";return cidade}
 function fullAddress(prefix){const rua=document.getElementById(prefix+"Rua").value.trim(),numero=(document.getElementById(prefix+"Numero").value.trim()||"0"),cidade=cidadeRota(document.getElementById(prefix+"Cidade").value);return[rua,numero,cidade].filter(Boolean).join(", ")}
 function pontoReferencia(prefix){return(document.getElementById(prefix+"Referencia")?.value||"").trim()}
+
+function installMotoPreparationStyles(){
+  if(document.getElementById("motoPreparationStyles"))return;
+
+  const style=document.createElement("style");
+  style.id="motoPreparationStyles";
+  style.textContent=`
+    .moto-preparation-box{
+      display:grid;
+      place-items:center;
+      gap:12px;
+      min-width:min(320px,88vw);
+      padding:24px 20px;
+      text-align:center;
+    }
+
+    .moto-preparation-road{
+      position:relative;
+      width:min(280px,76vw);
+      height:76px;
+      overflow:hidden;
+      border-radius:18px;
+      background:linear-gradient(180deg,#eff6ff 0 55%,#334155 55% 100%);
+      box-shadow:inset 0 -1px 0 rgba(255,255,255,.2);
+    }
+
+    .moto-preparation-road::after{
+      content:"";
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:13px;
+      height:4px;
+      background:repeating-linear-gradient(
+        90deg,
+        #fff 0 20px,
+        transparent 20px 38px
+      );
+      opacity:.85;
+      animation:motoRoadMove .65s linear infinite;
+    }
+
+    .moto-preparation-bike{
+      position:absolute;
+      left:50%;
+      bottom:24px;
+      z-index:2;
+      font-size:38px;
+      color:#10b981;
+      filter:drop-shadow(0 7px 8px rgba(15,23,42,.28));
+      animation:motoLoadingRide .55s ease-in-out infinite alternate;
+    }
+
+    .moto-preparation-title{
+      margin:0;
+      font-size:18px;
+      font-weight:950;
+      color:#0f172a;
+    }
+
+    .moto-preparation-subtitle{
+      margin:0;
+      color:#64748b;
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .moto-preparation-counter{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:68px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:#ecfdf5;
+      color:#047857;
+      font-size:15px;
+      font-weight:950;
+      border:1px solid #a7f3d0;
+    }
+
+    @keyframes motoLoadingRide{
+      from{transform:translate(-55%,-1px) rotate(-3deg)}
+      to{transform:translate(-45%,-8px) rotate(3deg)}
+    }
+
+    @keyframes motoRoadMove{
+      from{transform:translateX(0)}
+      to{transform:translateX(-38px)}
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function showMotoPreparationLoader(durationSeconds=20){
+  installMotoPreparationStyles();
+  hideSlowLoaderWarning();
+
+  const loader=document.getElementById("loader");
+  if(!loader)return Promise.resolve();
+
+  const originalHtml=loader.innerHTML;
+  let remaining=Math.max(1,Number(durationSeconds)||20);
+
+  loader.classList.remove("searching");
+  loader.classList.add("active");
+  loader.innerHTML=`
+    <div class="moto-preparation-box">
+      <div class="moto-preparation-road">
+        <i class="fa-solid fa-motorcycle moto-preparation-bike"></i>
+      </div>
+      <p class="moto-preparation-title">Preparando sua solicitação</p>
+      <p class="moto-preparation-subtitle">
+        Organizando os dados para abrir no WhatsApp.
+      </p>
+      <span class="moto-preparation-counter" id="motoPreparationCounter">${remaining}s</span>
+    </div>`;
+
+  return new Promise(resolve=>{
+    const timer=setInterval(()=>{
+      remaining--;
+      const counter=document.getElementById("motoPreparationCounter");
+      if(counter)counter.innerText=Math.max(0,remaining)+"s";
+
+      if(remaining<=0){
+        clearInterval(timer);
+        loader.classList.remove("active","searching");
+        loader.innerHTML=originalHtml;
+        resolve();
+      }
+    },1000);
+  });
+}
+
 function showLoader(text){
   const loader=document.getElementById("loader");
   const loaderText=document.getElementById("loaderText");
@@ -1107,7 +1241,6 @@ async function confirmDelivery(){
     :(profile.Nome||"");
 
   clearDeliveryProgress();
-  showLoader("Preparando sua solicitação...");
 
   ultimaEntregaLocal={
     ID:"LOCAL-"+Date.now(),
@@ -1137,7 +1270,9 @@ async function confirmDelivery(){
   };
 
   currentSearchingId="";
-  hideLoader();
+
+  await showMotoPreparationLoader(20);
+
   resetDeliveryForm(false);
   playSuccessNotification();
   showAcceptedStatus(ultimaEntregaLocal.ID);
@@ -1177,23 +1312,37 @@ function showAcceptedStatus(id){
   const title=document.getElementById("statusTitle");
   const text=document.getElementById("statusText");
   const icon=document.getElementById("statusIcon");
-  if(title)title.innerText="Sua entrega foi registrada com sucesso!";
+
+  if(title)title.innerText="Solicitação pronta!";
   if(icon){
     icon.className="fa-solid fa-motorcycle";
     icon.style.color="#10b981";
     icon.style.animation="motoSuccessJump .75s ease-in-out infinite alternate";
   }
+
   if(text){
     const codigoId=ultimaEntregaLocal?.CodigoID||session?.profile?.CodigoID||"";
-    text.innerHTML=`<div style="display:grid;gap:6px;margin-bottom:16px"><p class="muted" style="margin:0">Código ID da empresa/usuário: <b>${codigoId}</b></p></div>${whatsappSlideHtml(ultimaEntregaLocal?.ID||id)}`;
+    text.innerHTML=`
+      <div style="display:grid;gap:6px;margin-bottom:16px">
+        <p class="muted" style="margin:0">
+          Código ID da empresa/usuário: <b>${codigoId}</b>
+        </p>
+        <p class="muted" style="margin:0">
+          Agora confirme para enviar a solicitação pelo WhatsApp.
+        </p>
+      </div>
+      ${whatsappSlideHtml(ultimaEntregaLocal?.ID||id)}`;
+
     setTimeout(()=>installWhatsAppSliders(document),0);
   }
+
   if(!document.getElementById("motoSuccessAnimation")){
     const style=document.createElement("style");
     style.id="motoSuccessAnimation";
     style.textContent="@keyframes motoSuccessJump{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-10px) rotate(3deg)}}";
     document.head.appendChild(style);
   }
+
   document.getElementById("statusModal").classList.add("active");
 }
 
