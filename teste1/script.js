@@ -664,7 +664,7 @@ function notifyDeliveryWhatsApp(id){
     "✅ *Status: Entrega aceita*",
     "══════════════════════"
   ].join("\n");
-  window.open(`https://wa.me/5589994027592?text=${encodeURIComponent(mensagem)}`,"_blank");
+  window.open(`https://wa.me/5589994029572?text=${encodeURIComponent(mensagem)}`,"_blank");
 }
 
 
@@ -956,7 +956,7 @@ async function confirmDelivery(){
 
   resetDeliveryForm(false);
   playSuccessNotification();
-  showStatus("Entrega aceita","A entrega foi registrada na planilha e aceita automaticamente. Agora clique em Notificar entrega pelo WhatsApp.","ok");
+  showAcceptedStatus(registrada.ID);
 
   refreshBusy=false;
   refreshPanel();
@@ -991,6 +991,18 @@ async function cancelDelivery(id){
   refreshPanel()
 }
 function resetDeliveryForm(){["coletaRua","coletaNumero","coletaReferencia","coletaCidade","destinoRua","destinoNumero","destinoReferencia","destinoCidade","nomeDestino","whatsappDestino","conteudo","observacaoPagamento","cupom"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});updateBairroOptions();document.getElementById("bairroColeta").value="";document.getElementById("bairroDestino").value="";document.getElementById("volumes").value="1";if(document.getElementById("rotaRetorno"))document.getElementById("rotaRetorno").value="Não";lastPrice=0;if(document.getElementById("ofertaEntrega"))document.getElementById("ofertaEntrega").value="normal";if(document.getElementById("companyOfferBox"))document.getElementById("companyOfferBox").style.display="none";document.getElementById("paymentNotice").style.display="none";if(document.getElementById("cupomMsg"))document.getElementById("cupomMsg").innerText="";if(document.getElementById("cupomBtn"))document.getElementById("cupomBtn").style.display="none";toggleCouponArea();document.querySelectorAll(".choice").forEach(c=>c.classList.remove("active"));const rr=document.getElementById("rotaRetorno");if(rr){const rotaStep=rr.closest(".step");if(rotaStep){const choices=rotaStep.querySelectorAll(".choice");if(choices[1])choices[1].classList.add("active");}}setStep(0)}
+function showAcceptedStatus(id){
+  const title=document.getElementById("statusTitle");
+  const text=document.getElementById("statusText");
+  const icon=document.getElementById("statusIcon");
+  if(title)title.innerText="Entrega aceita!";
+  if(icon){
+    icon.className="fa-solid fa-motorcycle";
+    icon.style.color="#10b981";
+  }
+  if(text)text.innerHTML=`<button type="button" class="btn whatsapp-notify-btn" onclick="notifyDeliveryWhatsApp('${id}');closeStatusModal()"><i class="fa-brands fa-whatsapp"></i> Notificar pelo WhatsApp</button>`;
+  document.getElementById("statusModal").classList.add("active");
+}
 function showStatus(title,text,type){document.getElementById("statusTitle").innerText=title;document.getElementById("statusText").innerText=text;document.getElementById("statusIcon").className=type==="bad"?"fa-solid fa-circle-xmark":"fa-solid fa-circle-check";document.getElementById("statusIcon").style.color=type==="bad"?"#ef4444":"#10b981";document.getElementById("statusModal").classList.add("active")}
 function closeStatusModal(){document.getElementById("statusModal").classList.remove("active")}
 function logout(){
