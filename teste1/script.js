@@ -698,9 +698,9 @@ document.addEventListener("DOMContentLoaded",()=>installWhatsAppSliders());
 
 
 function notifyDeliveryWhatsApp(id){
-  const d=(ultimaEntregaLocal&&(String(ultimaEntregaLocal.CodigoCliente)===String(id)||String(ultimaEntregaLocal.ID)===String(id)))
+  const d=(ultimaEntregaLocal&&(String(ultimaEntregaLocal.ID)===String(id)||String(ultimaEntregaLocal.id)===String(id)))
     ?ultimaEntregaLocal
-    :(window.lastClientDeliveries||[]).find(x=>String(x.ID)===String(id));
+    :(window.lastClientDeliveries||[]).find(x=>String(x.ID||x.id)===String(id));
   if(!d)return alert("Dados da solicitação não encontrados.");
 
   const acompanhar=d.AcompanharUrl||"https://pegaelevadelivery.com.br/rastreioentrega";
@@ -708,8 +708,8 @@ function notifyDeliveryWhatsApp(id){
     "🛵 *PEGA E LEVA DELIVERY*",
     "*NOVA SOLICITAÇÃO DE ENTREGA*",
     "",
-    `Código ID da empresa/usuário: *${d.CodigoID||session?.profile?.CodigoID||""}*`,
-    `Código de rastreio: *${d.CodigoEntrega||d.CodigoCT||""}*`,
+    `Código ID da empresa/usuário: *${d.CodigoID||d.codigoId||session?.profile?.CodigoID||""}*`,
+    `Código de rastreio: *${d.CodigoCT||d.codigoCT||""}*`,
     "",
     `*VALOR DA ENTREGA: ${money(d.Valor||0)}*`,
     "",
