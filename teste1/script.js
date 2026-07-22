@@ -329,68 +329,11 @@ function playSuccessNotification(){
     setTimeout(()=>ctx.close&&ctx.close(),1200);
   }catch(e){}
 }
-function selectAccessType(type){
-  const accessOptions=document.getElementById("accessOptions");
-  const backBtn=document.getElementById("backBtn");
-  const accessTitle=document.getElementById("accessTitle");
-  const accessSubtitle=document.getElementById("accessSubtitle");
-  const userAccess=document.getElementById("userAccess");
-  const companyAccess=document.getElementById("companyAccess");
-
-  if(accessOptions)accessOptions.style.display="none";
-  if(backBtn)backBtn.style.display="block";
-
-  if(type==="usuario"){
-    if(accessTitle)accessTitle.innerText="Acesso do usuário";
-    if(accessSubtitle)accessSubtitle.innerText="Entre ou crie sua conta para solicitar uma entrega.";
-    if(userAccess)userAccess.style.display="block";
-    if(companyAccess)companyAccess.style.display="none";
-    showUserTab("login");
-  }else{
-    if(accessTitle)accessTitle.innerText="Acesso da empresa";
-    if(accessSubtitle)accessSubtitle.innerText="Entre ou cadastre sua empresa.";
-    if(userAccess)userAccess.style.display="none";
-    if(companyAccess)companyAccess.style.display="block";
-    showCompanyTab("login");
-  }
-}
-function backToOptions(){
-  const accessTitle=document.getElementById("accessTitle");
-  const accessSubtitle=document.getElementById("accessSubtitle");
-  const accessOptions=document.getElementById("accessOptions");
-  const backBtn=document.getElementById("backBtn");
-  const userAccess=document.getElementById("userAccess");
-  const companyAccess=document.getElementById("companyAccess");
-  if(accessTitle)accessTitle.innerText="Olá, bem-vindo";
-  if(accessSubtitle)accessSubtitle.innerText="Escolha uma opção para iniciar";
-  if(accessOptions)accessOptions.style.display="grid";
-  if(backBtn)backBtn.style.display="none";
-  if(userAccess)userAccess.style.display="none";
-  if(companyAccess)companyAccess.style.display="none";
-}
+function selectAccessType(type){document.getElementById("accessOptions").style.display="none";document.getElementById("backBtn").style.display="block";if(type==="usuario"){document.getElementById("accessTitle").innerText="Acesso do usuário";document.getElementById("accessSubtitle").innerText="Entre ou crie sua conta para solicitar uma entrega.";document.getElementById("userAccess").style.display="block";document.getElementById("companyAccess").style.display="none";showUserTab("login")}else{document.getElementById("accessTitle").innerText="Acesso da empresa";document.getElementById("accessSubtitle").innerText="Entre ou cadastre sua empresa.";document.getElementById("userAccess").style.display="none";document.getElementById("companyAccess").style.display="block";showCompanyTab("login")}}
+function backToOptions(){document.getElementById("accessTitle").innerText="Olá, bem-vindo";document.getElementById("accessSubtitle").innerText="Escolha uma opção para iniciar";document.getElementById("accessOptions").style.display="grid";document.getElementById("backBtn").style.display="none";document.getElementById("userAccess").style.display="none";document.getElementById("companyAccess").style.display="none"}
 function openCompanyRegistration(){document.getElementById("loginArea")?.scrollIntoView({behavior:"smooth",block:"center"});selectAccessType("empresa");showCompanyTab("create")}
-function showUserTab(tab){
-  const tabLogin=document.getElementById("tabUserLogin");
-  const tabCreate=document.getElementById("tabUserCreate");
-  const loginBox=document.getElementById("userLoginBox");
-  const createBox=document.getElementById("userCreateBox");
-  if(tabLogin)tabLogin.classList.toggle("active",tab==="login");
-  if(tabCreate)tabCreate.classList.toggle("active",tab==="create");
-  if(loginBox)loginBox.style.display=tab==="login"?"block":"none";
-  if(createBox)createBox.style.display=tab==="create"?"block":"none";
-  if(tab==="create")resetUserCreateSteps();
-}
-function showCompanyTab(tab){
-  const tabLogin=document.getElementById("tabCompanyLogin");
-  const tabCreate=document.getElementById("tabCompanyCreate");
-  const loginBox=document.getElementById("companyLoginBox");
-  const createBox=document.getElementById("companyCreateBox");
-  if(tabLogin)tabLogin.classList.toggle("active",tab==="login");
-  if(tabCreate)tabCreate.classList.toggle("active",tab==="create");
-  if(loginBox)loginBox.style.display=tab==="login"?"block":"none";
-  if(createBox)createBox.style.display=tab==="create"?"block":"none";
-  if(tab==="create")resetCompanyCreateSteps();
-}
+function showUserTab(tab){document.getElementById("tabUserLogin").classList.toggle("active",tab==="login");document.getElementById("tabUserCreate").classList.toggle("active",tab==="create");document.getElementById("userLoginBox").style.display=tab==="login"?"block":"none";document.getElementById("userCreateBox").style.display=tab==="create"?"block":"none";if(tab==="create")resetUserCreateSteps()}
+function showCompanyTab(tab){document.getElementById("tabCompanyLogin").classList.toggle("active",tab==="login");document.getElementById("tabCompanyCreate").classList.toggle("active",tab==="create");document.getElementById("companyLoginBox").style.display=tab==="login"?"block":"none";document.getElementById("companyCreateBox").style.display=tab==="create"?"block":"none";if(tab==="create")resetCompanyCreateSteps()}
 function resetCompanyCreateSteps(){showCompanyCreateStep(1)}
 function getCompanyCreateData(){return {responsavel:(document.getElementById("cNomeEmpresa")?.value||"").trim(),cpfCnpj:onlyDigits(document.getElementById("cCpfCnpj")?.value||""),email:(document.getElementById("cEmail")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("cWhatsapp")?.value||""),cidade:(document.getElementById("cCidade")?.value||"").trim(),rua:(document.getElementById("cRua")?.value||"").trim(),numero:(document.getElementById("cNumero")?.value||"").trim(),referencia:(document.getElementById("cReferencia")?.value||"").trim(),codigo:(document.getElementById("newCompanyCode")?.value||"").trim()}}
 function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail válido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informações de endereço para continuar.");return}[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
@@ -874,151 +817,119 @@ function toggleCashObs(){
 }
 async function confirmDelivery(){
   if(!validateStep())return;
-
-  const cupom=session.type==="usuario"
-    ?(document.getElementById("cupom")?.value.trim()||"")
-    :"";
-
+  const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
   if(cupom){
     showLoader("Verificando cupom...");
-    const check=await api("getPrice",{
-      bairroColeta:document.getElementById("bairroColeta").value,
-      bairroDestino:document.getElementById("bairroDestino").value,
-      coletaCidade:document.getElementById("coletaCidade").value,
-      destinoCidade:document.getElementById("destinoCidade").value,
-      desconto:0,
-      cupom,
-      rotaRetorno:document.getElementById("rotaRetorno").value,
-      forcePriceFresh:true
-    });
+    const check=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto:0,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});
     hideLoader();
-
     if(!check.ok){
       document.getElementById("cupomMsg").style.color="#ef4444";
       document.getElementById("cupomMsg").innerText="Cupom inválido";
       return;
     }
+    lastPrice=Number(check.valor||lastPrice||0);
+    document.getElementById("priceText").innerText=money(lastPrice);
   }
-
-  const perfil=session.profile||{};
-  const tipoCliente=session.type==="empresa"?"Empresa":"Usuário";
-  const nomeSolicitante=session.type==="empresa"
-    ?(perfil.Responsavel||perfil.NomeEmpresa||perfil.Empresa||"Empresa")
-    :(perfil.Nome||perfil.Responsavel||"Usuário");
-  const whatsappSolicitante=perfil.WhatsApp||perfil.Whatsapp||perfil.whatsapp||"";
-  const ofertaValor=(document.getElementById("ofertaEntrega")?.value||"normal");
-  const oferta=ofertaValor==="promocional"?"Promocional":"Normal";
-  const observacao=(document.getElementById("observacaoPagamento")?.value||"").trim();
-
-  const enderecoColeta=fullAddress("coleta");
-  const enderecoDestino=fullAddress("destino");
-  const mapaColeta="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(enderecoColeta);
-  const mapaDestino="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(enderecoDestino);
-
-  showLoader("Registrando sua entrega...");
-
-  const res=await api("createDelivery",{
-    tipoCliente:session.type,
-    codigoCliente:session.profile.CodigoAcesso,
-    enderecoColeta,
-    bairroColeta:document.getElementById("bairroColeta").value,
-    coletaCidade:document.getElementById("coletaCidade").value,
-    enderecoDestino,
-    referenciaColeta:pontoReferencia("coleta"),
-    referenciaDestino:pontoReferencia("destino"),
-    bairroDestino:document.getElementById("bairroDestino").value,
-    destinoCidade:document.getElementById("destinoCidade").value,
-    nomeDestino:document.getElementById("nomeDestino").value,
-    whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),
-    conteudo:document.getElementById("conteudo").value,
-    volumes:document.getElementById("volumes").value,
-    pagamento:document.getElementById("pagamento").value,
-    observacaoPagamento:observacao,
-    cupom,
-    rotaRetorno:document.getElementById("rotaRetorno").value,
-    ofertaEntrega:ofertaValor
-  });
-
-  if(!res.ok){
-    hideLoader();
-    showPanelMessage(res.error||"Não foi possível registrar a entrega.","bad");
-    return;
+  document.getElementById("whatsappDeliveryModal")?.classList.add("active");
+}
+function closeWhatsappDeliveryModal(){
+  document.getElementById("whatsappDeliveryModal")?.classList.remove("active");
+}
+function googleMapsPlaceLink(address){
+  return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(address);
+}
+function googleMapsRouteLink(origin,destination){
+  return "https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origin)+"&destination="+encodeURIComponent(destination)+"&travelmode=driving";
+}
+function createLocalDeliveryId(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code="";
+  if(window.crypto&&crypto.getRandomValues){
+    const values=new Uint32Array(8);crypto.getRandomValues(values);
+    values.forEach(v=>code+=chars[v%chars.length]);
+  }else{
+    for(let i=0;i<8;i++)code+=chars[Math.floor(Math.random()*chars.length)];
   }
-
-  const entregaId=res.delivery?.ID||"";
-  const nomeDestino=document.getElementById("nomeDestino").value;
-  const whatsappDestino=onlyDigits(document.getElementById("whatsappDestino").value);
-  const conteudo=document.getElementById("conteudo").value;
-  const volumes=document.getElementById("volumes").value;
-  const rotaRetorno=document.getElementById("rotaRetorno").value;
-  const pagamento=document.getElementById("pagamento").value;
-  const referenciaColeta=pontoReferencia("coleta")||"Não informada";
-  const referenciaDestino=pontoReferencia("destino")||"Não informada";
-
-  const mensagem=[
+  return "ENT-"+code;
+}
+function deliveryClientName(){
+  const p=session?.profile||{};
+  return String(session?.type==="empresa"?(p.Responsavel||p.NomeEmpresa||p.Empresa||""):(p.Nome||p.NomeCompleto||"")).trim()||"Cliente Pega&Leva";
+}
+function deliveryClientWhatsapp(){
+  const p=session?.profile||{};
+  return onlyDigits(p.Whatsapp||p.WhatsApp||p.Telefone||p.Celular||"");
+}
+function sendDeliveryToWhatsapp(){
+  if(!session)return alert("Faça login novamente para continuar.");
+  const coleta=fullAddress("coleta");
+  const destino=fullAddress("destino");
+  const coletaRef=pontoReferencia("coleta")||"Não informado";
+  const destinoRef=pontoReferencia("destino")||"Não informado";
+  const pedido=createLocalDeliveryId();
+  const nomeCliente=deliveryClientName();
+  const whatsappCliente=deliveryClientWhatsapp();
+  const nomeDestino=(document.getElementById("nomeDestino")?.value||"").trim();
+  const whatsappDestino=onlyDigits(document.getElementById("whatsappDestino")?.value||"");
+  const conteudo=(document.getElementById("conteudo")?.value||"").trim();
+  const volumes=(document.getElementById("volumes")?.value||"").trim();
+  const pagamento=(document.getElementById("pagamento")?.value||"").trim();
+  const obsPagamento=(document.getElementById("observacaoPagamento")?.value||"").trim();
+  const retorno=(document.getElementById("rotaRetorno")?.value||"").trim();
+  const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
+  const valor=(document.getElementById("priceText")?.innerText||money(lastPrice)).trim();
+  const coletaMaps=googleMapsPlaceLink(coleta);
+  const destinoMaps=googleMapsPlaceLink(destino);
+  const rotaMaps=googleMapsRouteLink(coleta,destino);
+  const linhas=[
     "══════════════════════",
     "🛵 *PEGA E LEVA DELIVERY*",
     "📦 *NOVA SOLICITAÇÃO DE ENTREGA*",
-    entregaId?`🧾 Pedido: *${entregaId}*`:"",
+    "🧾 Pedido: *"+pedido+"*",
     "══════════════════════",
     "",
-    "👤 *SOLICITANTE*",
-    "━━━━━━━━━━━━━━━━━━━━",
-    `Tipo: ${tipoCliente}`,
-    `Nome: ${nomeSolicitante}`,
-    `WhatsApp: https://wa.me/55${onlyDigits(whatsappSolicitante)}`,
+    "👤 *DADOS DO SOLICITANTE*",
+    "• Tipo: "+(session.type==="empresa"?"Empresa":"Usuário"),
+    "• Nome: "+nomeCliente,
+    whatsappCliente?"• WhatsApp: "+whatsappCliente:"",
     "",
-    "👥 *DESTINATÁRIO*",
-    "━━━━━━━━━━━━━━━━━━━━",
-    `Nome: ${nomeDestino}`,
-    `WhatsApp: https://wa.me/55${whatsappDestino}`,
+    "📍 *LOCAL DE COLETA*",
+    "• Endereço: "+coleta,
+    "• Bairro: "+document.getElementById("bairroColeta").value,
+    "• Referência: "+coletaRef,
+    "• Google Maps: "+coletaMaps,
     "",
-    "📍 *COLETA*",
-    "━━━━━━━━━━━━━━━━━━━━",
-    enderecoColeta,
-    `Referência: ${referenciaColeta}`,
+    "🏁 *LOCAL DE ENTREGA*",
+    "• Endereço: "+destino,
+    "• Bairro: "+document.getElementById("bairroDestino").value,
+    "• Referência: "+destinoRef,
+    "• Destinatário: "+nomeDestino,
+    "• WhatsApp: "+whatsappDestino,
+    "• Google Maps: "+destinoMaps,
     "",
-    "🗺️ *ABRIR COLETA NO GOOGLE MAPS*",
-    mapaColeta,
+    "🗺️ *ROTA PRONTA: COLETA → ENTREGA*",
+    rotaMaps,
     "",
-    "📍 *DESTINO*",
-    "━━━━━━━━━━━━━━━━━━━━",
-    enderecoDestino,
-    `Referência: ${referenciaDestino}`,
-    "",
-    "🗺️ *ABRIR DESTINO NO GOOGLE MAPS*",
-    mapaDestino,
-    "",
-    "📦 *INFORMAÇÕES DO PEDIDO*",
-    "━━━━━━━━━━━━━━━━━━━━",
-    `Conteúdo: ${conteudo}`,
-    `Volumes: ${volumes}`,
-    `Rota de retorno: ${rotaRetorno}`,
-    `Tipo de entrega: ${oferta}`,
-    `Valor do frete: ${money(lastPrice)}`,
+    "📦 *DETALHES DO PEDIDO*",
+    "• Conteúdo: "+conteudo,
+    "• Volumes: "+volumes,
+    "• Rota de retorno: "+(retorno||"Não"),
     "",
     "💳 *PAGAMENTO*",
-    "━━━━━━━━━━━━━━━━━━━━",
-    `Forma: ${pagamento}`,
-    `Observação: ${observacao||"Nenhuma"}`,
+    "• Forma: "+pagamento,
+    obsPagamento?"• Observação: "+obsPagamento:"",
+    cupom?"• Cupom: "+cupom:"",
+    "• Valor calculado: *"+valor+"*",
     "",
-    "══════════════════════",
-    "✅ Pedido registrado no painel Pega e Leva.",
-    "⚠️ Confira os endereços antes de iniciar a corrida.",
-    "══════════════════════"
-  ].filter(Boolean).join("\n");
-
-  // Não inicia busca automática por entregador.
-  currentSearchingId="";
-  saveDeliveryProgress();
-  resetDeliveryForm();
+    "✅ *Solicitação enviada pelo site Pega e Leva.*"
+  ].filter(Boolean);
+  const url="https://wa.me/5589994029572?text="+encodeURIComponent(linhas.join("\n"));
+  closeWhatsappDeliveryModal();
   clearDeliveryProgress();
-  hideLoader();
-  refreshPanel();
-
-  const whatsappUrl="https://wa.me/5589994372011?text="+encodeURIComponent(mensagem);
-  window.location.href=whatsappUrl;
+  window.open(url,"_blank","noopener,noreferrer");
+  setTimeout(()=>{resetDeliveryForm(false);showStatus("Solicitação preparada","A notinha foi aberta no WhatsApp da Central. Toque em enviar para concluir.","ok")},250);
 }
+
 function closeSearchLoader(){hideLoader()}
 async function tryAgainCurrentSearch(){
   if(!currentSearchingId){hideLoader();return}
@@ -1349,25 +1260,3 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },200);
 })();
-
-
-document.addEventListener("DOMContentLoaded",function(){
-  const userButton=document.querySelector('[onclick="selectAccessType(\'usuario\')"]');
-  const companyButton=document.querySelector('[onclick="selectAccessType(\'empresa\')"]');
-
-  if(userButton&&!userButton.dataset.accessBound){
-    userButton.dataset.accessBound="1";
-    userButton.addEventListener("click",function(event){
-      event.preventDefault();
-      selectAccessType("usuario");
-    });
-  }
-
-  if(companyButton&&!companyButton.dataset.accessBound){
-    companyButton.dataset.accessBound="1";
-    companyButton.addEventListener("click",function(event){
-      event.preventDefault();
-      selectAccessType("empresa");
-    });
-  }
-});
