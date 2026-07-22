@@ -120,9 +120,81 @@ function statusBadge(status){const s=norm(status);if(s==="Entrega finalizada")re
 function whatsappCobranca(nome,whatsapp,valor){const d=onlyDigits(whatsapp);if(!d){alert("WhatsApp não cadastrado para enviar cobrança.");return}const msg=`COBRANÇA DO DIA PEGA E LEVA - OLÁ ${norm(nome)||"CLIENTE"} PASSANDO PARA AVISAR DO PAGAMENTO DAS ENTREGAS DO DIA NO VALOR DE ${money(num(valor))} E AS INFORMAÇÕES PARA PAGEMENTO CHAVE PIX: 57293143000156 - BANCO MERCADO PAGO MARLLUS VINICIUS S ARAUJO`;window.open(`https://web.whatsapp.com/send?phone=55${d}&text=${encodeURIComponent(msg)}`,"_blank")}
 async function apiPost(payload){if(!APP_SCRIPT_URL||APP_SCRIPT_URL.includes("COLE_AQUI"))throw new Error("Cole a URL do Apps Script Web App em APP_SCRIPT_URL no painel.");const res=await fetch(APP_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});const data=await res.json().catch(()=>({ok:false,error:"Resposta inválida do Apps Script."}));if(!data.ok)throw new Error(data.error||"Ação não concluída.");return data}
 let pendingDebtPayment=null;
-function openDebtPaymentModal(tipo,codigo,nome,id,valor){if(!codigo&&!id)return alert("Cadastro sem ID ou código de acesso.");pendingDebtPayment={tipo,codigo,nome,id,valor:num(valor)};const body=document.getElementById("debtPaymentModalBody");if(body)body.innerHTML=`<div class="mini-row"><span>Cadastro</span><b>${escapeHtml(nome||"Cliente/empresa")}</b></div><div class="mini-row"><span>Tipo</span><b>${tipo==="empresa"?"Empresa":"Usuário"}</b></div><div class="mini-row"><span>Valor pendente</span><b class="money red">${money(num(valor))}</b></div><p class="muted">Ao confirmar, o valor pendente será lançado como pago, o PagamentoPendente será zerado e, no caso de empresa, o SaldoDevedor também será abatido.</p>`;document.getElementById("debtPaymentModal").classList.add("active")}
+function openDebtPaymentModal(tipo,codigo,nome,id,valor){if(!codigo&&!id)return alert("Cadastro sem ID ou código de acesso.");pendingDebtPayment={tipo,codigo,nome,id,valor:num(valor)};const body=document.getElementById("debtPaymentModalBody");if(body)body.innerHTML=`<div class="mini-row"><span>Cadastro</span><b>${escapeHtml(nome||"Cliente/empresa")}</b></div><div class="mini-row"><span>Tipo</span><b>${tipo==="empresa"?"Empresa":"Usuário"}</b></div><div class="mini-row"><span>Valor pendente</span><b class="money red">${money(num(valor))}</b></div><p class="muted">Ao confirmar, todas as corridas pendentes deste cadastro serão atualizadas na aba CORRIDAS para StatusPagamento = Pago.</p>`;document.getElementById("debtPaymentModal").classList.add("active")}
 function closeDebtPaymentModal(){document.getElementById("debtPaymentModal").classList.remove("active");pendingDebtPayment=null}
-async function confirmDebtPayment(){const p=pendingDebtPayment;if(!p)return;showLoader("Atualizando pagamento do devedor...");try{await apiPost({action:"adminClearPending",tipo:p.tipo,codigo:p.codigo,id:p.id});showStatus("Pagamento atualizado como pago e débito zerado com sucesso.","green");closeDebtPaymentModal();await loadDashboard(true)}catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}}
+async function confirmDebtPayment(){
+  const p=pendingDebtPayment;
+  if(!p)return;
+
+  const cliente=(p.tipo==="empresa"?db.empresas:db.usuarios).find(item=>
+    norm(item.ID)===norm(p.id)||
+    norm(item.CodigoAcesso)===norm(p.codigo)
+  );
+
+  if(!cliente){
+    showStatus("Cliente ou empresa não encontrado.","red");
+    return;
+  }
+
+  const corridasPendentes=corridasDoCliente(cliente).filter(corridaPendente);
+
+  if(!corridasPendentes.length){
+    showStatus("Não existem corridas pendentes para marcar como pagas.","red");
+    closeDebtPaymentModal();
+    await loadDashboard(true);
+    return;
+  }
+
+  showLoader("Marcando corridas como pagas...");
+
+  try{
+    let atualizadas=0;
+    const falhas=[];
+
+    for(const corrida of corridasPendentes){
+      const corridaId=norm(corrida.ID);
+      if(!corridaId){
+        falhas.push("Corrida sem ID");
+        continue;
+      }
+
+      try{
+        await apiPost({
+          action:"registerCorridaPaymentStatus",
+          corridaId,
+          id:corridaId,
+          status:"Pago"
+        });
+        atualizadas++;
+      }catch(err){
+        falhas.push((corrida.CodigoCT||corridaId)+": "+(err.message||String(err)));
+      }
+    }
+
+    if(atualizadas>0){
+      closeDebtPaymentModal();
+      await loadDashboard(true);
+
+      if(falhas.length){
+        showStatus(
+          atualizadas+" corrida(s) marcada(s) como paga(s). "+falhas.length+" não foram atualizadas.",
+          "red"
+        );
+      }else{
+        showStatus(
+          atualizadas+" corrida(s) marcada(s) como paga(s) com sucesso.",
+          "green"
+        );
+      }
+    }else{
+      throw new Error(falhas[0]||"Nenhuma corrida foi atualizada.");
+    }
+  }catch(err){
+    showStatus(err.message||String(err),"red");
+  }finally{
+    hideLoader();
+  }
+}
 async function quitarPendente(tipo,codigo,nome,id){const item=(tipo==="empresa"?db.empresas:db.usuarios).find(x=>norm(x.ID)===norm(id)||norm(x.CodigoAcesso)===norm(codigo));openDebtPaymentModal(tipo,codigo,nome,id,item?valorPendenteCorridas(item):0)}
 async function cadastrarEntregador(){const p={action:"adminRegisterDriver",nome:norm(document.getElementById("driverNome").value),whatsapp:norm(document.getElementById("driverWhatsApp").value),cpf:norm(document.getElementById("driverCPF").value),placaMoto:norm(document.getElementById("driverPlaca").value),codigo:norm(document.getElementById("driverCodigo").value),email:norm(document.getElementById("driverEmail").value)};if(!p.nome||!p.whatsapp||!p.cpf||!p.placaMoto||!p.codigo||!p.email)return alert("Preencha todos os dados do entregador.");showLoader("Cadastrando entregador...");try{await apiPost(p);["driverNome","driverWhatsApp","driverCPF","driverPlaca","driverCodigo","driverEmail"].forEach(id=>document.getElementById(id).value="");showStatus("Entregador cadastrado com sucesso.","green");await loadDashboard(false)}catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}}
 async function cadastrarEmpresa(){const p={action:"adminRegisterCompany",responsavel:norm(document.getElementById("empresaResponsavel").value),whatsapp:norm(document.getElementById("empresaWhatsApp").value),cpfCnpj:norm(document.getElementById("empresaCpfCnpj").value),codigo:norm(document.getElementById("empresaCodigo").value),email:norm(document.getElementById("empresaEmail").value),rua:norm(document.getElementById("empresaRua").value),numero:norm(document.getElementById("empresaNumero").value),referencia:norm(document.getElementById("empresaReferencia").value),cidade:norm(document.getElementById("empresaCidade").value)};if(!p.responsavel||!p.whatsapp||!p.cpfCnpj||!p.codigo||!p.email||!p.rua||!p.numero||!p.referencia||!p.cidade)return alert("Preencha todos os dados da empresa.");showLoader("Cadastrando empresa...");try{await apiPost(p);["empresaResponsavel","empresaWhatsApp","empresaCpfCnpj","empresaCodigo","empresaEmail","empresaRua","empresaNumero","empresaReferencia"].forEach(id=>document.getElementById(id).value="");document.getElementById("empresaCidade").value="Uruçuí";showStatus("Empresa cadastrada com sucesso.","green");await loadDashboard(false)}catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}}
