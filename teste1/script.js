@@ -644,23 +644,67 @@ function renderDeliveries(list){
 
 function whatsappSlideHtml(id){
   const safe=String(id||"").replace(/'/g,"&#039;");
-  return `<button type="button" class="btn green whatsapp-confirm-btn" onclick="notifyDeliveryWhatsApp('${safe}')">
-    <i class="fa-brands fa-whatsapp"></i> Confirmar e enviar pelo WhatsApp
+  return `<button type="button" class="delivery-confirm-btn" onclick="confirmAndOpenDeliveryWhatsApp('${safe}',this)">
+    <span class="delivery-confirm-icon"><i class="fa-brands fa-whatsapp"></i></span>
+    <span class="delivery-confirm-copy">
+      <strong>Confirmar entrega</strong>
+      <small>Registrar e enviar pelo WhatsApp</small>
+    </span>
+    <span class="delivery-confirm-arrow"><i class="fa-solid fa-arrow-right"></i></span>
   </button>`;
 }
 
 function installWhatsAppSliders(){
   // Mantida apenas por compatibilidade com chamadas antigas.
-  // O botão agora funciona com clique simples.
+  // A confirmação agora funciona com clique simples.
 }
 
+function addDeliveryToMyDeliveriesImmediately(delivery){
+  if(!delivery||!delivery.ID)return;
+  const atuais=Array.isArray(window.lastClientDeliveries)?window.lastClientDeliveries:[];
+  const semDuplicar=atuais.filter(item=>String(item.ID)!==String(delivery.ID));
+  window.lastClientDeliveries=[delivery,...semDuplicar];
+  renderDeliveries(window.lastClientDeliveries);
+}
 
-function notifyDeliveryWhatsApp(id){
+async function confirmAndOpenDeliveryWhatsApp(id,button){
   const d=(ultimaEntregaLocal&&String(ultimaEntregaLocal.ID)===String(id))
     ?ultimaEntregaLocal
     :(window.lastClientDeliveries||[]).find(x=>String(x.ID)===String(id));
+
   if(!d)return alert("Dados da solicitação não encontrados.");
 
+  const popup=window.open("about:blank","_blank");
+  if(button){
+    button.disabled=true;
+    button.classList.add("loading");
+    button.innerHTML='<span class="delivery-confirm-spinner"></span><span class="delivery-confirm-copy"><strong>Confirmando...</strong><small>Registrando em Minhas entregas</small></span>';
+  }
+
+  closeStatusModal();
+  addDeliveryToMyDeliveriesImmediately(d);
+
+  try{
+    refreshBusy=false;
+    await refreshPanel();
+  }catch(e){}
+
+  const url=buildDeliveryWhatsAppUrl(d);
+
+  if(button){
+    button.classList.remove("loading");
+    button.classList.add("confirmed");
+    button.innerHTML='<span class="delivery-confirm-icon"><i class="fa-solid fa-check"></i></span><span class="delivery-confirm-copy"><strong>Entrega confirmada</strong><small>WhatsApp aberto com sucesso</small></span>';
+  }
+
+  if(popup){
+    popup.location.href=url;
+  }else{
+    window.location.href=url;
+  }
+}
+
+function buildDeliveryWhatsAppUrl(d){
   const acompanhar=d.AcompanharUrl||"https://pegaelevadelivery.com.br/rastreioentrega";
   const linhas=[
     "🛵 *PEGA E LEVA DELIVERY*",
@@ -698,8 +742,15 @@ function notifyDeliveryWhatsApp(id){
     "",
     "*SOLICITAÇÃO GERADA VIA PEGA E LEVA*"
   ];
+  return `https://wa.me/5589994029572?text=${encodeURIComponent(linhas.join("\n"))}`;
+}
 
-  window.open(`https://wa.me/5589994029572?text=${encodeURIComponent(linhas.join("\n"))}`,"_blank");
+function notifyDeliveryWhatsApp(id){
+  const d=(ultimaEntregaLocal&&String(ultimaEntregaLocal.ID)===String(id))
+    ?ultimaEntregaLocal
+    :(window.lastClientDeliveries||[]).find(x=>String(x.ID)===String(id));
+  if(!d)return alert("Dados da solicitação não encontrados.");
+  window.open(buildDeliveryWhatsAppUrl(d),"_blank");
 }
 
 
@@ -983,7 +1034,9 @@ async function confirmDelivery(){
   currentSearchingId=d.ID||"";
   resetDeliveryForm(false);
   playSuccessNotification();
+  addDeliveryToMyDeliveriesImmediately(ultimaEntregaLocal);
   showAcceptedStatus(d.ID||"");
+  refreshBusy=false;
   refreshPanel();
 }
 
