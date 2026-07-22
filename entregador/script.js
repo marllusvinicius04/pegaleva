@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260706-impecavel";
+const APP_CACHE_VERSION="20260722-corridas-v4";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -23,7 +23,7 @@ clearAppCache();
 
 
 const PIX_KEY="57293143000156";
-const API_URL="https://script.google.com/macros/s/AKfycbx739xcgwZ0NTYdtj0pjFN0QAqyNh94PV96PxKRy90pOvKHOg1V0LFf-gjkrIsKaL1w/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbwJDVpvd4SDFWMHwIJWHOD3-2ZyUKX9oi4Zu9ytrOx47GjbufJd7QuXPyMZT2jw4pWF/exec";
 
 let openDeliveryDetails=JSON.parse(localStorage.getItem("pegaleva_open_delivery_details")||"[]"),
 session=JSON.parse(localStorage.getItem("pegaleva_driver")||"null"),
