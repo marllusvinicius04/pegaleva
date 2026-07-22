@@ -13,7 +13,7 @@
   <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    <link rel="stylesheet" href="style.css?v=hero-azul-secoes-claras-20260719">
+    <link rel="stylesheet" href="style.css?v=login-cadastro-corrigido-20260722">
 
 
 
@@ -54,6 +54,7 @@
 }
 </style>
 
+  <meta name="pegaleva-api-version" content="login-cadastro-corrigido-20260722">
 </head>
 <body>
 
@@ -180,7 +181,8 @@
         <div id="companyCreateStep2" style="display:none">
           <div class="mini-title"><i class="fa-solid fa-location-dot"></i> Etapa 2 de 3</div>
           <label>Selecionar a cidade</label><select id="cCidade"><option value="">Selecione</option><option value="Uruçuí">Uruçuí</option><option value="Benedito Leite">Benedito Leite</option></select>
-          <label>Logradouro (Rua, avenida, alameda...)</label><input id="cRua" placeholder="Rua">
+          <label>Logradouro (Rua, avenida, alameda...)</label><input id="cRua" placeholder="Ex: Rua das Flores (digite apenas o nome da rua ou avenida)">
+          <small style="display:block;margin:6px 0 14px;color:#dc2626;font-size:12px;">⚠️ Informe somente o nome da rua, avenida ou alameda. Não coloque número, bairro, cidade ou CEP neste campo.</small>
           <label>Número</label><input id="cNumero" placeholder="Número">
           <label>Referência</label><input id="cReferencia" placeholder="Ponto de referência">
           <button type="button" class="btn gray" onclick="showCompanyCreateStep(1)">Voltar</button>
@@ -312,7 +314,9 @@
         <div class="form-progress"><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         <div class="step active">
           <h3>Endereço de coleta</h3><button class="btn light" onclick="useRegisteredAddress()" id="useAddressBtn">Usar meu endereço de cadastro</button>
-          <label>Logradouro (Rua, avenida, alameda...)</label><input id="coletaRua"><label>Número</label><input id="coletaNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="coletaReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="coletaCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
+          <small style="display:block;margin:8px 0 14px;color:#2563eb;font-size:12px;font-weight:600;">💡 Apenas para empresas: clique em <strong>"Usar meu endereço de cadastro"</strong> para preencher automaticamente o endereço de coleta.</small>
+          <label>Logradouro (Rua, avenida, alameda...)</label><input id="coletaRua" placeholder="Ex: Rua das Flores (digite apenas o nome da rua ou avenida)">
+          <small style="display:block;margin:6px 0 14px;color:#dc2626;font-size:12px;">⚠️ Informe somente o nome da rua, avenida ou alameda. Não coloque número, bairro, cidade ou CEP neste campo.</small><label>Número</label><input id="coletaNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="coletaReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="coletaCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
           <button class="btn" onclick="nextStepWithLoading('Carregando destino...')">Continuar</button>
         </div>
         <div class="step"><h3>Endereço de destino</h3><label>Logradouro (Rua, avenida, alameda...)</label><input id="destinoRua"><label>Número</label><input id="destinoNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="destinoReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="destinoCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando bairros...')">Continuar</button></div></div>
@@ -320,7 +324,7 @@
         <div class="step"><h3>Dados de quem vai receber</h3><label>Nome da pessoa de destino</label><input id="nomeDestino"><label>Telefone / WhatsApp com DDD</label><input id="whatsappDestino"><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando conteúdo...')">Continuar</button></div></div>
         <div class="step"><h3>Conteúdo</h3><div class="grid2"><div class="choice" onclick="selectChoice(this,'conteudo','Comidas e bebidas')"><i class="fa-solid fa-burger"></i><strong>Comidas e bebidas</strong><small>Lanches e bebidas</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Frios')"><i class="fa-solid fa-snowflake"></i><strong>Frios</strong><small>Sorvetes e gelados</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Documentos e papéis')"><i class="fa-solid fa-file-lines"></i><strong>Documentos</strong><small>Papéis e envelopes</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Outros')"><i class="fa-solid fa-box"></i><strong>Outros</strong><small>Pequenos itens</small></div></div><input type="hidden" id="conteudo"><label>Volumes</label><select id="volumes"><option value="1">1 volume</option><option value="2">2 volumes</option><option value="3">3 volumes</option><option value="4">4 volumes</option></select><div class="pay-alert">Capacidade da entrega: até 4 itens apenas, dentro da bag de 45L do entregador. Não serão aceitas entregas ou ofertas de valores que não sejam solicitadas pelo sistema.</div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando rota de retorno...')">Continuar</button></div></div>
         <div class="step"><h3>Deseja acionar rota de retorno?</h3><p class="muted">A rota de retorno é usada quando o cliente vai pagar por maquininha ou dinheiro. O entregador coleta o produto com a maquininha da empresa e depois devolve a maquininha e/ou o dinheiro em espécie no estabelecimento.</p><input type="hidden" id="rotaRetorno" value="Não"><div class="grid2"><div class="choice" onclick="selectRotaRetorno(this,'Sim')"><i class="fa-solid fa-route"></i><strong>Sim, acionar retorno</strong></div><div class="choice active" onclick="selectRotaRetorno(this,'Não')"><i class="fa-solid fa-circle-xmark"></i><strong>Não precisa</strong></div></div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="loadPrice()">Continuar para valor</button></div></div>
-        <div class="step"><h3>Valor e pagamento</h3><input type="hidden" id="ofertaEntrega" value="normal"><div class="price-card"><p class="muted">Valor da viagem</p><div class="price" id="priceText">R$0,00</div><span class="eco" id="ecoText" style="display:none">Frete com economia</span><div class="company-offers" id="companyOfferBox"><button type="button" class="company-offer active" onclick="selectCompanyOffer('normal')">Entrega Normal<small>Serviço normal</small><b id="companyNormalPrice">R$0,00</b></button><button type="button" class="company-offer" onclick="selectCompanyOffer('promocional')">Entrega Promocional<small>Oferta para usuários e empresas</small><b id="companyPromoPrice">R$0,00</b></button></div></div><label>Forma de pagamento</label><select id="pagamento" onchange="toggleCashObs()"><option>PIX</option><option>Espécie</option></select><div id="cupomArea" style="display:none"><label>Inserir cupom</label><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center"><input id="cupom" data-optional="true" placeholder="Digite seu cupom" oninput="onCouponInput()"><button id="cupomBtn" type="button" onclick="applyCouponPrice()" style="display:none;width:auto;margin:0;padding:0 14px;min-height:48px;border-radius:14px;background:#eef4ff;color:#0044c3;font-weight:900">Confirmar</button></div><div class="mini-error" id="cupomMsg"></div></div><div id="paymentNotice" class="pay-alert" style="display:none">O PAGAMENTO DEVE SER REALIZADO NO ATO DA COLETA DO ITEM PELO CODIGO DO ENTREGADOR INFORMADO</div><div id="cashObs" style="display:none"><label>Observação para dinheiro trocado</label><textarea id="observacaoPagamento"></textarea></div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn green" onclick="confirmDelivery()">Confirmar entrega</button></div></div>
+        <div class="step"><h3>Valor e pagamento</h3><input type="hidden" id="ofertaEntrega" value="normal"><div class="price-card"><p class="muted">Valor da viagem</p><div class="price" id="priceText">R$0,00</div><span class="eco" id="ecoText" style="display:none">Frete com economia</span><div class="company-offers" id="companyOfferBox"><button type="button" class="company-offer active" onclick="selectCompanyOffer('normal')">Entrega Normal<small>Serviço normal</small><b id="companyNormalPrice">R$0,00</b></button><button type="button" class="company-offer" onclick="selectCompanyOffer('promocional')">Entrega Promocional<small>Oferta para usuários e empresas</small><b id="companyPromoPrice">R$0,00</b></button></div></div><label>Forma de pagamento</label><select id="pagamento" onchange="toggleCashObs()"><option>PIX</option><option>Espécie</option></select><div id="cupomArea" style="display:none"><label>Inserir cupom</label><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center"><input id="cupom" data-optional="true" placeholder="Digite seu cupom" oninput="onCouponInput()"><button id="cupomBtn" type="button" onclick="applyCouponPrice()" style="display:none;width:auto;margin:0;padding:0 14px;min-height:48px;border-radius:14px;background:#eef4ff;color:#0044c3;font-weight:900">Confirmar</button></div><div class="mini-error" id="cupomMsg"></div></div><div id="paymentNotice" class="pay-alert" style="display:none">O PAGAMENTO DEVE SER REALIZADO NO ATO DA COLETA DO ITEM PELO CODIGO DO ENTREGADOR INFORMADO</div><div id="cashObs" style="display:none"><label>Observação para dinheiro trocado</label><textarea id="observacaoPagamento"></textarea></div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn green" onclick="confirmDelivery()"><i class="fa-solid fa-check"></i> Confirmar valor</button></div></div>
       </div>
       <div class="card" style="margin-top:18px"><h3>Minhas entregas</h3><div id="deliveriesBox"><p class="muted">Sem entregas aqui (0) Solicite agora</p></div></div>
     </main>
@@ -505,21 +509,7 @@
   </div>
 </div>
 
-
-<div class="modal" id="whatsappDeliveryModal">
-  <div class="modal-box whatsapp-order-modal" style="max-width:470px;text-align:center;padding:28px 22px">
-    <div class="whatsapp-order-icon"><i class="fa-brands fa-whatsapp"></i></div>
-    <h2>Finalize pelo WhatsApp</h2>
-    <p class="muted">Para uma melhor experiência e atendimento mais rápido, envie agora a solicitação completa para a Central Pega&amp;Leva pelo WhatsApp.</p>
-    <div class="whatsapp-order-note">
-      <i class="fa-solid fa-receipt"></i> A notinha será gerada automaticamente com todos os dados, localização da coleta, localização da entrega e rota pronta no Google Maps.
-    </div>
-    <button class="btn green" onclick="sendDeliveryToWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Enviar solicitação pelo WhatsApp</button>
-    <button class="btn gray" onclick="closeWhatsappDeliveryModal()">Voltar e revisar</button>
-  </div>
-</div>
-
-<div class="modal" id="statusModal"><div class="modal-box"><i id="statusIcon" class="fa-solid fa-circle-check"></i><h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p><button class="btn green" onclick="closeStatusModal()">OK</button></div></div>
+<div class="modal" id="statusModal"><div class="modal-box"><i id="statusIcon" class="fa-solid fa-circle-check"></i><h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p></div></div>
 
 <div class="modal" id="clientPaymentModal">
   <div class="modal-box client-pay-box" style="text-align:left">
@@ -529,7 +519,7 @@
   </div>
 </div>
 
-<script src="script.js?v=chat-atendimento-corrigido-20260719"></script>
+<script src="script.js?v=loading-moto-corrigido-20260722-2"></script>
 
 <script>
 /* Correção isolada do chat de atendimento */
@@ -692,6 +682,61 @@
         window.closeSupportChat();
       }
     });
+  });
+})();
+</script>
+
+
+<script>
+/* PegaLeva: confirmação por clique, sem arrastar e sem tela verde. */
+(function(){
+  function transformarConfirmacaoWhatsApp(){
+    document.querySelectorAll(".wa-slide").forEach(function(slider){
+      if(slider.dataset.clickConfirmInstalled==="1") return;
+      slider.dataset.clickConfirmInstalled="1";
+      slider.setAttribute("role","button");
+      slider.setAttribute("tabindex","0");
+      slider.classList.add("wa-click-confirm");
+      var label=slider.querySelector(".wa-slide-label");
+      if(label) label.innerHTML='<i class="fa-brands fa-whatsapp"></i> Confirmar e abrir WhatsApp';
+
+      function confirmar(event){
+        event.preventDefault();
+        event.stopPropagation();
+
+        if(typeof window.notifyDeliveryWhatsApp==="function"){
+          var codigo=slider.dataset.deliveryId || slider.dataset.id || slider.getAttribute("data-delivery-id") || "";
+          window.notifyDeliveryWhatsApp(codigo || slider);
+          return;
+        }
+
+        if(typeof window.confirmWhatsAppSlide==="function"){
+          window.confirmWhatsAppSlide(slider);
+        }
+      }
+
+      slider.addEventListener("click", confirmar);
+      slider.addEventListener("keydown", function(event){
+        if(event.key==="Enter" || event.key===" "){
+          confirmar(event);
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", transformarConfirmacaoWhatsApp);
+  new MutationObserver(transformarConfirmacaoWhatsApp).observe(document.documentElement,{
+    childList:true,
+    subtree:true
+  });
+
+  /* Impede que a animação verde antiga seja mostrada. */
+  new MutationObserver(function(){
+    document.body.classList.remove("wa-confirm-screen");
+  }).observe(document.documentElement,{
+    attributes:true,
+    subtree:true,
+    attributeFilter:["class"]
   });
 })();
 </script>
