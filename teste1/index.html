@@ -13,7 +13,7 @@
   <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    <link rel="stylesheet" href="style.css?v=rastreio-empresa-entrega-slider-20260722">
+    <link rel="stylesheet" href="style.css?v=codigo-empresa-botao-clique-20260722">
 
 
 
@@ -54,7 +54,7 @@
 }
 </style>
 
-  <meta name="pegaleva-api-version" content="empresa-entrega-slider-20260722">
+  <meta name="pegaleva-api-version" content="codigo-empresa-botao-clique-20260722">
 </head>
 <body>
 
@@ -682,6 +682,61 @@
         window.closeSupportChat();
       }
     });
+  });
+})();
+</script>
+
+
+<script>
+/* PegaLeva: confirmação por clique, sem arrastar e sem tela verde. */
+(function(){
+  function transformarConfirmacaoWhatsApp(){
+    document.querySelectorAll(".wa-slide").forEach(function(slider){
+      if(slider.dataset.clickConfirmInstalled==="1") return;
+      slider.dataset.clickConfirmInstalled="1";
+      slider.setAttribute("role","button");
+      slider.setAttribute("tabindex","0");
+      slider.classList.add("wa-click-confirm");
+      var label=slider.querySelector(".wa-slide-label");
+      if(label) label.innerHTML='<i class="fa-brands fa-whatsapp"></i> Confirmar e abrir WhatsApp';
+
+      function confirmar(event){
+        event.preventDefault();
+        event.stopPropagation();
+
+        if(typeof window.notifyDeliveryWhatsApp==="function"){
+          var codigo=slider.dataset.deliveryId || slider.dataset.id || slider.getAttribute("data-delivery-id") || "";
+          window.notifyDeliveryWhatsApp(codigo || slider);
+          return;
+        }
+
+        if(typeof window.confirmWhatsAppSlide==="function"){
+          window.confirmWhatsAppSlide(slider);
+        }
+      }
+
+      slider.addEventListener("click", confirmar);
+      slider.addEventListener("keydown", function(event){
+        if(event.key==="Enter" || event.key===" "){
+          confirmar(event);
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", transformarConfirmacaoWhatsApp);
+  new MutationObserver(transformarConfirmacaoWhatsApp).observe(document.documentElement,{
+    childList:true,
+    subtree:true
+  });
+
+  /* Impede que a animação verde antiga seja mostrada. */
+  new MutationObserver(function(){
+    document.body.classList.remove("wa-confirm-screen");
+  }).observe(document.documentElement,{
+    attributes:true,
+    subtree:true,
+    attributeFilter:["class"]
   });
 })();
 </script>
