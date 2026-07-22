@@ -708,8 +708,8 @@ function notifyDeliveryWhatsApp(id){
     "🛵 *PEGA E LEVA DELIVERY*",
     "*NOVA SOLICITAÇÃO DE ENTREGA*",
     "",
-    `Código da empresa: *${d.CodigoEmpresa||d.CodigoCliente||session?.profile?.CodigoAcesso||""}*`,
-    `Código da entrega: *${d.CodigoEntrega||d.CodigoCT||d.ID||""}*`,
+    `Código ID da empresa/usuário: *${d.CodigoID||session?.profile?.CodigoID||""}*`,
+    `Código de rastreio: *${d.CodigoEntrega||d.CodigoCT||""}*`,
     "",
     `*VALOR DA ENTREGA: ${money(d.Valor||0)}*`,
     "",
@@ -976,66 +976,59 @@ async function confirmDelivery(){
   if(!validateStep())return;
 
   const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
-  if(cupom){
-    showLoader("Verificando cupom...");
-    const check=await api("getPrice",{
-      bairroColeta:document.getElementById("bairroColeta").value,
-      bairroDestino:document.getElementById("bairroDestino").value,
-      coletaCidade:document.getElementById("coletaCidade").value,
-      destinoCidade:document.getElementById("destinoCidade").value,
-      desconto:0,
-      cupom,
-      rotaRetorno:document.getElementById("rotaRetorno").value,
-      forcePriceFresh:true
-    });
-    hideLoader();
-    if(!check.ok){
-      document.getElementById("cupomMsg").style.color="#ef4444";
-      document.getElementById("cupomMsg").innerText="Cupom inválido";
-      return;
-    }
-  }
-
-  const p=session.profile||{};
   const coleta=enderecoMapa("coleta");
   const destino=enderecoMapa("destino");
-  const codigos=gerarCodigosEntregaLocal();
-  const codigoEmpresa=codigos.codigoEmpresa;
-  const codigoCliente=codigos.codigoCliente;
 
-  ultimaEntregaLocal={
-    ID:codigoCliente,
-    Codigo:codigoCliente,
-    CodigoEmpresa:codigoEmpresa,
-    CodigoCliente:codigoCliente,
-    NomeSolicitante:(session.type==="empresa"?p.Responsavel:p.Nome)||"",
-    Empresa:session.type==="empresa"?(p.Responsavel||p.NomeEmpresa||""):"",
-    WhatsAppSolicitante:p.WhatsApp||"",
-    NomeDestino:document.getElementById("nomeDestino").value,
-    WhatsAppDestino:onlyDigits(document.getElementById("whatsappDestino").value),
-    EnderecoColeta:coleta,
-    EnderecoDestino:destino,
-    MapsColeta:linkGoogleMaps(coleta),
-    MapsDestino:linkGoogleMaps(destino),
-    MapsRota:linkRotaGoogleMaps(coleta,destino),
-    Conteudo:document.getElementById("conteudo").value,
-    Volumes:document.getElementById("volumes").value,
-    Pagamento:document.getElementById("pagamento").value,
-    ObservacaoPagamento:document.getElementById("observacaoPagamento").value,
-    Valor:lastPrice||0,
-    AcompanharUrl:"https://pegaelevadelivery.com.br/rastreioentrega"
+  const payload={
+    codigoCliente:session.profile.CodigoAcesso,
+    tipoCliente:session.type,
+    bairroColeta:document.getElementById("bairroColeta").value,
+    bairroDestino:document.getElementById("bairroDestino").value,
+    coletaCidade:document.getElementById("coletaCidade").value,
+    destinoCidade:document.getElementById("destinoCidade").value,
+    enderecoColeta:coleta,
+    enderecoDestino:destino,
+    referenciaColeta:pontoReferencia("coleta"),
+    referenciaDestino:pontoReferencia("destino"),
+    nomeDestino:document.getElementById("nomeDestino").value,
+    whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),
+    conteudo:document.getElementById("conteudo").value,
+    volumes:document.getElementById("volumes").value,
+    rotaRetorno:document.getElementById("rotaRetorno").value,
+    ofertaEntrega:document.getElementById("ofertaEntrega")?.value||"",
+    pagamento:document.getElementById("pagamento").value,
+    observacaoPagamento:document.getElementById("observacaoPagamento").value,
+    cupom
   };
 
-  currentSearchingId="";
   clearDeliveryProgress();
   showLoader("Registrando sua solicitação...");
 
-  setTimeout(()=>{
-    hideLoader();
-    resetDeliveryForm(false);
-    playSuccessNotification();
-    showAcceptedStatus(codigoCliente);
-  },4000);
+  const res=await api("createDelivery",payload);
+  hideLoader();
+
+  if(!res.ok){
+    showStatus("Não foi possível registrar",res.error||"Confira os dados e tente novamente.","bad");
+    return;
+  }
+
+  const d=res.delivery||{};
+  ultimaEntregaLocal={
+    ...d,
+    CodigoID:d.CodigoID||session.profile.CodigoID||"",
+    CodigoEntrega:d.CodigoEntrega||"",
+    Empresa:session.type==="empresa"?(session.profile.Responsavel||session.profile.NomeEmpresa||""):"",
+    MapsColeta:linkGoogleMaps(d.EnderecoColeta||coleta),
+    MapsDestino:linkGoogleMaps(d.EnderecoDestino||destino),
+    MapsRota:d.MapsUrl||linkRotaGoogleMaps(d.EnderecoColeta||coleta,d.EnderecoDestino||destino),
+    AcompanharUrl:"https://pegaelevadelivery.com.br/rastreioentrega"
+  };
+
+  currentSearchingId=d.ID||"";
+  resetDeliveryForm(false);
+  playSuccessNotification();
+  showAcceptedStatus(d.ID||"");
+  refreshPanel();
 }
 
 async function retryDelivery(id){
@@ -1079,9 +1072,9 @@ function showAcceptedStatus(id){
     icon.style.animation="motoSuccessJump .75s ease-in-out infinite alternate";
   }
   if(text){
-    const empresa=ultimaEntregaLocal?.CodigoEmpresa||ultimaEntregaLocal?.CodigoCliente||session?.profile?.CodigoAcesso||"";
-    const entrega=ultimaEntregaLocal?.CodigoEntrega||ultimaEntregaLocal?.CodigoCT||ultimaEntregaLocal?.ID||id||"";
-    text.innerHTML=`<div style="display:grid;gap:6px;margin-bottom:16px"><p class="muted" style="margin:0">Código da empresa: <b>${empresa}</b></p><p class="muted" style="margin:0">Código da entrega: <b>${entrega}</b></p></div>${whatsappSlideHtml(ultimaEntregaLocal?.ID||id)}`;
+    const codigoId=ultimaEntregaLocal?.CodigoID||session?.profile?.CodigoID||"";
+    const rastreio=ultimaEntregaLocal?.CodigoEntrega||ultimaEntregaLocal?.CodigoCT||"";
+    text.innerHTML=`<div style="display:grid;gap:6px;margin-bottom:16px"><p class="muted" style="margin:0">Código ID da empresa/usuário: <b>${codigoId}</b></p><p class="muted" style="margin:0">Código de rastreio: <b>${rastreio}</b></p></div>${whatsappSlideHtml(ultimaEntregaLocal?.ID||id)}`;
     setTimeout(()=>installWhatsAppSliders(document),0);
   }
   if(!document.getElementById("motoSuccessAnimation")){
