@@ -239,7 +239,7 @@ async function updateWithoutLosingProgress(){
 
 
 const PIX_KEY="57293143000156";
-const API_URL="https://script.google.com/macros/s/AKfycbx739xcgwZ0NTYdtj0pjFN0QAqyNh94PV96PxKRy90pOvKHOg1V0LFf-gjkrIsKaL1w/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbz_QyJ1x8YR_0Z2O_kCG2yw-vXhBsqei_EW3P3gziZFZ7cZaQVII96oXydfWej0AU1c/exec";
 let session=JSON.parse(localStorage.getItem("pegaleva_client")||"null"),
 chatDeliveryId="",currentStep=0,lastPrice=0,currentSearchingId="",showAllClientDeliveries=false,knownStatuses=JSON.parse(localStorage.getItem("pegaleva_status_client")||"{}"),refreshTimer=null,refreshBusy=false,clientCoupons=[],clientAnnouncements=[],clientSavedContacts=[];
 const steps=()=>document.querySelectorAll(".step"),dots=()=>document.querySelectorAll(".dot");
@@ -629,7 +629,7 @@ function renderDeliveries(list){
       <p class="muted">Quem recebe: ${d.NomeDestino||""} - <a target="_blank" href="https://wa.me/55${waDest}">${d.WhatsAppDestino||""}</a></p>
       <p class="muted">Valor: <b>${money(d.Valor)}</b></p><p class="muted">Pagamento: <b>${d.StatusPagamento||"Aguardando confirmação"}</b></p>
       ${d.NomeEntregador?driverMiniHtml(d):`<p class="muted"><b><i class="fa-solid fa-circle-check" style="color:#10b981"></i> Entrega aceita</b></p>`}
-      <button class="btn whatsapp-notify-btn" onclick="notifyDeliveryWhatsApp('${d.ID}')"><i class="fa-brands fa-whatsapp"></i> Notificar entrega</button>
+      ${whatsappSlideHtml(d.ID)}
       ${!isClosedDelivery(d.Status)&&d.CodigoEntregador?`<button class="btn light" onclick="openChatModal('${d.ID}')">Enviar mensagem${Number(d.ClienteNaoLidas||0)>0?` <span class="chat-badge">${d.ClienteNaoLidas}</span>`:""}</button>`:""}
       ${canCancel?`<button class="btn red" onclick="cancelDelivery('${d.ID}')">Cancelar entrega</button>`:""}
       ${d.Status==="Cancelada"?`<button class="btn green" onclick="retryDelivery('${d.ID}')">Tentar novamente</button><button class="btn red" onclick="cancelGeneralDelivery('${d.ID}')">Cancelar geral</button>`:""}
@@ -637,8 +637,64 @@ function renderDeliveries(list){
     </div>`
   }).join("") + (list.length>3?`<button class="btn light" onclick="showAllClientDeliveries=!showAllClientDeliveries;renderDeliveries(window.lastClientDeliveries||[])">${showAllClientDeliveries?"Ver menos":"Ver todas"}</button>`:"");
   window.lastClientDeliveries=list;
+  setTimeout(()=>installWhatsAppSliders(document),0);
 }
 
+
+
+function whatsappSlideHtml(id){
+  const safe=String(id||"").replace(/'/g,"&#039;");
+  return `<div class="wa-slide" data-delivery-id="${safe}">
+    <div class="wa-slide-fill"></div>
+    <span class="wa-slide-label"><i class="fa-brands fa-whatsapp"></i> Arraste para confirmar</span>
+    <button type="button" class="wa-slide-handle" aria-label="Arrastar para confirmar envio ao WhatsApp">
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+  </div>`;
+}
+function installWhatsAppSliders(root=document){
+  root.querySelectorAll(".wa-slide:not([data-ready])").forEach(slider=>{
+    slider.dataset.ready="1";
+    const handle=slider.querySelector(".wa-slide-handle");
+    const fill=slider.querySelector(".wa-slide-fill");
+    const label=slider.querySelector(".wa-slide-label");
+    let dragging=false,startX=0,startLeft=0;
+    const maxLeft=()=>Math.max(0,slider.clientWidth-handle.offsetWidth-8);
+    const moveTo=x=>{
+      const left=Math.max(4,Math.min(maxLeft(),x));
+      handle.style.transform=`translateX(${left-4}px)`;
+      fill.style.width=`${left+handle.offsetWidth}px`;
+      const progress=maxLeft()?left/maxLeft():0;
+      label.style.opacity=String(Math.max(.18,1-progress*.75));
+      if(progress>=.94)confirmWhatsAppSlide(slider);
+    };
+    const pointX=e=>e.touches?e.touches[0].clientX:e.clientX;
+    const start=e=>{if(slider.classList.contains("confirmed"))return;dragging=true;startX=pointX(e);startLeft=parseFloat(handle.dataset.left||"4");slider.classList.add("dragging");e.preventDefault()};
+    const move=e=>{if(!dragging)return;const left=startLeft+(pointX(e)-startX);handle.dataset.left=String(left);moveTo(left);e.preventDefault()};
+    const end=()=>{if(!dragging)return;dragging=false;slider.classList.remove("dragging");if(!slider.classList.contains("confirmed")){handle.dataset.left="4";handle.style.transform="translateX(0)";fill.style.width="0";label.style.opacity="1"}};
+    handle.addEventListener("mousedown",start);
+    handle.addEventListener("touchstart",start,{passive:false});
+    window.addEventListener("mousemove",move);
+    window.addEventListener("touchmove",move,{passive:false});
+    window.addEventListener("mouseup",end);
+    window.addEventListener("touchend",end);
+  });
+}
+function confirmWhatsAppSlide(slider){
+  if(slider.classList.contains("confirmed"))return;
+  slider.classList.add("confirmed");
+  const label=slider.querySelector(".wa-slide-label");
+  const handle=slider.querySelector(".wa-slide-handle");
+  if(label)label.innerHTML='<i class="fa-solid fa-check"></i> Confirmado! Abrindo WhatsApp...';
+  if(handle)handle.innerHTML='<i class="fa-solid fa-check"></i>';
+  document.body.classList.add("wa-confirm-screen");
+  const deliveryId=slider.dataset.deliveryId;
+  setTimeout(()=>{
+    notifyDeliveryWhatsApp(deliveryId);
+    document.body.classList.remove("wa-confirm-screen");
+  },850);
+}
+document.addEventListener("DOMContentLoaded",()=>installWhatsAppSliders());
 
 
 function notifyDeliveryWhatsApp(id){
@@ -652,8 +708,8 @@ function notifyDeliveryWhatsApp(id){
     "🛵 *PEGA E LEVA DELIVERY*",
     "*NOVA SOLICITAÇÃO DE ENTREGA*",
     "",
-    `Código da empresa: *${d.CodigoEmpresa||""}*`,
-    `Código do cliente: *${d.CodigoCliente||d.Codigo||d.ID||""}*`,
+    `Código da empresa: *${d.CodigoEmpresa||d.CodigoCliente||session?.profile?.CodigoAcesso||""}*`,
+    `Código da entrega: *${d.CodigoEntrega||d.CodigoCT||d.ID||""}*`,
     "",
     `*VALOR DA ENTREGA: ${money(d.Valor||0)}*`,
     "",
@@ -1023,9 +1079,10 @@ function showAcceptedStatus(id){
     icon.style.animation="motoSuccessJump .75s ease-in-out infinite alternate";
   }
   if(text){
-    const empresa=ultimaEntregaLocal?.CodigoEmpresa||"";
-    const cliente=ultimaEntregaLocal?.CodigoCliente||id||"";
-    text.innerHTML=`<div style="display:grid;gap:6px;margin-bottom:16px"><p class="muted" style="margin:0">Código da empresa: <b>${empresa}</b></p><p class="muted" style="margin:0">Código do cliente: <b>${cliente}</b></p></div><button type="button" class="btn whatsapp-notify-btn" onclick="notifyDeliveryWhatsApp('${cliente}')"><i class="fa-brands fa-whatsapp"></i> Notificar via WhatsApp</button>`;
+    const empresa=ultimaEntregaLocal?.CodigoEmpresa||ultimaEntregaLocal?.CodigoCliente||session?.profile?.CodigoAcesso||"";
+    const entrega=ultimaEntregaLocal?.CodigoEntrega||ultimaEntregaLocal?.CodigoCT||ultimaEntregaLocal?.ID||id||"";
+    text.innerHTML=`<div style="display:grid;gap:6px;margin-bottom:16px"><p class="muted" style="margin:0">Código da empresa: <b>${empresa}</b></p><p class="muted" style="margin:0">Código da entrega: <b>${entrega}</b></p></div>${whatsappSlideHtml(ultimaEntregaLocal?.ID||id)}`;
+    setTimeout(()=>installWhatsAppSliders(document),0);
   }
   if(!document.getElementById("motoSuccessAnimation")){
     const style=document.createElement("style");
