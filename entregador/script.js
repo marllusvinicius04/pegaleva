@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260722-corridas-ct-pagamento-v5";
+const APP_CACHE_VERSION="20260722-corridas-ct-pagamento-v6";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -23,7 +23,7 @@ clearAppCache();
 
 
 const PIX_KEY="57293143000156";
-const API_URL="https://script.google.com/macros/s/AKfycbwJDVpvd4SDFWMHwIJWHOD3-2ZyUKX9oi4Zu9ytrOx47GjbufJd7QuXPyMZT2jw4pWF/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxmcVMZvlt2wxVHqDok_aYYd8jg9yNE6EbNE_bz39QeXuIfzwKXp5_53oFaprRhbvTA/exec";
 
 let openDeliveryDetails=JSON.parse(localStorage.getItem("pegaleva_open_delivery_details")||"[]"),
 session=JSON.parse(localStorage.getItem("pegaleva_driver")||"null"),
