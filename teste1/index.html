@@ -47,11 +47,6 @@
 .support-cta{display:grid;gap:8px;margin-top:12px}
 .support-cta button{margin:0!important}
 .support-footer{padding:11px 14px;background:white;border-top:1px solid #edf0f5;font-size:10px;color:#64748b;text-align:center}
-
-.address-tip{margin:8px 0 10px;padding:10px 12px;border-radius:12px;background:#eef6ff;border:1px solid #cfe2ff;color:#17365f;font-size:12px;line-height:1.45}
-.address-tip i{color:#0044c3;margin-right:5px}
-.street-help{display:block;margin:5px 0 10px;color:#b45309;font-size:11px;line-height:1.4;font-weight:700}
-.street-help i{margin-right:4px}
 @media(max-width:600px){
   .support-float{right:12px;top:auto;bottom:18px;padding-right:10px}
   .support-float img{width:44px;height:44px}
@@ -185,7 +180,7 @@
         <div id="companyCreateStep2" style="display:none">
           <div class="mini-title"><i class="fa-solid fa-location-dot"></i> Etapa 2 de 3</div>
           <label>Selecionar a cidade</label><select id="cCidade"><option value="">Selecione</option><option value="Uruçuí">Uruçuí</option><option value="Benedito Leite">Benedito Leite</option></select>
-          <label>Logradouro (somente o nome da rua, avenida ou alameda)</label><input id="cRua" placeholder="Ex.: Rua Alameda do Sol"><small class="street-help"><i class="fa-solid fa-triangle-exclamation"></i>Informe somente o nome do logradouro. Não coloque número, bairro, cidade ou ponto de referência neste campo.</small>
+          <label>Logradouro (Rua, avenida, alameda...)</label><input id="cRua" placeholder="Rua">
           <label>Número</label><input id="cNumero" placeholder="Número">
           <label>Referência</label><input id="cReferencia" placeholder="Ponto de referência">
           <button type="button" class="btn gray" onclick="showCompanyCreateStep(1)">Voltar</button>
@@ -316,11 +311,11 @@
         <h2>Solicitar entrega</h2><p class="muted"></p>
         <div class="form-progress"><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         <div class="step active">
-          <h3>Endereço de coleta</h3><div class="address-tip" id="savedAddressTip"><i class="fa-solid fa-circle-info"></i><strong>Empresa:</strong> clique no botão abaixo para preencher automaticamente o endereço cadastrado e economizar tempo.</div><button class="btn light" onclick="useRegisteredAddress()" id="useAddressBtn"><i class="fa-solid fa-location-dot"></i> Usar meu endereço cadastrado</button>
-          <label>Logradouro (somente o nome da rua, avenida ou alameda)</label><input id="coletaRua" placeholder="Ex.: Rua Alameda do Sol"><small class="street-help"><i class="fa-solid fa-triangle-exclamation"></i>Não coloque número, bairro, cidade ou referência neste campo. Use os campos abaixo.</small><label>Número</label><input id="coletaNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="coletaReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="coletaCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
+          <h3>Endereço de coleta</h3><button class="btn light" onclick="useRegisteredAddress()" id="useAddressBtn">Usar meu endereço de cadastro</button>
+          <label>Logradouro (Rua, avenida, alameda...)</label><input id="coletaRua"><label>Número</label><input id="coletaNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="coletaReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="coletaCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
           <button class="btn" onclick="nextStepWithLoading('Carregando destino...')">Continuar</button>
         </div>
-        <div class="step"><h3>Endereço de destino</h3><label>Logradouro (somente o nome da rua, avenida ou alameda)</label><input id="destinoRua" placeholder="Ex.: Rua Alameda do Sol"><small class="street-help"><i class="fa-solid fa-triangle-exclamation"></i>Não coloque número, bairro, cidade ou referência neste campo. Use os campos abaixo.</small><label>Número</label><input id="destinoNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="destinoReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="destinoCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando bairros...')">Continuar</button></div></div>
+        <div class="step"><h3>Endereço de destino</h3><label>Logradouro (Rua, avenida, alameda...)</label><input id="destinoRua"><label>Número</label><input id="destinoNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="destinoReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="destinoCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando bairros...')">Continuar</button></div></div>
         <div class="step"><h3>Confirmar bairros</h3><label>Bairro de coleta</label><select id="bairroColeta"><option value="">Selecione</option></select><label>Bairro de destino</label><select id="bairroDestino"><option value="">Selecione</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando recebedor...')">Continuar</button></div></div>
         <div class="step"><h3>Dados de quem vai receber</h3><label>Nome da pessoa de destino</label><input id="nomeDestino"><label>Telefone / WhatsApp com DDD</label><input id="whatsappDestino"><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando conteúdo...')">Continuar</button></div></div>
         <div class="step"><h3>Conteúdo</h3><div class="grid2"><div class="choice" onclick="selectChoice(this,'conteudo','Comidas e bebidas')"><i class="fa-solid fa-burger"></i><strong>Comidas e bebidas</strong><small>Lanches e bebidas</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Frios')"><i class="fa-solid fa-snowflake"></i><strong>Frios</strong><small>Sorvetes e gelados</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Documentos e papéis')"><i class="fa-solid fa-file-lines"></i><strong>Documentos</strong><small>Papéis e envelopes</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Outros')"><i class="fa-solid fa-box"></i><strong>Outros</strong><small>Pequenos itens</small></div></div><input type="hidden" id="conteudo"><label>Volumes</label><select id="volumes"><option value="1">1 volume</option><option value="2">2 volumes</option><option value="3">3 volumes</option><option value="4">4 volumes</option></select><div class="pay-alert">Capacidade da entrega: até 4 itens apenas, dentro da bag de 45L do entregador. Não serão aceitas entregas ou ofertas de valores que não sejam solicitadas pelo sistema.</div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando rota de retorno...')">Continuar</button></div></div>
@@ -510,7 +505,7 @@
   </div>
 </div>
 
-<div class="modal" id="statusModal"><div class="modal-box"><i id="statusIcon" class="fa-solid fa-circle-check"></i><h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p><button class="btn green" onclick="closeStatusModal()">OK</button></div></div>
+<div class="modal" id="statusModal"><div class="modal-box"><i id="statusIcon" class="fa-solid fa-circle-check"></i><h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p></div></div>
 
 <div class="modal" id="clientPaymentModal">
   <div class="modal-box client-pay-box" style="text-align:left">
