@@ -862,17 +862,103 @@ function toggleCashObs(){
   document.getElementById("cashObs").style.display=pg==="Espécie"?"block":"none";
   document.getElementById("paymentNotice").style.display=pg?"block":"none";
 }
-async function confirmDelivery(){if(!validateStep())return;const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";if(cupom){showLoader("Verificando cupom...");const check=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto:0,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!check.ok){document.getElementById("cupomMsg").style.color="#ef4444";document.getElementById("cupomMsg").innerText="Cupom inválido";return}}showLoader("Registrando entrega...");const res=await api("createDelivery",{tipoCliente:session.type,codigoCliente:session.profile.CodigoAcesso,enderecoColeta:fullAddress("coleta"),bairroColeta:document.getElementById("bairroColeta").value,coletaCidade:document.getElementById("coletaCidade").value,enderecoDestino:fullAddress("destino"),referenciaColeta:pontoReferencia("coleta"),referenciaDestino:pontoReferencia("destino"),bairroDestino:document.getElementById("bairroDestino").value,destinoCidade:document.getElementById("destinoCidade").value,nomeDestino:document.getElementById("nomeDestino").value,whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),conteudo:document.getElementById("conteudo").value,volumes:document.getElementById("volumes").value,pagamento:document.getElementById("pagamento").value,observacaoPagamento:document.getElementById("observacaoPagamento").value,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,ofertaEntrega:document.getElementById("ofertaEntrega")?document.getElementById("ofertaEntrega").value:"normal",status:"Entrega aceita",Status:"Entrega aceita",aceita:true});hideLoader();if(!res.ok){showPanelMessage(res.error||"Não foi possível criar entrega.","bad");return}currentSearchingId="";clearDeliveryProgress();resetDeliveryForm(false);playSuccessNotification();showStatus("Entrega aceita","A entrega foi registrada e já está aceita. Agora clique em Notificar entrega pelo WhatsApp.","ok");refreshBusy=false;await refreshPanel()}
-function closeSearchLoader(){hideLoader()}
-async function tryAgainCurrentSearch(){
-  if(!currentSearchingId){hideLoader();return}
-  showLoader("Buscando entregador...",true);
-  const res = await api("retryDelivery",{deliveryId:currentSearchingId});
-  if(!res.ok){
+async function confirmDelivery(){
+  if(!validateStep())return;
+
+  const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
+  if(cupom){
+    showLoader("Verificando cupom...");
+    const check=await api("getPrice",{
+      bairroColeta:document.getElementById("bairroColeta").value,
+      bairroDestino:document.getElementById("bairroDestino").value,
+      coletaCidade:document.getElementById("coletaCidade").value,
+      destinoCidade:document.getElementById("destinoCidade").value,
+      desconto:0,
+      cupom,
+      rotaRetorno:document.getElementById("rotaRetorno").value,
+      forcePriceFresh:true
+    });
     hideLoader();
-    showStatus("Não foi possível tentar novamente", res.error || "Tente novamente.", "bad");
+    if(!check.ok){
+      document.getElementById("cupomMsg").style.color="#ef4444";
+      document.getElementById("cupomMsg").innerText="Cupom inválido";
+      return;
+    }
+  }
+
+  const deliveryData={
+    tipoCliente:session.type,
+    codigoCliente:session.profile.CodigoAcesso,
+    enderecoColeta:fullAddress("coleta"),
+    bairroColeta:document.getElementById("bairroColeta").value,
+    coletaCidade:document.getElementById("coletaCidade").value,
+    enderecoDestino:fullAddress("destino"),
+    referenciaColeta:pontoReferencia("coleta"),
+    referenciaDestino:pontoReferencia("destino"),
+    bairroDestino:document.getElementById("bairroDestino").value,
+    destinoCidade:document.getElementById("destinoCidade").value,
+    nomeDestino:document.getElementById("nomeDestino").value,
+    whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),
+    conteudo:document.getElementById("conteudo").value,
+    volumes:document.getElementById("volumes").value,
+    pagamento:document.getElementById("pagamento").value,
+    observacaoPagamento:document.getElementById("observacaoPagamento").value,
+    cupom,
+    rotaRetorno:document.getElementById("rotaRetorno").value,
+    ofertaEntrega:document.getElementById("ofertaEntrega")?document.getElementById("ofertaEntrega").value:"normal",
+    status:"Entrega aceita",
+    Status:"Entrega aceita",
+    aceita:true,
+    aceitarAutomaticamente:true
+  };
+
+  showLoader("Registrando e aceitando entrega...");
+  const res=await api("createDelivery",deliveryData);
+  hideLoader();
+
+  if(!res.ok){
+    showPanelMessage(res.error||"Não foi possível criar entrega.","bad");
     return;
   }
+
+  const p=session.profile||{};
+  const registrada={
+    ...deliveryData,
+    ...(res.delivery||{}),
+    ID:(res.delivery&&res.delivery.ID)||res.deliveryId||res.id||("ENT-"+Date.now()),
+    Status:"Entrega aceita",
+    status:"Entrega aceita",
+    NomeSolicitante:(res.delivery&&res.delivery.NomeSolicitante)||(session.type==="empresa"?p.Responsavel:p.Nome)||"",
+    WhatsAppSolicitante:(res.delivery&&res.delivery.WhatsAppSolicitante)||p.WhatsApp||"",
+    EnderecoColeta:(res.delivery&&res.delivery.EnderecoColeta)||deliveryData.enderecoColeta,
+    BairroColeta:(res.delivery&&res.delivery.BairroColeta)||deliveryData.bairroColeta,
+    ColetaCidade:(res.delivery&&res.delivery.ColetaCidade)||deliveryData.coletaCidade,
+    ReferenciaColeta:(res.delivery&&res.delivery.ReferenciaColeta)||deliveryData.referenciaColeta,
+    EnderecoDestino:(res.delivery&&res.delivery.EnderecoDestino)||deliveryData.enderecoDestino,
+    BairroDestino:(res.delivery&&res.delivery.BairroDestino)||deliveryData.bairroDestino,
+    DestinoCidade:(res.delivery&&res.delivery.DestinoCidade)||deliveryData.destinoCidade,
+    ReferenciaDestino:(res.delivery&&res.delivery.ReferenciaDestino)||deliveryData.referenciaDestino,
+    NomeDestino:(res.delivery&&res.delivery.NomeDestino)||deliveryData.nomeDestino,
+    WhatsAppDestino:(res.delivery&&res.delivery.WhatsAppDestino)||deliveryData.whatsappDestino,
+    Conteudo:(res.delivery&&res.delivery.Conteudo)||deliveryData.conteudo,
+    Volumes:(res.delivery&&res.delivery.Volumes)||deliveryData.volumes,
+    Pagamento:(res.delivery&&res.delivery.Pagamento)||deliveryData.pagamento,
+    ObservacaoPagamento:(res.delivery&&res.delivery.ObservacaoPagamento)||deliveryData.observacaoPagamento,
+    RotaRetorno:(res.delivery&&res.delivery.RotaRetorno)||deliveryData.rotaRetorno,
+    Valor:(res.delivery&&res.delivery.Valor)||res.valor||lastPrice||0
+  };
+
+  currentSearchingId="";
+  clearDeliveryProgress();
+
+  const atuais=(window.lastClientDeliveries||[]).filter(d=>String(d.ID)!==String(registrada.ID));
+  renderDeliveries([registrada,...atuais]);
+
+  resetDeliveryForm(false);
+  playSuccessNotification();
+  showStatus("Entrega aceita","A entrega foi registrada na planilha e aceita automaticamente. Agora clique em Notificar entrega pelo WhatsApp.","ok");
+
+  refreshBusy=false;
   refreshPanel();
 }
 async function retryDelivery(id){
