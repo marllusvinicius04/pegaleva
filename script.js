@@ -1729,3 +1729,163 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },200);
 })();
+
+
+/* =========================================================
+   RESUMO FINANCEIRO DAS CORRIDAS — SOMENTE FRONTEND
+   Não altera o Apps Script.
+   Usa a action getTrackingPanel já existente na API e soma
+   as corridas pelo CodigoID da empresa ou do usuário.
+========================================================= */
+(function(){
+  let corridaFinancialBusy=false;
+  let lastCorridaFinancialAt=0;
+
+  function normalizePaymentStatusFrontend(value){
+    return String(value||"").trim().toLocaleLowerCase("pt-BR");
+  }
+
+  function corridaFinancialSummaryFrontend(list){
+    const corridas=Array.isArray(list)?list:[];
+    let totalPendente=0;
+    let totalPago=0;
+    let quantidadePendente=0;
+    let quantidadePaga=0;
+
+    corridas.forEach(corrida=>{
+      const valor=Number(corrida?.valor ?? corrida?.Valor ?? 0) || 0;
+      const status=normalizePaymentStatusFrontend(
+        corrida?.pagamento ?? corrida?.StatusPagamento
+      );
+
+      if(status==="pago"){
+        totalPago+=valor;
+        quantidadePaga++;
+      }else{
+        totalPendente+=valor;
+        quantidadePendente++;
+      }
+    });
+
+    return {
+      totalCorridas:corridas.length,
+      quantidadePendente,
+      totalPendente,
+      quantidadePaga,
+      totalPago
+    };
+  }
+
+  function renderCorridaFinancialSummaryFrontend(){
+    const box=document.getElementById("profileBox");
+    const profile=session&&session.profile?session.profile:null;
+    const resumo=profile&&profile.ResumoCorridasFrontend;
+
+    if(!box||!resumo)return;
+
+    box.querySelectorAll(".corrida-financial-summary-frontend").forEach(el=>el.remove());
+
+    const wrapper=document.createElement("div");
+    wrapper.className="corrida-financial-summary-frontend";
+    wrapper.innerHTML=`
+      <div class="info-row">
+        <span>Corridas registradas</span>
+        <b>${Number(resumo.totalCorridas||0)}</b>
+      </div>
+      <div class="info-row">
+        <span>Corridas pendentes</span>
+        <b>${Number(resumo.quantidadePendente||0)}</b>
+      </div>
+      <div class="info-row">
+        <span>Valor pendente</span>
+        <b>${money(resumo.totalPendente||0)}</b>
+      </div>
+      <div class="info-row">
+        <span>Corridas pagas</span>
+        <b>${Number(resumo.quantidadePaga||0)}</b>
+      </div>
+      <div class="info-row">
+        <span>Total pago</span>
+        <b>${money(resumo.totalPago||0)}</b>
+      </div>`;
+
+    box.appendChild(wrapper);
+  }
+
+  async function loadCorridaFinancialSummaryFrontend(force){
+    if(!session||!session.profile||corridaFinancialBusy)return;
+
+    const now=Date.now();
+    if(!force&&now-lastCorridaFinancialAt<4000)return;
+
+    const codigoId=String(
+      session.profile.CodigoID||
+      session.profile.codigoId||
+      ""
+    ).trim().toUpperCase();
+
+    if(!codigoId)return;
+
+    corridaFinancialBusy=true;
+    lastCorridaFinancialAt=now;
+
+    try{
+      const res=await api("getTrackingPanel",{codigoId,_t:Date.now()});
+      if(!res||!res.ok)return;
+
+      const corridas=res.corridas||res.entregas||[];
+      const resumo=corridaFinancialSummaryFrontend(corridas);
+
+      session.profile.PagamentoPendente=resumo.totalPendente;
+      if(session.type==="empresa"){
+        session.profile.SaldoDevedor=resumo.totalPendente;
+      }
+      session.profile.ResumoCorridasFrontend=resumo;
+
+      localStorage.setItem("pegaleva_client",JSON.stringify(session));
+
+      if(typeof renderProfile==="function")renderProfile();
+      renderCorridaFinancialSummaryFrontend();
+    }catch(e){
+      console.warn("Não foi possível carregar o resumo financeiro das corridas.",e);
+    }finally{
+      corridaFinancialBusy=false;
+    }
+  }
+
+  const originalRenderProfileCorridasFrontend=
+    typeof renderProfile==="function"?renderProfile:null;
+
+  if(originalRenderProfileCorridasFrontend){
+    renderProfile=function(){
+      const result=originalRenderProfileCorridasFrontend.apply(this,arguments);
+      renderCorridaFinancialSummaryFrontend();
+      return result;
+    };
+  }
+
+  const originalRefreshPanelCorridasFrontend=
+    typeof refreshPanel==="function"?refreshPanel:null;
+
+  if(originalRefreshPanelCorridasFrontend){
+    refreshPanel=async function(){
+      const result=await originalRefreshPanelCorridasFrontend.apply(this,arguments);
+      await loadCorridaFinancialSummaryFrontend(false);
+      return result;
+    };
+  }
+
+  const originalOpenPanelCorridasFrontend=
+    typeof openPanel==="function"?openPanel:null;
+
+  if(originalOpenPanelCorridasFrontend){
+    openPanel=function(){
+      const result=originalOpenPanelCorridasFrontend.apply(this,arguments);
+      setTimeout(()=>loadCorridaFinancialSummaryFrontend(true),100);
+      return result;
+    };
+  }
+
+  window.loadCorridaFinancialSummaryFrontend=loadCorridaFinancialSummaryFrontend;
+})();
+v
