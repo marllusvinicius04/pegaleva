@@ -8,6 +8,47 @@ function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",c
 function loginAdmin(){const code=norm(document.getElementById("adminCode").value).toUpperCase();if(code!==ADMIN_ACCESS_CODE){alert("Código de acesso administrativo inválido.");return}localStorage.setItem("pegaleva_admin_access","1");document.getElementById("loginScreen").style.display="none";document.getElementById("appScreen").classList.add("active");setToday();unlockAlertAudio();requestDeliveryNotificationPermission();loadDashboard(true);startDashboardAutoUpdate()}function logoutAdmin(){stopDashboardAutoUpdate();localStorage.removeItem("pegaleva_admin_access");document.getElementById("appScreen").classList.remove("active");document.getElementById("loginScreen").style.display="flex";document.getElementById("adminCode").value=""}if(localStorage.getItem("pegaleva_admin_access")==="1"){document.getElementById("loginScreen").style.display="none";document.getElementById("appScreen").classList.add("active");setToday();loadDashboard(true);startDashboardAutoUpdate()}
 function todayISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}function setToday(){document.getElementById("salesDate").value=todayISO();renderAll()}
 
+
+/* =========================================================
+   PENDENTES DE CORRIDAS — SOMENTE FRONTEND ADMIN
+   Calcula pela aba CORRIDAS usando CodigoCliente ou CodigoID.
+   Não altera o Apps Script.
+========================================================= */
+function corridaPendente(c){
+  return lower(c&&c.StatusPagamento)!=="pago";
+}
+
+function corridasDoCliente(cliente){
+  const codigoAcesso=norm(cliente&&cliente.CodigoAcesso);
+  const codigoId=norm(cliente&&cliente.CodigoID).toUpperCase();
+
+  return (db.corridas||[]).filter(c=>{
+    const corridaCodigoCliente=norm(c.CodigoCliente);
+    const corridaCodigoId=norm(c.CodigoID).toUpperCase();
+
+    return (codigoAcesso&&corridaCodigoCliente===codigoAcesso)||
+           (codigoId&&corridaCodigoId===codigoId);
+  });
+}
+
+function resumoCorridasCliente(cliente){
+  const corridas=corridasDoCliente(cliente);
+  const pendentes=corridas.filter(corridaPendente);
+  const pagas=corridas.filter(c=>!corridaPendente(c));
+
+  return {
+    totalCorridas:corridas.length,
+    quantidadePendente:pendentes.length,
+    valorPendente:pendentes.reduce((s,c)=>s+num(c.Valor),0),
+    quantidadePaga:pagas.length,
+    valorPago:pagas.reduce((s,c)=>s+num(c.Valor),0)
+  };
+}
+
+function valorPendenteCorridas(cliente){
+  return resumoCorridasCliente(cliente).valorPendente;
+}
+
 function corridaComoEntrega(c){
   const driver=(db.entregadores||[]).find(d=>norm(d.CodigoAcesso)===norm(c.CodigoEntregador))||{};
   return {
@@ -43,7 +84,36 @@ function renderBankCard(){const selected=document.getElementById("salesDate").va
 function driverFinancial(d){const list=driverDeliveries(d).filter(e=>norm(e.Status)==="Entrega finalizada"&&(isPaid(e)||isPending(e)));const total=list.reduce((sum,e)=>sum+num(e.Valor),0);const taxa=list.length*1.98;const liquido=Math.max(0,total-taxa);const pago=(db.saques||[]).filter(s=>lower(s.Status)==="pago"&&norm(s.CodigoEntregador)===norm(d.CodigoAcesso)).reduce((sum,s)=>sum+num(s.ValorSolicitado),0);const saldo=Math.max(0,liquido-pago);return{entregas:list.length,total,taxa,liquido,pago,saldo}}
 function allDriversFinancial(){return db.entregadores.map(driverFinancial).reduce((acc,f)=>{acc.entregas+=f.entregas;acc.total+=f.total;acc.taxa+=f.taxa;acc.liquido+=f.liquido;acc.pago+=f.pago;acc.saldo+=f.saldo;return acc},{entregas:0,total:0,taxa:0,liquido:0,pago:0,saldo:0})}
 function renderKpis(){const totalRevenue=db.entregas.reduce((s,d)=>s+num(d.Valor),0);const pending=db.entregas.filter(isPending).reduce((s,d)=>s+num(d.Valor),0);const running=db.entregas.filter(d=>!isClosed(d)).length;const done=db.entregas.filter(d=>norm(d.Status)==="Entrega finalizada").length;const activeDrivers=db.entregadores.filter(d=>lower(d.Ativo)==="ativo").length;const df=allDriversFinancial();document.getElementById("kpiTotalRevenue").innerText=money(totalRevenue);document.getElementById("kpiDriverFees").innerText=money(df.taxa);document.getElementById("kpiDriverNet").innerText=money(df.saldo);document.getElementById("kpiPending").innerText=money(pending);document.getElementById("kpiDeliveries").innerText=db.entregas.length;document.getElementById("kpiRunning").innerText=running;document.getElementById("kpiDone").innerText=done;document.getElementById("kpiUsers").innerText=db.usuarios.length;document.getElementById("kpiCompanies").innerText=db.empresas.length;document.getElementById("kpiActiveDrivers").innerText=activeDrivers}
-function renderFinanceSummary(){const totalEntregas=db.entregas.reduce((s,d)=>s+num(d.Valor),0);const pagas=db.entregas.filter(isPaid).reduce((s,d)=>s+num(d.Valor),0);const pendentes=db.entregas.filter(isPending).reduce((s,d)=>s+num(d.Valor),0);const df=allDriversFinancial();const saldoEmpresas=db.empresas.reduce((s,e)=>s+num(e.SaldoDevedor),0);const pagoUsuarios=db.usuarios.reduce((s,u)=>s+num(u.ValorPago),0);const pagoEmpresas=db.empresas.reduce((s,e)=>s+num(e.ValorPago),0);const pendUsuarios=db.usuarios.reduce((s,u)=>s+num(u.PagamentoPendente),0);const pendEmpresas=db.empresas.reduce((s,e)=>s+num(e.PagamentoPendente),0);const rows=[["Valor total em entregas",money(totalEntregas),"money"],["Entregas pagas",money(pagas),"money green"],["Entregas pendentes/aguardando",money(pendentes),"money red"],["Bruto finalizado dos entregadores",money(df.total),"money"],["Taxa sistema/serviço dos entregadores (pagas e pendentes)",money(df.taxa),"money red"],["Saldo líquido a transferir aos entregadores",money(df.saldo),"money green"],["Saques já pagos aos entregadores",money(df.pago),"money green"],["Valor pago por usuários",money(pagoUsuarios),"money green"],["Valor pago por empresas",money(pagoEmpresas),"money green"],["Pendente usuários",money(pendUsuarios),"money red"],["Pendente empresas",money(pendEmpresas),"money red"],["Saldo devedor empresas",money(saldoEmpresas),"money red"]];document.getElementById("financeSummary").innerHTML=rows.map(([a,b,c])=>`<div class="mini-row"><span>${a}</span><b class="${c}">${b}</b></div>`).join("")}
+function renderFinanceSummary(){
+  const totalEntregas=db.entregas.reduce((s,d)=>s+num(d.Valor),0);
+  const pagas=db.entregas.filter(isPaid).reduce((s,d)=>s+num(d.Valor),0);
+  const pendentes=db.entregas.filter(isPending).reduce((s,d)=>s+num(d.Valor),0);
+  const df=allDriversFinancial();
+  const saldoEmpresas=db.empresas.reduce((s,e)=>s+num(e.SaldoDevedor),0);
+  const pagoUsuarios=db.usuarios.reduce((s,u)=>s+resumoCorridasCliente(u).valorPago,0);
+  const pagoEmpresas=db.empresas.reduce((s,e)=>s+resumoCorridasCliente(e).valorPago,0);
+  const pendUsuarios=db.usuarios.reduce((s,u)=>s+valorPendenteCorridas(u),0);
+  const pendEmpresas=db.empresas.reduce((s,e)=>s+valorPendenteCorridas(e),0);
+  const qtdPendUsuarios=db.usuarios.reduce((s,u)=>s+resumoCorridasCliente(u).quantidadePendente,0);
+  const qtdPendEmpresas=db.empresas.reduce((s,e)=>s+resumoCorridasCliente(e).quantidadePendente,0);
+
+  const rows=[
+    ["Valor total em corridas",money(totalEntregas),"money"],
+    ["Corridas pagas",money(pagas),"money green"],
+    ["Corridas pendentes/aguardando",money(pendentes),"money red"],
+    ["Bruto finalizado dos entregadores",money(df.total),"money"],
+    ["Taxa sistema/serviço dos entregadores (pagas e pendentes)",money(df.taxa),"money red"],
+    ["Saldo líquido a transferir aos entregadores",money(df.saldo),"money green"],
+    ["Saques já pagos aos entregadores",money(df.pago),"money green"],
+    ["Valor pago por usuários nas corridas",money(pagoUsuarios),"money green"],
+    ["Valor pago por empresas nas corridas",money(pagoEmpresas),"money green"],
+    [`Pendente usuários nas corridas (${qtdPendUsuarios})`,money(pendUsuarios),"money red"],
+    [`Pendente empresas nas corridas (${qtdPendEmpresas})`,money(pendEmpresas),"money red"],
+    ["Saldo devedor empresas",money(saldoEmpresas),"money red"]
+  ];
+
+  document.getElementById("financeSummary").innerHTML=rows.map(([a,b,c])=>`<div class="mini-row"><span>${a}</span><b class="${c}">${b}</b></div>`).join("");
+}
 function renderStatusSummary(){const map={};db.entregas.forEach(d=>{const s=norm(d.Status)||"Sem status";map[s]=(map[s]||0)+1});const rows=Object.keys(map).sort().map(k=>`<div class="mini-row"><span>${escapeHtml(k)}</span><b>${map[k]}</b></div>`).join("");document.getElementById("statusSummary").innerHTML=rows||'<p class="muted">Nenhuma entrega encontrada.</p>'}
 function statusBadge(status){const s=norm(status);if(s==="Entrega finalizada")return'<span class="badge green">Entrega finalizada</span>';if(s==="Cancelada"||s==="Cancelada Geral")return`<span class="badge red">${escapeHtml(s)}</span>`;if(s==="Aguardando entregador")return'<span class="badge yellow">Aguardando entregador</span>';if(s==="Entrega aceita")return'<span class="badge purple">Entrega aceita</span>';return`<span class="badge">${escapeHtml(s||"Sem status")}</span>`}function paymentBadge(status){const s=norm(status)||"Aguardando confirmação";if(s==="Pago")return'<span class="badge green">Pago</span>';if(s==="Pendente")return'<span class="badge red">Pendente</span>';return`<span class="badge yellow">${escapeHtml(s)}</span>`}function waLink(v){const d=onlyDigits(v);if(!d)return"-";return`<a target="_blank" href="https://wa.me/55${d}">${escapeHtml(v)}</a>`}
 
@@ -53,7 +123,7 @@ let pendingDebtPayment=null;
 function openDebtPaymentModal(tipo,codigo,nome,id,valor){if(!codigo&&!id)return alert("Cadastro sem ID ou código de acesso.");pendingDebtPayment={tipo,codigo,nome,id,valor:num(valor)};const body=document.getElementById("debtPaymentModalBody");if(body)body.innerHTML=`<div class="mini-row"><span>Cadastro</span><b>${escapeHtml(nome||"Cliente/empresa")}</b></div><div class="mini-row"><span>Tipo</span><b>${tipo==="empresa"?"Empresa":"Usuário"}</b></div><div class="mini-row"><span>Valor pendente</span><b class="money red">${money(num(valor))}</b></div><p class="muted">Ao confirmar, o valor pendente será lançado como pago, o PagamentoPendente será zerado e, no caso de empresa, o SaldoDevedor também será abatido.</p>`;document.getElementById("debtPaymentModal").classList.add("active")}
 function closeDebtPaymentModal(){document.getElementById("debtPaymentModal").classList.remove("active");pendingDebtPayment=null}
 async function confirmDebtPayment(){const p=pendingDebtPayment;if(!p)return;showLoader("Atualizando pagamento do devedor...");try{await apiPost({action:"adminClearPending",tipo:p.tipo,codigo:p.codigo,id:p.id});showStatus("Pagamento atualizado como pago e débito zerado com sucesso.","green");closeDebtPaymentModal();await loadDashboard(true)}catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}}
-async function quitarPendente(tipo,codigo,nome,id){const item=(tipo==="empresa"?db.empresas:db.usuarios).find(x=>norm(x.ID)===norm(id)||norm(x.CodigoAcesso)===norm(codigo));openDebtPaymentModal(tipo,codigo,nome,id,item?num(item.PagamentoPendente):0)}
+async function quitarPendente(tipo,codigo,nome,id){const item=(tipo==="empresa"?db.empresas:db.usuarios).find(x=>norm(x.ID)===norm(id)||norm(x.CodigoAcesso)===norm(codigo));openDebtPaymentModal(tipo,codigo,nome,id,item?valorPendenteCorridas(item):0)}
 async function cadastrarEntregador(){const p={action:"adminRegisterDriver",nome:norm(document.getElementById("driverNome").value),whatsapp:norm(document.getElementById("driverWhatsApp").value),cpf:norm(document.getElementById("driverCPF").value),placaMoto:norm(document.getElementById("driverPlaca").value),codigo:norm(document.getElementById("driverCodigo").value),email:norm(document.getElementById("driverEmail").value)};if(!p.nome||!p.whatsapp||!p.cpf||!p.placaMoto||!p.codigo||!p.email)return alert("Preencha todos os dados do entregador.");showLoader("Cadastrando entregador...");try{await apiPost(p);["driverNome","driverWhatsApp","driverCPF","driverPlaca","driverCodigo","driverEmail"].forEach(id=>document.getElementById(id).value="");showStatus("Entregador cadastrado com sucesso.","green");await loadDashboard(false)}catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}}
 async function cadastrarEmpresa(){const p={action:"adminRegisterCompany",responsavel:norm(document.getElementById("empresaResponsavel").value),whatsapp:norm(document.getElementById("empresaWhatsApp").value),cpfCnpj:norm(document.getElementById("empresaCpfCnpj").value),codigo:norm(document.getElementById("empresaCodigo").value),email:norm(document.getElementById("empresaEmail").value),rua:norm(document.getElementById("empresaRua").value),numero:norm(document.getElementById("empresaNumero").value),referencia:norm(document.getElementById("empresaReferencia").value),cidade:norm(document.getElementById("empresaCidade").value)};if(!p.responsavel||!p.whatsapp||!p.cpfCnpj||!p.codigo||!p.email||!p.rua||!p.numero||!p.referencia||!p.cidade)return alert("Preencha todos os dados da empresa.");showLoader("Cadastrando empresa...");try{await apiPost(p);["empresaResponsavel","empresaWhatsApp","empresaCpfCnpj","empresaCodigo","empresaEmail","empresaRua","empresaNumero","empresaReferencia"].forEach(id=>document.getElementById(id).value="");document.getElementById("empresaCidade").value="Uruçuí";showStatus("Empresa cadastrada com sucesso.","green");await loadDashboard(false)}catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}}
 function acoesCobranca(tipo,codigo,nome,whatsapp,valor,id){const v=num(valor);if(v<=0)return'<span class="muted">Quitado</span>';return`<div class="action-stack"><button class="mini-btn blue" onclick="whatsappCobranca('${escapeHtml(String(nome)).replace(/'/g,"&#039;")}','${escapeHtml(String(whatsapp)).replace(/'/g,"&#039;")}',${v})"><i class="fa-brands fa-whatsapp"></i> Cobrar</button><button class="mini-btn green" onclick="openDebtPaymentModal('${tipo}','${escapeHtml(String(codigo)).replace(/'/g,"&#039;")}','${escapeHtml(String(nome)).replace(/'/g,"&#039;")}','${escapeHtml(String(id||"")).replace(/'/g,"&#039;")}',${v})"><i class="fa-solid fa-check"></i> Marcar pago</button></div>`}
@@ -86,12 +156,44 @@ function openDeliveriesModal(){renderDeliveriesModal();document.getElementById("
 function closeDeliveriesModal(){document.getElementById("deliveriesModal").classList.remove("active")}
 function renderDeliveriesModal(){document.getElementById("deliveriesModalTable").innerHTML=(currentDeliveryExport||[]).map(deliveryRow).join("")||'<tr><td colspan="9" class="muted">Nenhuma entrega encontrada.</td></tr>'}
 function renderDeliveries(){const q=lower(document.getElementById("deliverySearch").value);const st=norm(document.getElementById("deliveryStatusFilter").value);const pay=norm(document.getElementById("deliveryPaymentFilter").value);const dateMode=norm(document.getElementById("deliveryDateFilter").value);const selected=document.getElementById("salesDate").value;let list=db.entregas.filter(d=>{const text=lower(Object.values(d).join(" "));const dateOk=dateMode!=="selected"||!selected||dateISO(d.CriadoEm||d.AtualizadoEm)===selected;return(!q||text.includes(q))&&(!st||norm(d.Status)===st)&&(!pay||norm(d.StatusPagamento)===pay)&&dateOk}).slice().reverse();currentDeliveryExport=list;const preview=list.slice(0,4);document.getElementById("deliveriesTable").innerHTML=preview.map(deliveryRow).join("")||'<tr><td colspan="9" class="muted">Nenhuma entrega encontrada.</td></tr>';if(document.getElementById("deliveriesModal").classList.contains("active"))renderDeliveriesModal()}
-function userRow(u){return `<tr><td>${escapeHtml(u.ID)}</td><td><b>${escapeHtml(u.Nome)}</b><br><span class="muted">${dateBR(u.CriadoEm)}</span></td><td>${waLink(u.WhatsApp)}</td><td>${escapeHtml(u.Email)}</td><td>${escapeHtml(u.CPF)}</td><td><b>${escapeHtml(u.CodigoAcesso)}</b></td><td><b>${num(u.EntregasSolicitadas)}</b></td><td><b class="money green">${money(num(u.ValorPago))}</b></td><td><b class="money red">${money(num(u.PagamentoPendente))}</b></td><td>${acoesCobranca("usuario",u.CodigoAcesso,u.Nome,u.WhatsApp,u.PagamentoPendente,u.ID)}</td></tr>`}
+function userRow(u){
+  const resumo=resumoCorridasCliente(u);
+  const pendente=resumo.valorPendente;
+  return `<tr>
+    <td>${escapeHtml(u.ID)}</td>
+    <td><b>${escapeHtml(u.Nome)}</b><br><span class="muted">${dateBR(u.CriadoEm)}</span></td>
+    <td>${waLink(u.WhatsApp)}</td>
+    <td>${escapeHtml(u.Email)}</td>
+    <td>${escapeHtml(u.CPF)}</td>
+    <td><b>${escapeHtml(u.CodigoAcesso)}</b><br><span class="muted">ID: ${escapeHtml(u.CodigoID||"-")}</span></td>
+    <td><b>${resumo.totalCorridas}</b><br><span class="muted">${resumo.quantidadePendente} pendente(s)</span></td>
+    <td><b class="money green">${money(resumo.valorPago)}</b></td>
+    <td><b class="money red">${money(pendente)}</b><br><span class="muted">calculado em CORRIDAS</span></td>
+    <td>${acoesCobranca("usuario",u.CodigoAcesso,u.Nome,u.WhatsApp,pendente,u.ID)}</td>
+  </tr>`;
+}
 function openUsersModal(){renderUsersModal();document.getElementById("usersModal").classList.add("active")}
 function closeUsersModal(){document.getElementById("usersModal").classList.remove("active")}
 function renderUsersModal(){document.getElementById("usersModalTable").innerHTML=(currentUsersList||[]).map(userRow).join("")||'<tr><td colspan="10" class="muted">Nenhum usuário encontrado.</td></tr>'}
 function renderUsers(){const q=lower(document.getElementById("userSearch").value);const list=db.usuarios.filter(u=>!q||lower(Object.values(u).join(" ")).includes(q)).slice().reverse();currentUsersList=list;document.getElementById("usersTable").innerHTML=list.slice(0,4).map(userRow).join("")||'<tr><td colspan="10" class="muted">Nenhum usuário encontrado.</td></tr>';if(document.getElementById("usersModal").classList.contains("active"))renderUsersModal()}
-function companyRow(e){return `<tr><td>${escapeHtml(e.ID)}</td><td><b>${escapeHtml(e.Responsavel)}</b><br><span class="muted">${dateBR(e.CriadoEm)}</span></td><td>${waLink(e.WhatsApp)}</td><td>${escapeHtml(e.Email)}</td><td>${escapeHtml(e.CPF_CNPJ)}</td><td>${escapeHtml(e.Endereco||[e.Rua,e.Numero,e.Referencia,e.Cidade].filter(Boolean).join(", "))}</td><td><b>${escapeHtml(e.CodigoAcesso)}</b></td><td><b class="money red">${money(num(e.SaldoDevedor))}</b></td><td><b class="money green">${money(num(e.ValorPago))}</b></td><td><b class="money red">${money(num(e.PagamentoPendente))}</b></td><td>${priorityBadge(e.Prioridade)}</td><td>${acoesCobranca("empresa",e.CodigoAcesso,e.Responsavel,e.WhatsApp,e.PagamentoPendente,e.ID)}</td></tr>`}
+function companyRow(e){
+  const resumo=resumoCorridasCliente(e);
+  const pendente=resumo.valorPendente;
+  return `<tr>
+    <td>${escapeHtml(e.ID)}</td>
+    <td><b>${escapeHtml(e.Responsavel)}</b><br><span class="muted">${dateBR(e.CriadoEm)}</span></td>
+    <td>${waLink(e.WhatsApp)}</td>
+    <td>${escapeHtml(e.Email)}</td>
+    <td>${escapeHtml(e.CPF_CNPJ)}</td>
+    <td>${escapeHtml(e.Endereco||[e.Rua,e.Numero,e.Referencia,e.Cidade].filter(Boolean).join(", "))}</td>
+    <td><b>${escapeHtml(e.CodigoAcesso)}</b><br><span class="muted">ID: ${escapeHtml(e.CodigoID||"-")}</span></td>
+    <td><b class="money red">${money(pendente)}</b><br><span class="muted">${resumo.quantidadePendente} corrida(s)</span></td>
+    <td><b class="money green">${money(resumo.valorPago)}</b></td>
+    <td><b class="money red">${money(pendente)}</b><br><span class="muted">calculado em CORRIDAS</span></td>
+    <td>${priorityBadge(e.Prioridade)}</td>
+    <td>${acoesCobranca("empresa",e.CodigoAcesso,e.Responsavel,e.WhatsApp,pendente,e.ID)}</td>
+  </tr>`;
+}
 function openCompaniesModal(){renderCompaniesModal();document.getElementById("companiesModal").classList.add("active")}
 function closeCompaniesModal(){document.getElementById("companiesModal").classList.remove("active")}
 function renderCompaniesModal(){document.getElementById("companiesModalTable").innerHTML=(currentCompaniesList||[]).map(companyRow).join("")||'<tr><td colspan="12" class="muted">Nenhuma empresa encontrada.</td></tr>'}
