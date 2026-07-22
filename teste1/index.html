@@ -180,7 +180,8 @@
         <div id="companyCreateStep2" style="display:none">
           <div class="mini-title"><i class="fa-solid fa-location-dot"></i> Etapa 2 de 3</div>
           <label>Selecionar a cidade</label><select id="cCidade"><option value="">Selecione</option><option value="Uruçuí">Uruçuí</option><option value="Benedito Leite">Benedito Leite</option></select>
-          <label>Logradouro (Rua, avenida, alameda...)</label><input id="cRua" placeholder="Rua">
+          <label>Logradouro (Rua, avenida, alameda...)</label><input id="cRua" placeholder="Ex: Rua das Flores (digite apenas o nome da rua ou avenida)">
+          <small style="display:block;margin:6px 0 14px;color:#dc2626;font-size:12px;">⚠️ Informe somente o nome da rua, avenida ou alameda. Não coloque número, bairro, cidade ou CEP neste campo.</small>
           <label>Número</label><input id="cNumero" placeholder="Número">
           <label>Referência</label><input id="cReferencia" placeholder="Ponto de referência">
           <button type="button" class="btn gray" onclick="showCompanyCreateStep(1)">Voltar</button>
@@ -312,7 +313,9 @@
         <div class="form-progress"><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         <div class="step active">
           <h3>Endereço de coleta</h3><button class="btn light" onclick="useRegisteredAddress()" id="useAddressBtn">Usar meu endereço de cadastro</button>
-          <label>Logradouro (Rua, avenida, alameda...)</label><input id="coletaRua"><label>Número</label><input id="coletaNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="coletaReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="coletaCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
+          <small style="display:block;margin:8px 0 14px;color:#2563eb;font-size:12px;font-weight:600;">💡 Apenas para empresas: clique em <strong>"Usar meu endereço de cadastro"</strong> para preencher automaticamente o endereço de coleta.</small>
+          <label>Logradouro (Rua, avenida, alameda...)</label><input id="coletaRua" placeholder="Ex: Rua das Flores (digite apenas o nome da rua ou avenida)">
+          <small style="display:block;margin:6px 0 14px;color:#dc2626;font-size:12px;">⚠️ Informe somente o nome da rua, avenida ou alameda. Não coloque número, bairro, cidade ou CEP neste campo.</small><label>Número</label><input id="coletaNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="coletaReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="coletaCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select>
           <button class="btn" onclick="nextStepWithLoading('Carregando destino...')">Continuar</button>
         </div>
         <div class="step"><h3>Endereço de destino</h3><label>Logradouro (Rua, avenida, alameda...)</label><input id="destinoRua"><label>Número</label><input id="destinoNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="destinoReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="destinoCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando bairros...')">Continuar</button></div></div>
