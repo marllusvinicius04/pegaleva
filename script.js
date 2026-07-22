@@ -1730,93 +1730,119 @@ document.addEventListener("DOMContentLoaded",()=>{
   setTimeout(()=>{ bindBairroFixEvents(); updateBairroOptions(); },200);
 })();
 
-
 /* =========================================================
-   RESUMO FINANCEIRO DAS CORRIDAS — SOMENTE FRONTEND
+   VALORES PENDENTES DAS CORRIDAS — FRONTEND CORRIGIDO
    Não altera o Apps Script.
-   Usa a action getTrackingPanel já existente na API e soma
-   as corridas pelo CodigoID da empresa ou do usuário.
 ========================================================= */
 (function(){
-  let corridaFinancialBusy=false;
-  let lastCorridaFinancialAt=0;
+  let loadingFinancial=false;
+  let financialRequestId=0;
 
-  function normalizePaymentStatusFrontend(value){
-    return String(value||"").trim().toLocaleLowerCase("pt-BR");
+  function parseMoneySafe(value){
+    if(typeof value==="number")return Number.isFinite(value)?value:0;
+    let text=String(value==null?"":value).trim();
+    if(!text)return 0;
+    text=text.replace(/\s/g,"").replace(/R\$/gi,"");
+    if(text.includes(",")&&text.includes(".")){
+      if(text.lastIndexOf(",")>text.lastIndexOf(".")){
+        text=text.replace(/\./g,"").replace(",",".");
+      }else{
+        text=text.replace(/,/g,"");
+      }
+    }else if(text.includes(",")){
+      text=text.replace(/\./g,"").replace(",",".");
+    }
+    const number=Number(text.replace(/[^0-9.-]/g,""));
+    return Number.isFinite(number)?number:0;
   }
 
-  function corridaFinancialSummaryFrontend(list){
-    const corridas=Array.isArray(list)?list:[];
-    let totalPendente=0;
-    let totalPago=0;
-    let quantidadePendente=0;
-    let quantidadePaga=0;
+  function normalizeFinancialStatus(value){
+    return String(value||"")
+      .trim()
+      .toLocaleLowerCase("pt-BR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"");
+  }
 
-    corridas.forEach(corrida=>{
-      const valor=Number(corrida?.valor ?? corrida?.Valor ?? 0) || 0;
-      const status=normalizePaymentStatusFrontend(
-        corrida?.pagamento ?? corrida?.StatusPagamento
+  function extractFinancialItems(response){
+    if(!response||typeof response!=="object")return [];
+    const candidates=[
+      response.corridas,
+      response.itens,
+      response.items,
+      response.entregas,
+      response.list,
+      response.data
+    ];
+    const found=candidates.find(Array.isArray);
+    if(!found)return [];
+    return found.filter(item=>{
+      const tipo=String(item?.tipoRegistro||item?.TipoRegistro||"").toUpperCase();
+      const id=String(item?.id||item?.ID||"");
+      return tipo!=="AGUARDANDO"&&!id.startsWith("AGUARDANDO-");
+    });
+  }
+
+  function summarizeFinancialItems(items){
+    const summary={
+      totalCorridas:0,
+      quantidadePendente:0,
+      totalPendente:0,
+      quantidadePaga:0,
+      totalPago:0
+    };
+
+    (Array.isArray(items)?items:[]).forEach(item=>{
+      const value=Math.max(0,parseMoneySafe(item?.valor ?? item?.Valor ?? 0));
+      const status=normalizeFinancialStatus(
+        item?.pagamento ?? item?.StatusPagamento ?? ""
       );
 
-      if(status==="pago"){
-        totalPago+=valor;
-        quantidadePaga++;
+      summary.totalCorridas++;
+
+      if(status==="pago"||status==="pagamento realizado com sucesso"||status==="sucesso"){
+        summary.quantidadePaga++;
+        summary.totalPago+=value;
       }else{
-        totalPendente+=valor;
-        quantidadePendente++;
+        summary.quantidadePendente++;
+        summary.totalPendente+=value;
       }
     });
 
-    return {
-      totalCorridas:corridas.length,
-      quantidadePendente,
-      totalPendente,
-      quantidadePaga,
-      totalPago
-    };
+    summary.totalPendente=Math.round(summary.totalPendente*100)/100;
+    summary.totalPago=Math.round(summary.totalPago*100)/100;
+    return summary;
   }
 
-  function renderCorridaFinancialSummaryFrontend(){
-    const box=document.getElementById("profileBox");
-    const profile=session&&session.profile?session.profile:null;
-    const resumo=profile&&profile.ResumoCorridasFrontend;
+  function applyFinancialSummary(summary){
+    if(!session||!session.profile)return;
+    session.profile.PagamentoPendente=summary.totalPendente;
+    session.profile.ValorPagoCorridas=summary.totalPago;
+    session.profile.ResumoCorridasFrontend=summary;
+    if(session.type==="empresa")session.profile.SaldoDevedor=summary.totalPendente;
+    localStorage.setItem("pegaleva_client",JSON.stringify(session));
+  }
 
-    if(!box||!resumo)return;
+  function renderFinancialSummary(){
+    const box=document.getElementById("profileBox");
+    const summary=session?.profile?.ResumoCorridasFrontend;
+    if(!box||!summary)return;
 
     box.querySelectorAll(".corrida-financial-summary-frontend").forEach(el=>el.remove());
 
     const wrapper=document.createElement("div");
     wrapper.className="corrida-financial-summary-frontend";
     wrapper.innerHTML=`
-      <div class="info-row">
-        <span>Corridas registradas</span>
-        <b>${Number(resumo.totalCorridas||0)}</b>
-      </div>
-      <div class="info-row">
-        <span>Corridas pendentes</span>
-        <b>${Number(resumo.quantidadePendente||0)}</b>
-      </div>
-      <div class="info-row">
-        <span>Valor pendente</span>
-        <b>${money(resumo.totalPendente||0)}</b>
-      </div>
-      <div class="info-row">
-        <span>Corridas pagas</span>
-        <b>${Number(resumo.quantidadePaga||0)}</b>
-      </div>
-      <div class="info-row">
-        <span>Total pago</span>
-        <b>${money(resumo.totalPago||0)}</b>
-      </div>`;
-
+      <div class="info-row"><span>Corridas registradas</span><b>${summary.totalCorridas}</b></div>
+      <div class="info-row"><span>Corridas pendentes</span><b>${summary.quantidadePendente}</b></div>
+      <div class="info-row"><span>Valor pendente das corridas</span><b>${money(summary.totalPendente)}</b></div>
+      <div class="info-row"><span>Corridas pagas</span><b>${summary.quantidadePaga}</b></div>
+      <div class="info-row"><span>Total pago nas corridas</span><b>${money(summary.totalPago)}</b></div>`;
     box.appendChild(wrapper);
   }
 
   async function loadCorridaFinancialSummaryFrontend(force){
-    if(!session||!session.profile||corridaFinancialBusy)return;
-
-    const now=Date.now();
-    if(!force&&now-lastCorridaFinancialAt<4000)return;
+    if(!session?.profile||loadingFinancial)return null;
 
     const codigoId=String(
       session.profile.CodigoID||
@@ -1824,68 +1850,76 @@ document.addEventListener("DOMContentLoaded",()=>{
       ""
     ).trim().toUpperCase();
 
-    if(!codigoId)return;
+    if(!codigoId)return null;
 
-    corridaFinancialBusy=true;
-    lastCorridaFinancialAt=now;
+    loadingFinancial=true;
+    const requestId=++financialRequestId;
 
     try{
-      const res=await api("getTrackingPanel",{codigoId,_t:Date.now()});
-      if(!res||!res.ok)return;
-
-      const corridas=res.corridas||res.entregas||[];
-      const resumo=corridaFinancialSummaryFrontend(corridas);
-
-      session.profile.PagamentoPendente=resumo.totalPendente;
-      if(session.type==="empresa"){
-        session.profile.SaldoDevedor=resumo.totalPendente;
+      const response=await api("getTrackingPanel",{codigoId,_t:Date.now()});
+      if(requestId!==financialRequestId)return null;
+      if(!response||!response.ok){
+        console.warn("Resumo financeiro não carregado:",response?.error||"Resposta inválida.");
+        return null;
       }
-      session.profile.ResumoCorridasFrontend=resumo;
 
-      localStorage.setItem("pegaleva_client",JSON.stringify(session));
+      const summary=summarizeFinancialItems(extractFinancialItems(response));
+      applyFinancialSummary(summary);
 
       if(typeof renderProfile==="function")renderProfile();
-      renderCorridaFinancialSummaryFrontend();
-    }catch(e){
-      console.warn("Não foi possível carregar o resumo financeiro das corridas.",e);
+      renderFinancialSummary();
+      return summary;
+    }catch(error){
+      console.warn("Não foi possível carregar os valores pendentes das corridas.",error);
+      return null;
     }finally{
-      corridaFinancialBusy=false;
+      if(requestId===financialRequestId)loadingFinancial=false;
     }
   }
 
-  const originalRenderProfileCorridasFrontend=
-    typeof renderProfile==="function"?renderProfile:null;
-
-  if(originalRenderProfileCorridasFrontend){
+  const originalRenderProfile=typeof renderProfile==="function"?renderProfile:null;
+  if(originalRenderProfile){
     renderProfile=function(){
-      const result=originalRenderProfileCorridasFrontend.apply(this,arguments);
-      renderCorridaFinancialSummaryFrontend();
+      const result=originalRenderProfile.apply(this,arguments);
+      renderFinancialSummary();
       return result;
     };
   }
 
-  const originalRefreshPanelCorridasFrontend=
-    typeof refreshPanel==="function"?refreshPanel:null;
+  const originalOpenPendingModal=
+    typeof openClientPendingPaymentModal==="function"
+      ?openClientPendingPaymentModal
+      :null;
 
-  if(originalRefreshPanelCorridasFrontend){
+  if(originalOpenPendingModal){
+    openClientPendingPaymentModal=function(){
+      const pending=parseMoneySafe(session?.profile?.PagamentoPendente);
+      if(!(pending>0)){
+        alert("Você não possui valores pendentes nas corridas.");
+        return;
+      }
+      session.profile.PagamentoPendente=pending;
+      return originalOpenPendingModal.apply(this,arguments);
+    };
+  }
+
+  const originalRefreshPanel=typeof refreshPanel==="function"?refreshPanel:null;
+  if(originalRefreshPanel){
     refreshPanel=async function(){
-      const result=await originalRefreshPanelCorridasFrontend.apply(this,arguments);
-      await loadCorridaFinancialSummaryFrontend(false);
+      const result=await originalRefreshPanel.apply(this,arguments);
+      await loadCorridaFinancialSummaryFrontend(true);
       return result;
     };
   }
 
-  const originalOpenPanelCorridasFrontend=
-    typeof openPanel==="function"?openPanel:null;
-
-  if(originalOpenPanelCorridasFrontend){
+  const originalOpenPanel=typeof openPanel==="function"?openPanel:null;
+  if(originalOpenPanel){
     openPanel=function(){
-      const result=originalOpenPanelCorridasFrontend.apply(this,arguments);
-      setTimeout(()=>loadCorridaFinancialSummaryFrontend(true),100);
+      const result=originalOpenPanel.apply(this,arguments);
+      setTimeout(()=>loadCorridaFinancialSummaryFrontend(true),150);
       return result;
     };
   }
 
   window.loadCorridaFinancialSummaryFrontend=loadCorridaFinancialSummaryFrontend;
 })();
-v
