@@ -505,6 +505,20 @@
   </div>
 </div>
 
+
+<div class="modal" id="whatsappDeliveryModal">
+  <div class="modal-box whatsapp-order-modal" style="max-width:470px;text-align:center;padding:28px 22px">
+    <div class="whatsapp-order-icon"><i class="fa-brands fa-whatsapp"></i></div>
+    <h2>Finalize pelo WhatsApp</h2>
+    <p class="muted">Para uma melhor experiência e atendimento mais rápido, envie agora a solicitação completa para a Central Pega&amp;Leva pelo WhatsApp.</p>
+    <div class="whatsapp-order-note">
+      <i class="fa-solid fa-receipt"></i> A notinha será gerada automaticamente com todos os dados, localização da coleta, localização da entrega e rota pronta no Google Maps.
+    </div>
+    <button class="btn green" onclick="sendDeliveryToWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Enviar solicitação pelo WhatsApp</button>
+    <button class="btn gray" onclick="closeWhatsappDeliveryModal()">Voltar e revisar</button>
+  </div>
+</div>
+
 <div class="modal" id="statusModal"><div class="modal-box"><i id="statusIcon" class="fa-solid fa-circle-check"></i><h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p><button class="btn green" onclick="closeStatusModal()">OK</button></div></div>
 
 <div class="modal" id="clientPaymentModal">
