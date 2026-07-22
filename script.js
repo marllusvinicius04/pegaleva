@@ -1,3 +1,4 @@
+const PEGALEVA_SCRIPT_VERSION="2026-07-21-createDelivery";
 
 const QUICK_ACCESS_KEY="pegaleva_quick_access";
 
