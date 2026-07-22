@@ -1,231 +1,87 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <title>Entregador - PegaLeva</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=20260721-finalizar-manual">
-
-  <link rel="icon" type="image/jpeg" href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg">
-  <script>
-    const APP_VERSION = "20260721-finalizar-manual";
-    async function clearAppCache(){
-      try{
-        if("caches" in window){
-          const keys = await caches.keys();
-          await Promise.all(keys.map(k => caches.delete(k)));
-        }
-        if("serviceWorker" in navigator){
-          const regs = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map(r => r.update().catch(()=>{})));
-        }
-        localStorage.setItem("pegaleva_last_version", APP_VERSION);
-      }catch(e){}
-    }
-    function forceAppUpdate(){
-      clearAppCache().finally(()=>{
-        const url = new URL(window.location.href);
-        url.searchParams.set("v", Date.now());
-        window.location.replace(url.toString());
-      });
-    }
-    clearAppCache();
-  </script>
-
-  <style>
-    #manualDeliveryModal .modal-content{max-width:560px;max-height:94vh;overflow:auto;text-align:left}
-    .manual-title-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
-    .manual-title-icon{width:48px;height:48px;border-radius:16px;background:#eef4ff;color:#0044c3;display:grid;place-items:center;font-size:22px}
-    .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .manual-field{margin-top:12px}
-    .manual-field label{display:block;font-weight:900;font-size:13px;margin-bottom:7px}
-    .manual-search-wrap{position:relative}
-    .manual-results{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #dbe3f0;border-radius:15px;box-shadow:0 18px 44px rgba(15,23,42,.18);max-height:230px;overflow:auto;z-index:30}
-    .manual-results.active{display:block}
-    .manual-company-result{width:100%;background:#fff;color:#0f172a;text-align:left;padding:12px;border:0;border-bottom:1px solid #edf2f7;cursor:pointer}
-    .manual-company-result:last-child{border-bottom:0}
-    .manual-company-result:hover{background:#f4f8ff}
-    .manual-company-result strong{display:block}
-    .manual-company-result small{display:block;color:#64748b;margin-top:3px}
-    .manual-selected{display:none;margin-top:9px;padding:11px 12px;border-radius:14px;background:#dcfce7;color:#047857;font-size:13px;font-weight:900}
-    .manual-selected.active{display:block}
-    .manual-payment-step{display:none;margin-top:16px}
-    .manual-payment-step.active{display:block}
-    .manual-pix-card{background:#f8fbff;border:1px solid #dbe7ff;border-radius:22px;padding:16px;text-align:center}
-    .manual-pix-card img{display:block;width:min(240px,75vw);max-height:280px;object-fit:contain;margin:12px auto;border-radius:16px;background:white}
-    .manual-payment-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-    .manual-payment-options button{margin:0}
-    .manual-payment-options button.selected{outline:4px solid rgba(0,68,195,.14)}
-    .manual-summary{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;text-align:left;line-height:1.6;font-size:13px;margin-top:12px}
-    #manualDeliveryModal textarea{min-height:85px;resize:vertical}
-    #manualDeliveryModal select,#manualDeliveryModal textarea{width:100%;box-sizing:border-box}
-    @media(max-width:600px){.manual-grid,.manual-payment-options{grid-template-columns:1fr}}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Rastrear entrega - PegaLeva</title>
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="icon" href="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="style.css?v=20260722-rastreio-ct4">
 </head>
 <body>
-<div class="loader" id="loader"><div><div class="spinner" id="loaderSpinner"></div><div class="loader-bike" id="loaderBike" style="display:none"><i class="fa-solid fa-motorcycle"></i><div class="loader-road"></div></div><h2 id="loaderText">Carregando...</h2></div></div>
-
-<section class="screen login active" id="loginScreen">
-  <div class="login-card">
-    <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
-    <h1>Painel do Entregador</h1>
-    <p>Entre com seu código de acesso.</p>
-    <input id="driverCode" placeholder="Código do entregador">
-    <button class="btn" onclick="loginDriver()"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+<div class="shell">
+  <div class="brand">
+    <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva">
+    <div><strong>PegaLeva</strong><span>Rastreamento de entrega em tempo real</span></div>
   </div>
-</section>
 
-<section class="screen app" id="appScreen">
-  <div class="top">
-    <button class="top-icon-btn refresh" onclick="forceAppUpdate()" title="Atualizar sistema"><i class="fa-solid fa-rotate-right"></i></button>
-    <button class="top-icon-btn logout" onclick="logout()" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
-    <button class="top-icon-btn menu" onclick="openSideMenu()" title="Menu"><i class="fa-solid fa-bars"></i></button>
-    <div class="head">
-      <div class="brand">
-        <img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg">
-        <div><strong id="driverName">Entregador</strong><span id="driverPlate">Placa</span></div>
+  <section class="card login-card" id="loginCard">
+    <div class="login-icon"><i class="fa-solid fa-location-dot"></i></div>
+    <h1>Acompanhe sua entrega</h1>
+    <p style="color:var(--muted)">Digite o código do cliente, da empresa ou o Código CT de 4 caracteres.</p>
+    <div class="input-wrap">
+      <input id="trackingCode" placeholder="Código do cliente, empresa ou CT" autocomplete="off">
+      <button id="trackButton" onclick="startTracking()"><i class="fa-solid fa-magnifying-glass-location"></i> Rastrear</button>
+    </div>
+    <div id="loginError"></div>
+  </section>
+
+  <section id="trackingPanel" class="hidden">
+    <div class="card hero">
+      <div class="top-row">
+        <div>
+          <span class="status-pill" id="statusPill"><i class="fa-solid fa-motorcycle"></i><span id="statusLabel">Em andamento</span></span>
+          <h2 id="clientName" style="margin:16px 0 5px">Cliente</h2>
+          <p class="muted" id="recordCode">Entrega</p>
+        </div>
+        <div class="estimate"><small>Tempo estimado</small><strong id="estimateText">Até 20 min</strong></div>
+      </div>
+      <div class="driver">
+        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+        <div><strong id="driverName">Aguardando entregador</strong><small id="driverPlate">O entregador aparecerá aqui</small></div>
       </div>
     </div>
-  </div>
 
-  <div class="wrap">
-    <aside>
-      <div class="saldo">
-        <small>Saldo Atual</small>
-        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
-          <h1 id="saldoText">R$0,00</h1>
-          <button id="toggleSaldoBtn" onclick="toggleSaldoVisibility()" style="width:auto;margin:0;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);color:white;border-radius:14px;padding:10px 12px;font-size:18px;box-shadow:none"><i class="fa-solid fa-eye"></i></button>
+    <div class="card">
+      <div class="timeline">
+        <div class="timeline-progress" id="timelineProgress"></div>
+        <div class="step" data-step="0"><i class="fa-solid fa-receipt"></i><span>Pedido recebido</span></div>
+        <div class="step" data-step="1"><i class="fa-solid fa-user-check"></i><span>Entregador responsável</span></div>
+        <div class="step" data-step="2"><i class="fa-solid fa-motorcycle"></i><span>A caminho</span></div>
+        <div class="step" data-step="3"><i class="fa-solid fa-location-dot"></i><span>No local</span></div>
+        <div class="step" data-step="4"><i class="fa-solid fa-circle-check"></i><span>Finalizada</span></div>
+      </div>
+      <div class="current-box">
+        <strong id="currentTitle">Situação da entrega</strong>
+        <span id="currentMessage">Carregando informações...</span>
+      </div>
+
+      <div id="routeBox">
+        <div class="route">
+          <div class="route-line"><div class="dot"></div></div>
+          <div><strong>Coleta</strong><p id="pickupText">Local de coleta</p></div>
         </div>
-        <button class="btn green" onclick="openManualDeliveryModal()"><i class="fa-solid fa-plus"></i> Adicionar entrega</button>
-      </div>
-
-      <div class="card">
-        <h3>Status do entregador</h3>
-        <p class="muted">Ative para receber pedidos.</p>
-        <div class="switch">
-          <button id="btnOn" class="on" onclick="toggleActive(true)"><i class="fa-solid fa-toggle-on"></i> ON</button>
-          <button id="btnOff" class="off" onclick="toggleActive(false)"><i class="fa-solid fa-toggle-off"></i> OFF</button>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:18px">
-        <h2>Minhas entregas</h2>
-        <div id="myBox"></div>
-      </div>
-    </aside>
-
-    <main class="available-main">
-      <div class="available-backdrop" id="availableBackdrop" onclick="closeAvailableDrawer()"></div>
-      <button class="available-handle" id="availableHandle" title="Novas entregas">
-        <span class="available-count" id="availableCount">0</span>
-        <i class="fa-solid fa-motorcycle"></i>
-      </button>
-      <div class="available-drawer" id="availableDrawer">
-        <button class="available-close" onclick="closeAvailableDrawer()"><i class="fa-solid fa-xmark"></i></button>
-        <div class="card">
-          <h2>Novas entregas disponíveis</h2>
-          <p class="muted">Arraste a moto da direita para a esquerda para abrir esta lista.</p>
-          <div id="availableBox"></div>
+        <div class="route">
+          <div class="route-line"><div class="dot destination"></div></div>
+          <div><strong>Destino</strong><p id="destinationText">Local de entrega</p></div>
         </div>
       </div>
-    </main>
-  </div>
-</section>
-
-<div class="bottom-offer" id="bottomOfferBar"><div id="bottomOfferBody"></div></div>
-
-<div class="side-menu-backdrop" id="sideMenuBackdrop" onclick="closeSideMenu()"></div>
-<nav class="side-menu" id="sideMenu">
-  <button class="side-close" onclick="closeSideMenu()"><i class="fa-solid fa-xmark"></i></button>
-  <div class="side-profile">
-    <div class="side-avatar"><i class="fa-solid fa-circle-user"></i></div>
-    <div><strong id="sideDriverName">Entregador</strong><span id="sideDriverPlate">Placa: -</span></div>
-  </div>
-  <div class="side-balance"><small>Meu saldo</small><h2 id="sideSaldoText">R$0,00</h2></div>
-
-  <button class="side-menu-btn" onclick="openManualDeliveryModal()"><i class="fa-solid fa-plus"></i> Adicionar entrega</button>
-  <button class="side-menu-btn" onclick="openPaymentsModal()"><i class="fa-solid fa-wallet"></i> Meus pagamentos</button>
-  <button class="side-menu-btn" onclick="openDriverHistoryModal()"><i class="fa-solid fa-clock-rotate-left"></i> Meu histórico</button>
-  <button class="side-menu-btn" onclick="cancelDriverRegistration()"><i class="fa-solid fa-user-slash"></i> Cancelar entregador</button>
-  <button class="side-menu-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
-</nav>
-
-<div class="modal" id="manualDeliveryModal">
-  <div class="modal-content" style="position:relative;max-width:520px;text-align:left">
-    <button class="side-close" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i></button>
-    <div class="manual-title-row">
-      <span class="manual-title-icon"><i class="fa-solid fa-plus"></i></span>
-      <div><h2>Adicionar entrega</h2><p class="muted">Informe o Código ID cadastrado e o valor da entrega.</p></div>
+      <div class="refresh-note" id="refreshNote">Atualização automática a cada 5 segundos.</div>
     </div>
-    <div class="manual-field">
-      <label>Código ID da empresa ou usuário</label>
-      <input id="manualClientIdCode" autocomplete="off" placeholder="Digite o Código ID">
-      <div class="manual-selected" id="manualClientLocated"></div>
+
+    <div class="card">
+      <div class="top-row">
+        <div><h3 style="margin-bottom:5px">Histórico recente</h3><p style="color:var(--muted);font-size:13px">Últimas entregas vinculadas ao código.</p></div>
+        <button onclick="changeCode()" style="background:#eef3ff;color:var(--blue);padding:11px 13px"><i class="fa-solid fa-pen"></i></button>
+      </div>
+      <div id="historyList"></div>
     </div>
-    <div class="manual-field">
-      <label>Valor da entrega</label>
-      <input id="manualDeliveryValue" inputmode="decimal" placeholder="Ex.: 15,00">
-    </div>
-    <button class="btn green" type="button" onclick="createManualRace()"><i class="fa-solid fa-plus"></i> Criar entrega</button>
-    <button class="btn gray" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i> Cancelar</button>
-  </div>
+  </section>
 </div>
 
-<div class="modal" id="paymentsModal">
-  <div class="modal-content" style="position:relative">
-    <button class="side-close" onclick="closePaymentsModal()"><i class="fa-solid fa-xmark"></i></button>
-    <h2>Meus pagamentos</h2><p class="muted">Histórico de saques solicitados.</p>
-    <div id="paymentsHistoryBox"></div>
-  </div>
-</div>
-
-<div class="modal" id="driverHistoryModal">
-  <div class="modal-content" style="position:relative">
-    <button class="side-close" onclick="closeDriverHistoryModal()"><i class="fa-solid fa-xmark"></i></button>
-    <h2>Meu histórico</h2><p class="muted">Corridas finalizadas, rotas e valores.</p>
-    <div id="driverHistoryListBox"></div>
-  </div>
-</div>
-
-<div class="modal" id="statusModal">
-  <div class="modal-content" style="text-align:center">
-    <h2 id="statusTitle">Status</h2><p class="muted" id="statusText"></p>
-    <button class="btn green" onclick="closeStatusModal()"><i class="fa-solid fa-check"></i> OK</button>
-  </div>
-</div>
-
-<div class="modal" id="paymentModal">
-  <div class="modal-content">
-    <h2>Pagamento da entrega</h2>
-    <div id="paymentBody"></div>
-    <div class="actions">
-      <button class="btn green" onclick="registerPayment('Pago')"><i class="fa-solid fa-circle-check"></i> Pagamento realizado com sucesso</button>
-      <button class="btn red" onclick="registerPayment('Pendente')"><i class="fa-solid fa-clock"></i> Pagamento pendente</button>
-    </div>
-    <button class="btn gray" onclick="closePaymentModal()"><i class="fa-solid fa-xmark"></i> Fechar</button>
-  </div>
-</div>
-
-<div class="modal" id="withdrawModal">
-  <div class="modal-content">
-    <h2>Solicitar saque</h2>
-    <p class="muted">Bem transparente: a cada entrega finalizada é descontada a taxa de sistema/serviço de R$1,98. O valor abaixo é o total que será transferido via PIX já com esse desconto.</p>
-    <div class="pix-box" style="text-align:left">
-      <small>Valor total para transferência via PIX</small>
-      <h2 id="withdrawAvailable">R$0,00</h2>
-      <p class="pay-note" id="withdrawTransparentNote">Pagamento do valor total já descontado da taxa de sistema/serviço de cada entrega. Saque disponível somente a partir de R$50,00. Pagamentos são feitos quarta e sábado em horário comercial.</p>
-    </div>
-    <input id="withdrawPix" placeholder="Chave PIX">
-    <input id="withdrawName" placeholder="Nome do destinatário da chave PIX">
-    <button class="btn green" onclick="requestWithdraw()"><i class="fa-solid fa-check-circle"></i> Sacar meu saldo</button>
-    <button class="btn gray" onclick="closeWithdrawModal()"><i class="fa-solid fa-xmark"></i> Fechar</button>
-  </div>
-</div>
-
-<div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> Enviar</button></div><button class="btn gray" onclick="closeChatModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div></div>
-
-<script src="script.js?v=20260721-finalizar-manual"></script>
+<script src="script.js?v=20260722-rastreio-ct4"></script>
 </body>
 </html>
