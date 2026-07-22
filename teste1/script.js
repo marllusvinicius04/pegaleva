@@ -386,7 +386,18 @@ async function loginSelected(type){const codigo=type==="empresa"?document.getEle
 async function loginByCode(codigo,expectedType,email="",isNewAccount=false){session=null;localStorage.removeItem("pegaleva_client");showLoader("Carregando seu painel...");const res=await api("loginClient",{codigo,email,expectedType});hideLoader();if(!res.ok){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}if(res.type!==expectedType){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}const perfilEmail=String(res.profile?.Email||"").trim().toLowerCase();if(perfilEmail!==String(email||"").trim().toLowerCase()){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}session=res;localStorage.setItem("pegaleva_client",JSON.stringify(session));openPanel();if(isNewAccount)setTimeout(showNewAccountWelcomeModal,180);return true}
 function showNewAccountWelcomeModal(){if(!session)return;const p=session.profile||{};const fullName=String(session.type==="empresa"?(p.Responsavel||""):(p.Nome||"")).trim();const firstName=fullName.split(/\s+/)[0]||"";const feminine=session.type==="empresa"||/[aáàâã]$/i.test(firstName);const title=document.getElementById("newAccountWelcomeTitle"),text=document.getElementById("newAccountWelcomeText"),modal=document.getElementById("newAccountWelcomeModal");if(title)title.innerText=(feminine?"Bem-vinda, ":"Bem-vindo, ")+(firstName||"ao Pega&Leva")+"!";if(text)text.innerText=session.type==="empresa"?"Sua empresa foi cadastrada com sucesso no Pega&Leva. O desconto de 20% ainda está em processo de ativação e pode ser liberado a qualquer momento, em até 30 minutos. Aguarde a notificação no WhatsApp confirmando que o desconto foi ativado antes de solicitar uma entrega. Caso solicite antes da liberação, será cobrado o valor normal, sem desconto. Após receber a confirmação, você poderá usar o desconto normalmente dentro do nosso sistema.":"Sua conta foi criada com sucesso no Pega&Leva. Agora você já pode acessar o painel e solicitar sua primeira entrega.";if(modal)modal.classList.add("active")}
 function closeNewAccountWelcomeModal(){document.getElementById("newAccountWelcomeModal")?.classList.remove("active")}
-function openPanel(){setSupportVisibility(false);setTimeout(updateBairroOptions,0);const historyBtn=document.querySelector(".history-chat-btn");if(historyBtn)historyBtn.style.display="grid";const accessScreen=document.getElementById("accessScreen");const appScreen=document.getElementById("appScreen");if(accessScreen)accessScreen.classList.remove("active");if(appScreen)appScreen.classList.add("active");
+
+function disableDeliveriesAreaUI(){
+  const box=document.getElementById("deliveriesBox");
+  const card=box&&box.closest?box.closest(".card"):null;
+  if(card)card.style.display="none";
+  const historyBtn=document.querySelector(".history-chat-btn");
+  if(historyBtn)historyBtn.style.display="none";
+  const historyPanel=document.getElementById("historyPanel");
+  if(historyPanel)historyPanel.classList.remove("active");
+}
+
+function openPanel(){setSupportVisibility(false);disableDeliveriesAreaUI();setTimeout(updateBairroOptions,0);const historyBtn=document.querySelector(".history-chat-btn");if(historyBtn)historyBtn.style.display="grid";const accessScreen=document.getElementById("accessScreen");const appScreen=document.getElementById("appScreen");if(accessScreen)accessScreen.classList.remove("active");if(appScreen)appScreen.classList.add("active");
   const clientNav=document.getElementById("clientAppNav");
   if(clientNav) clientNav.style.display="";
 const p=session.profile,name=session.type==="empresa"?p.Responsavel:p.Nome;const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";document.getElementById("welcomeName").innerText="Olá, "+primeiroNome;document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuário";document.getElementById("companyBox").style.display=session.type==="empresa"?"block":"none";document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";const savedAddressTip=document.getElementById("savedAddressTip");if(savedAddressTip)savedAddressTip.style.display=session.type==="empresa"?"block":"none";toggleCouponArea();renderProfile();loadClientTools();startAutoRefresh()}
@@ -620,8 +631,8 @@ function openAnnouncementsModal(){
 }
 function closeAnnouncementsModal(){document.getElementById("announcementsModal").classList.remove("active")}
 
-function startAutoRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshPanel();scheduleAutoRefresh()}
-function scheduleAutoRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(async()=>{await refreshPanel();scheduleAutoRefresh()},1000)}
+function startAutoRefresh(){ refreshPanel(); }
+function scheduleAutoRefresh(){ /* Entregas desativadas. */ }
 document.addEventListener("visibilitychange",()=>{if(!session)return;scheduleAutoRefresh();refreshPanel()});window.addEventListener("focus",()=>{if(session)refreshPanel()});window.addEventListener("pageshow",()=>{if(session)refreshPanel()})
 function useRegisteredAddress(){if(session.type!=="empresa")return;const p=session.profile;document.getElementById("coletaRua").value=p.Rua||p.Endereco||"";document.getElementById("coletaNumero").value=p.Numero||"";document.getElementById("coletaReferencia").value=p.Referencia||"";document.getElementById("coletaCidade").value=p.Cidade||""}
 function renderProfile(){const p=session.profile,pendente=Number(p.PagamentoPendente||0),payBtn=pendente>0?` <button type="button" class="btn-pay-pending" onclick="openClientPendingPaymentModal()" style="margin-top:0!important;padding:7px 10px!important;font-size:11px!important"><i class="fa-solid fa-money-bill-wave"></i> PAGAR AGORA</button>`:"";document.getElementById("profileBox").innerHTML=session.type==="empresa"?`<div class="info-row"><span>Responsável</span><b>${p.Responsavel||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF/CNPJ</span><b>${p.CPF_CNPJ||""}</b></div><div class="info-row"><span>Endereço</span><b>${p.Endereco||""}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`:`<div class="info-row"><span>Nome</span><b>${p.Nome||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF</span><b>${p.CPF||""}</b></div><div class="info-row"><span>Entregas solicitadas</span><b>${p.EntregasSolicitadas||0}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`}
@@ -667,7 +678,7 @@ function whatsappSlideHtml(id){
     <span class="delivery-confirm-icon"><i class="fa-brands fa-whatsapp"></i></span>
     <span class="delivery-confirm-copy">
       <strong>Confirmar entrega</strong>
-      <small>Registrar e enviar pelo WhatsApp</small>
+      <small>Enviar pelo WhatsApp</small>
     </span>
     <span class="delivery-confirm-arrow"><i class="fa-solid fa-arrow-right"></i></span>
   </button>`;
@@ -986,62 +997,48 @@ function linkRotaGoogleMaps(origem,destino){
 async function confirmDelivery(){
   if(!validateStep())return;
 
-  const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
   const coleta=enderecoMapa("coleta");
   const destino=enderecoMapa("destino");
-
-  const payload={
-    codigoCliente:session.profile.CodigoAcesso,
-    tipoCliente:session.type,
-    bairroColeta:document.getElementById("bairroColeta").value,
-    bairroDestino:document.getElementById("bairroDestino").value,
-    coletaCidade:document.getElementById("coletaCidade").value,
-    destinoCidade:document.getElementById("destinoCidade").value,
-    enderecoColeta:coleta,
-    enderecoDestino:destino,
-    referenciaColeta:pontoReferencia("coleta"),
-    referenciaDestino:pontoReferencia("destino"),
-    nomeDestino:document.getElementById("nomeDestino").value,
-    whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),
-    conteudo:document.getElementById("conteudo").value,
-    volumes:document.getElementById("volumes").value,
-    rotaRetorno:document.getElementById("rotaRetorno").value,
-    ofertaEntrega:document.getElementById("ofertaEntrega")?.value||"",
-    pagamento:document.getElementById("pagamento").value,
-    observacaoPagamento:document.getElementById("observacaoPagamento").value,
-    cupom
-  };
+  const profile=session&&session.profile?session.profile:{};
+  const nomeSolicitante=session&&session.type==="empresa"
+    ?(profile.Responsavel||profile.NomeEmpresa||"")
+    :(profile.Nome||"");
 
   clearDeliveryProgress();
-  showLoader("Registrando sua solicitação...");
+  showLoader("Preparando sua solicitação...");
 
-  const res=await api("createDelivery",payload);
-  hideLoader();
-
-  if(!res.ok){
-    showStatus("Não foi possível registrar",res.error||"Confira os dados e tente novamente.","bad");
-    return;
-  }
-
-  const d=res.delivery||{};
   ultimaEntregaLocal={
-    ...d,
-    CodigoID:d.CodigoID||session.profile.CodigoID||"",
-    CodigoEntrega:d.CodigoEntrega||"",
-    Empresa:session.type==="empresa"?(session.profile.Responsavel||session.profile.NomeEmpresa||""):"",
-    MapsColeta:linkGoogleMaps(d.EnderecoColeta||coleta),
-    MapsDestino:linkGoogleMaps(d.EnderecoDestino||destino),
-    MapsRota:d.MapsUrl||linkRotaGoogleMaps(d.EnderecoColeta||coleta,d.EnderecoDestino||destino),
-    AcompanharUrl:"https://pegaelevadelivery.com.br/rastreioentrega"
+    ID:"LOCAL-"+Date.now(),
+    CodigoID:profile.CodigoID||"",
+    TipoCliente:session?.type||"",
+    CodigoCliente:profile.CodigoAcesso||"",
+    NomeSolicitante:nomeSolicitante,
+    WhatsAppSolicitante:profile.WhatsApp||"",
+    Empresa:session?.type==="empresa"?nomeSolicitante:"",
+    EnderecoColeta:coleta,
+    BairroColeta:document.getElementById("bairroColeta").value,
+    EnderecoDestino:destino,
+    BairroDestino:document.getElementById("bairroDestino").value,
+    NomeDestino:document.getElementById("nomeDestino").value,
+    WhatsAppDestino:onlyDigits(document.getElementById("whatsappDestino").value),
+    Conteudo:document.getElementById("conteudo").value,
+    Volumes:document.getElementById("volumes").value,
+    RotaRetorno:document.getElementById("rotaRetorno").value,
+    OfertaEntrega:document.getElementById("ofertaEntrega")?.value||"",
+    Pagamento:document.getElementById("pagamento").value,
+    ObservacaoPagamento:document.getElementById("observacaoPagamento").value,
+    Valor:lastPrice,
+    MapsColeta:linkGoogleMaps(coleta),
+    MapsDestino:linkGoogleMaps(destino),
+    MapsRota:linkRotaGoogleMaps(coleta,destino),
+    AcompanharUrl:""
   };
 
-  currentSearchingId=d.ID||"";
+  currentSearchingId="";
+  hideLoader();
   resetDeliveryForm(false);
   playSuccessNotification();
-  addDeliveryToMyDeliveriesImmediately(ultimaEntregaLocal);
-  showAcceptedStatus(d.ID||"");
-  refreshBusy=false;
-  refreshPanel();
+  showAcceptedStatus(ultimaEntregaLocal.ID);
 }
 
 async function retryDelivery(id){
