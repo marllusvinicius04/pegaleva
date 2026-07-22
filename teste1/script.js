@@ -42,23 +42,22 @@ function restoreDeliveryProgress(){
   const saved=getDeliveryRecoveryData();
   if(!saved||!saved.values)return;
   const values=saved.values;
+
   ["coletaCidade","destinoCidade"].forEach(id=>{
     const el=document.getElementById(id);
     if(el&&values[id]!=null)el.value=values[id];
   });
+
   updateBairroOptions();
+
   DELIVERY_RECOVERY_FIELDS.forEach(id=>{
     const el=document.getElementById(id);
     if(el&&values[id]!=null)el.value=values[id];
   });
-  if(saved.currentSearchingId)currentSearchingId=String(saved.currentSearchingId);
+
+  currentSearchingId="";
   if(Number.isFinite(Number(saved.currentStep)))setStep(Number(saved.currentStep));
   if(document.getElementById("pagamento"))toggleCashObs();
-  if(currentSearchingId){
-    showLoader("Atualizando sua solicitação...",true);
-    refreshBusy=false;
-    refreshPanel().finally(()=>hideLoader());
-  }
 }
 function showSystemDelayNotice(){
   const now=Date.now();
@@ -211,7 +210,7 @@ function ensureSlowLoaderNotice(){
   box.className="slow-loader-warning";
   box.style.display="none";
   box.innerHTML=`<strong>Ops, parece que está demorando mais que o esperado.</strong>
-    <span>Isso pode acontecer por instabilidade na conexão ou sincronização da planilha.</span>
+    <span>Isso pode acontecer por instabilidade na conexão. Seus dados preenchidos continuam salvos neste aparelho.</span>
     <button type="button" onclick="updateWithoutLosingProgress()">Clique aqui para atualizar</button>`;
   const inner=loader.querySelector("div");
   (inner||loader).appendChild(box);
@@ -304,13 +303,20 @@ function updateBairroOptions(){
 function cidadeRota(cidade){cidade=String(cidade||"").trim();if(cidade==="Uruçuí"||cidade==="Urucui"||cidade==="URUCUI")return "Uruçuí-PI";if(cidade==="Benedito Leite")return "Benedito Leite-MA";return cidade}
 function fullAddress(prefix){const rua=document.getElementById(prefix+"Rua").value.trim(),numero=(document.getElementById(prefix+"Numero").value.trim()||"0"),cidade=cidadeRota(document.getElementById(prefix+"Cidade").value);return[rua,numero,cidade].filter(Boolean).join(", ")}
 function pontoReferencia(prefix){return(document.getElementById(prefix+"Referencia")?.value||"").trim()}
-function showLoader(text,search=false){
+function showLoader(text){
   const loader=document.getElementById("loader");
-  document.getElementById("loaderText").innerText=text||"Carregando...";
-  document.getElementById("loaderSub").innerText=search?"Buscando entregador disponível.":"Aguarde um instante.";
-  document.getElementById("searchActions").style.display=search?"block":"none";
-  loader.classList.toggle("searching",!!search);
-  loader.classList.add("active");
+  const loaderText=document.getElementById("loaderText");
+  const loaderSub=document.getElementById("loaderSub");
+  const searchActions=document.getElementById("searchActions");
+
+  if(loaderText)loaderText.innerText=text||"Preparando...";
+  if(loaderSub)loaderSub.innerText="Aguarde um instante.";
+  if(searchActions)searchActions.style.display="none";
+
+  if(loader){
+    loader.classList.remove("searching");
+    loader.classList.add("active");
+  }
   startSlowLoaderWarning();
 }
 function hideLoader(){
@@ -387,17 +393,86 @@ async function loginByCode(codigo,expectedType,email="",isNewAccount=false){sess
 function showNewAccountWelcomeModal(){if(!session)return;const p=session.profile||{};const fullName=String(session.type==="empresa"?(p.Responsavel||""):(p.Nome||"")).trim();const firstName=fullName.split(/\s+/)[0]||"";const feminine=session.type==="empresa"||/[aáàâã]$/i.test(firstName);const title=document.getElementById("newAccountWelcomeTitle"),text=document.getElementById("newAccountWelcomeText"),modal=document.getElementById("newAccountWelcomeModal");if(title)title.innerText=(feminine?"Bem-vinda, ":"Bem-vindo, ")+(firstName||"ao Pega&Leva")+"!";if(text)text.innerText=session.type==="empresa"?"Sua empresa foi cadastrada com sucesso no Pega&Leva. O desconto de 20% ainda está em processo de ativação e pode ser liberado a qualquer momento, em até 30 minutos. Aguarde a notificação no WhatsApp confirmando que o desconto foi ativado antes de solicitar uma entrega. Caso solicite antes da liberação, será cobrado o valor normal, sem desconto. Após receber a confirmação, você poderá usar o desconto normalmente dentro do nosso sistema.":"Sua conta foi criada com sucesso no Pega&Leva. Agora você já pode acessar o painel e solicitar sua primeira entrega.";if(modal)modal.classList.add("active")}
 function closeNewAccountWelcomeModal(){document.getElementById("newAccountWelcomeModal")?.classList.remove("active")}
 
-function disableDeliveriesAreaUI(){
-  const box=document.getElementById("deliveriesBox");
-  const card=box&&box.closest?box.closest(".card"):null;
-  if(card)card.style.display="none";
-  const historyBtn=document.querySelector(".history-chat-btn");
-  if(historyBtn)historyBtn.style.display="none";
-  const historyPanel=document.getElementById("historyPanel");
-  if(historyPanel)historyPanel.classList.remove("active");
+
+const DEFAULT_MKT_BANNER="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6ZpkOkEyErigvmB_gHLHTQSJ4rsYJsaXZ1izjGDJwRg&s=10";
+
+function escapeHtml(value){
+  return String(value||"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 }
 
-function openPanel(){setSupportVisibility(false);disableDeliveriesAreaUI();setTimeout(updateBairroOptions,0);const historyBtn=document.querySelector(".history-chat-btn");if(historyBtn)historyBtn.style.display="grid";const accessScreen=document.getElementById("accessScreen");const appScreen=document.getElementById("appScreen");if(accessScreen)accessScreen.classList.remove("active");if(appScreen)appScreen.classList.add("active");
+function installMktBannerStyles(){
+  if(document.getElementById("mktBannerStyles"))return;
+  const style=document.createElement("style");
+  style.id="mktBannerStyles";
+  style.textContent=`
+    .mkt-banner-card{width:100%;overflow:hidden;border-radius:20px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.08)}
+    .mkt-banner-label{padding:9px 12px;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#64748b;background:#f8fafc;border-bottom:1px solid #eef2f7}
+    .mkt-banner-link{display:block;width:100%;line-height:0;background:#f1f5f9}
+    .mkt-banner-link img{display:block;width:100%;height:auto;max-height:360px;object-fit:cover;aspect-ratio:16/6}
+    @media(max-width:700px){
+      .mkt-banner-card{border-radius:16px}
+      .mkt-banner-link img{aspect-ratio:16/8;max-height:260px}
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function renderMktBanner(data){
+  const box=document.getElementById("deliveriesBox");
+  if(!box)return;
+
+  const image=String(data?.imagem||data?.Imagem||DEFAULT_MKT_BANNER).trim()||DEFAULT_MKT_BANNER;
+  const link=String(data?.link||data?.Link||"").trim();
+  const titulo=String(data?.titulo||data?.Titulo||"Publicidade").trim();
+  const alt=String(data?.alt||data?.Alt||titulo||"Banner publicitário").trim();
+
+  const picture=`<img src="${escapeHtml(image)}" alt="${escapeHtml(alt)}" loading="lazy"
+    onerror="this.onerror=null;this.src='${DEFAULT_MKT_BANNER}'">`;
+
+  box.innerHTML=`
+    <div class="mkt-banner-card">
+      <div class="mkt-banner-label">${escapeHtml(titulo)}</div>
+      ${link
+        ?`<a class="mkt-banner-link" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${picture}</a>`
+        :`<div class="mkt-banner-link">${picture}</div>`}
+    </div>`;
+
+  const card=box.closest?box.closest(".card"):null;
+  if(card){
+    card.style.display="block";
+    const headings=card.querySelectorAll("h1,h2,h3,strong,.card-title");
+    headings.forEach(el=>{
+      if(/minhas entregas/i.test(el.textContent||""))el.textContent="Ofertas e novidades";
+    });
+  }
+}
+
+async function loadMktBanner(){
+  renderMktBanner({imagem:DEFAULT_MKT_BANNER,titulo:"Publicidade"});
+  try{
+    const res=await api("getMktBanner",{_t:Date.now()});
+    if(res&&res.ok)renderMktBanner(res.banner||res);
+  }catch(e){}
+}
+
+function disableDeliveriesAreaUI(){
+  installMktBannerStyles();
+
+  const historyBtn=document.querySelector(".history-chat-btn");
+  if(historyBtn)historyBtn.style.display="none";
+
+  const historyPanel=document.getElementById("historyPanel");
+  if(historyPanel)historyPanel.classList.remove("active");
+
+  loadMktBanner();
+}
+
+function openPanel(){setSupportVisibility(false);disableDeliveriesAreaUI();setTimeout(updateBairroOptions,0);const historyBtn=document.querySelector(".history-chat-btn");if(historyBtn)historyBtn.style.display="none";const accessScreen=document.getElementById("accessScreen");const appScreen=document.getElementById("appScreen");if(accessScreen)accessScreen.classList.remove("active");if(appScreen)appScreen.classList.add("active");
   const clientNav=document.getElementById("clientAppNav");
   if(clientNav) clientNav.style.display="";
 const p=session.profile,name=session.type==="empresa"?p.Responsavel:p.Nome;const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";document.getElementById("welcomeName").innerText="Olá, "+primeiroNome;document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuário";document.getElementById("companyBox").style.display=session.type==="empresa"?"block":"none";document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";const savedAddressTip=document.getElementById("savedAddressTip");if(savedAddressTip)savedAddressTip.style.display=session.type==="empresa"?"block":"none";toggleCouponArea();renderProfile();loadClientTools();startAutoRefresh()}
@@ -581,7 +656,7 @@ async function confirmSavedOrderDelivery(id){
   const referencia=(document.getElementById("savedOrderReferenciaColeta")||{}).value||"";
   const cidade=(document.getElementById("savedOrderCidadeColeta")||{}).value||"";
   if(!rua.trim()||!numero.trim()||!referencia.trim()||!cidade.trim())return alert("Confirme rua, número, ponto de referência e cidade da coleta.");
-  showLoader("Buscando entregador...",true);
+  showLoader("Preparando solicitação...",true);
   const res=await api("createDeliveryFromSavedOrder",{
     pedidoCodigo:c.PedidoCodigo,
     ruaColeta:rua,
@@ -636,7 +711,34 @@ function scheduleAutoRefresh(){ /* Entregas desativadas. */ }
 document.addEventListener("visibilitychange",()=>{if(!session)return;scheduleAutoRefresh();refreshPanel()});window.addEventListener("focus",()=>{if(session)refreshPanel()});window.addEventListener("pageshow",()=>{if(session)refreshPanel()})
 function useRegisteredAddress(){if(session.type!=="empresa")return;const p=session.profile;document.getElementById("coletaRua").value=p.Rua||p.Endereco||"";document.getElementById("coletaNumero").value=p.Numero||"";document.getElementById("coletaReferencia").value=p.Referencia||"";document.getElementById("coletaCidade").value=p.Cidade||""}
 function renderProfile(){const p=session.profile,pendente=Number(p.PagamentoPendente||0),payBtn=pendente>0?` <button type="button" class="btn-pay-pending" onclick="openClientPendingPaymentModal()" style="margin-top:0!important;padding:7px 10px!important;font-size:11px!important"><i class="fa-solid fa-money-bill-wave"></i> PAGAR AGORA</button>`:"";document.getElementById("profileBox").innerHTML=session.type==="empresa"?`<div class="info-row"><span>Responsável</span><b>${p.Responsavel||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF/CNPJ</span><b>${p.CPF_CNPJ||""}</b></div><div class="info-row"><span>Endereço</span><b>${p.Endereco||""}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`:`<div class="info-row"><span>Nome</span><b>${p.Nome||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF</span><b>${p.CPF||""}</b></div><div class="info-row"><span>Entregas solicitadas</span><b>${p.EntregasSolicitadas||0}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`}
-async function refreshPanel(){if(!session||refreshBusy)return;refreshBusy=true;try{const res=await api("getClientPanel",{codigo:session.profile.CodigoAcesso,_t:Date.now()});if(!res.ok)return;session={ok:true,type:res.type,profile:res.profile};localStorage.setItem("pegaleva_client",JSON.stringify(session));renderProfile();loadClientTools();window.activeDrivers=res.activeDrivers!==false;renderDeliveries(res.deliveries||[]);renderClientHistory(res.deliveries||[]);handleStatusModals(res.deliveries||[]);if(currentSearchingId){const d=(res.deliveries||[]).find(x=>x.ID===currentSearchingId);if(d&&d.CodigoEntregador) {currentSearchingId="";hideLoader();playSuccessNotification();showStatus("Sua entrega foi aceita","Um entregador aceitou sua solicitação.","ok")} if(d&&d.Status==="Cancelada"){currentSearchingId="";hideLoader();showStatus("Sua entrega foi cancelada","Tente novamente ou cancele geral no card da entrega.","bad")} if(d&&d.Status==="Cancelada Geral"){currentSearchingId="";hideLoader();showStatus("Entrega cancelada","A entrega foi cancelada definitivamente.","bad")}}if(session.type==="empresa"){document.getElementById("companyBox").style.display="block";const p=session.profile;document.getElementById("companyStats").innerHTML=`<div class="info-row"><span>Entregas restantes com desconto</span><b>${p.EntregasComDescontoRestantes||0}</b></div><div class="info-row"><span>Desconto</span><b>${p.DescontoPercentual||0}%</b></div><div class="info-row"><span>Prioridade</span><b class="badge green">${p.Prioridade||"Desativado"}</b></div>`}else document.getElementById("companyBox").style.display="none"}finally{refreshBusy=false}}
+async function refreshPanel(){
+  if(!session||refreshBusy)return;
+  refreshBusy=true;
+  try{
+    const res=await api("getClientPanel",{codigo:session.profile.CodigoAcesso,_t:Date.now()});
+    if(!res.ok)return;
+
+    session={ok:true,type:res.type,profile:res.profile};
+    localStorage.setItem("pegaleva_client",JSON.stringify(session));
+
+    renderProfile();
+    loadClientTools();
+    await loadMktBanner();
+
+    if(session.type==="empresa"){
+      const companyBox=document.getElementById("companyBox");
+      if(companyBox)companyBox.style.display="block";
+      const p=session.profile;
+      const stats=document.getElementById("companyStats");
+      if(stats)stats.innerHTML=`<div class="info-row"><span>Entregas restantes com desconto</span><b>${p.EntregasComDescontoRestantes||0}</b></div><div class="info-row"><span>Desconto</span><b>${p.DescontoPercentual||0}%</b></div><div class="info-row"><span>Prioridade</span><b class="badge green">${p.Prioridade||"Desativado"}</b></div>`;
+    }else{
+      const companyBox=document.getElementById("companyBox");
+      if(companyBox)companyBox.style.display="none";
+    }
+  }finally{
+    refreshBusy=false;
+  }
+}
 function handleStatusModals(list){list.forEach(d=>{if(!knownStatuses[d.ID]){knownStatuses[d.ID]=d.Status;return}if(knownStatuses[d.ID]!==d.Status){knownStatuses[d.ID]=d.Status;if(d.Status==="Entrega aceita"){playSuccessNotification();showStatus("Sua entrega foi aceita","O entregador aceitou sua entrega.","ok")};if(d.Status==="Estou a caminho")showStatus("5MIN CHEGANDO...","O entregador está chegando para a coleta.","ok");if(d.Status==="Coletado")showStatus("Entrega em rota","Sua entrega foi coletada e está em rota.","ok");if(d.Status==="Entrega finalizada")showStatus("Entrega finalizada com sucesso","Sua entrega foi concluída.","ok");if(d.Status==="Cancelada")showStatus("Sua entrega foi cancelada","Tente novamente.","bad");if(d.Status==="Aguardando entregador")showStatus("Procurando outro entregador","A entrega voltou para novas entregas disponíveis até outro entregador aceitar.","ok")}});localStorage.setItem("pegaleva_status_client",JSON.stringify(knownStatuses))}
 function isClosedDelivery(status){return ["Entrega finalizada","Cancelada","Cancelada Geral"].includes(String(status||""))}
 function showPanelMessage(text,type){const box=document.getElementById("deliveriesBox");if(!box)return;box.innerHTML=`<div class="pay-alert" style="${type==='bad'?'background:#fee2e2;color:#b91c1c':''}">${text}</div>`}
@@ -1042,7 +1144,7 @@ async function confirmDelivery(){
 }
 
 async function retryDelivery(id){
-  showLoader("Buscando entregador...", true);
+  showLoader("Preparando solicitação...", true);
   const res = await api("retryDelivery",{deliveryId:id});
   if(!res.ok){hideLoader();showStatus("Erro",res.error||"Não foi possível tentar novamente.","bad");return}
   currentSearchingId=id;
@@ -1238,7 +1340,7 @@ function enhanceClientDeliveryCards(){
       if(p.dataset.clientProText==="1")return;
       let html=p.innerHTML;
       html=html.replace(/(<b>Valor:<\/b>\s*)(R\$\s*[\d.,]+)/i,'$1<span class="delivery-price-client">$2</span>');
-      html=html.replace(/Buscando entregador\.\.\./gi,'<span class="route-mini"><i class="fa-solid fa-motorcycle"></i> Buscando entregador...</span>');
+      html=html.replace(/Buscando entregador\.\.\./gi,'<span class="route-mini"><i class="fa-solid fa-motorcycle"></i> Preparando solicitação...</span>');
       html=html.replace(/Aguardando entregador/gi,'<span class="badge yellow">Aguardando entregador</span>');
       p.innerHTML=html;
       p.dataset.clientProText="1";
