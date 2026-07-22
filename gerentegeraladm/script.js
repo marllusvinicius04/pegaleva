@@ -1,13 +1,32 @@
 
 const ADMIN_ACCESS_CODE="ADMINDEUS1";
 const SPREADSHEET_ID="1FCV9ca7XdwW2ZnJICq65kRme5fAXaAVURsQKPdOHV90";
-const APP_SCRIPT_URL="https://script.google.com/macros/s/AKfycbx739xcgwZ0NTYdtj0pjFN0QAqyNh94PV96PxKRy90pOvKHOg1V0LFf-gjkrIsKaL1w/exec";
-const SHEETS={usuarios:"usuarios",empresas:"empresas",entregas:"entregas",entregadores:"entregadores",mensagens:"mensagens",saques:"saques"};
-let db={usuarios:[],empresas:[],entregas:[],entregadores:[],mensagens:[],saques:[]};let currentDeliveryExport=[];let currentDriverSummary=null;let currentPayWithdrawId="";let currentRouteDelivery=null;let deliveryNotifications=[];let alertAudioCtx=null;let alertSoundTimer=null;let dashboardAutoTimer=null;let dashboardLoading=false;let dashboardLastSuccess=0;let dashboardWatchdogTimer=null;let dashboardWakeLock=null;
+const APP_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz_QyJ1x8YR_0Z2O_kCG2yw-vXhBsqei_EW3P3gziZFZ7cZaQVII96oXydfWej0AU1c/exec";
+const SHEETS={usuarios:"usuarios",empresas:"empresas",entregas:"entregas",entregadores:"entregadores",mensagens:"mensagens",saques:"saques",corridas:"CORRIDAS"};
+let db={usuarios:[],empresas:[],entregas:[],entregadores:[],mensagens:[],saques:[],corridas:[]};let currentDeliveryExport=[];let currentDriverSummary=null;let currentPayWithdrawId="";let currentRouteDelivery=null;let deliveryNotifications=[];let alertAudioCtx=null;let alertSoundTimer=null;let dashboardAutoTimer=null;let dashboardLoading=false;let dashboardLastSuccess=0;let dashboardWatchdogTimer=null;let dashboardWakeLock=null;
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}function num(v){if(typeof v==="number")return v;return Number(String(v||"0").replace(/\./g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0}function norm(v){return String(v==null?"":v).trim()}function lower(v){return norm(v).toLowerCase()}function onlyDigits(v){return String(v||"").replace(/\D/g,"")}function escapeHtml(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}function showLoader(t){document.getElementById("loaderText").innerText=t||"Carregando...";document.getElementById("loader").classList.add("active")}function hideLoader(){document.getElementById("loader").classList.remove("active")}function showStatus(text,type){const el=document.getElementById("statusBox");el.innerText=text;el.className="status-box active "+(type||"");setTimeout(()=>el.classList.remove("active"),6500)}
 function loginAdmin(){const code=norm(document.getElementById("adminCode").value).toUpperCase();if(code!==ADMIN_ACCESS_CODE){alert("Código de acesso administrativo inválido.");return}localStorage.setItem("pegaleva_admin_access","1");document.getElementById("loginScreen").style.display="none";document.getElementById("appScreen").classList.add("active");setToday();unlockAlertAudio();requestDeliveryNotificationPermission();loadDashboard(true);startDashboardAutoUpdate()}function logoutAdmin(){stopDashboardAutoUpdate();localStorage.removeItem("pegaleva_admin_access");document.getElementById("appScreen").classList.remove("active");document.getElementById("loginScreen").style.display="flex";document.getElementById("adminCode").value=""}if(localStorage.getItem("pegaleva_admin_access")==="1"){document.getElementById("loginScreen").style.display="none";document.getElementById("appScreen").classList.add("active");setToday();loadDashboard(true);startDashboardAutoUpdate()}
 function todayISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}function setToday(){document.getElementById("salesDate").value=todayISO();renderAll()}
-async function loadDashboard(showVisual){if(dashboardLoading)return;dashboardLoading=true;if(showVisual)showLoader("Conectando à planilha...");try{const result=await Promise.all([loadSheet(SHEETS.usuarios),loadSheet(SHEETS.empresas),loadSheet(SHEETS.entregas),loadSheet(SHEETS.entregadores),loadSheet(SHEETS.mensagens),loadSheet(SHEETS.saques)]);db={usuarios:result[0],empresas:result[1],entregas:result[2],entregadores:result[3],mensagens:result[4],saques:result[5]};dashboardLastSuccess=Date.now();checkNewDeliveries();fillStatusFilter();renderAll();renderChatNotifications();document.getElementById("lastUpdate").innerText="Conectado à planilha • Atualizado em "+new Date().toLocaleString("pt-BR");if(showVisual)showStatus("Dashboard atualizado com sucesso.","green")}catch(err){if(showVisual)showStatus((err&&err.message?err.message:String(err))||"Erro ao carregar dados.","red")}finally{dashboardLoading=false;if(showVisual)hideLoader()}}
+
+function corridaComoEntrega(c){
+  const driver=(db.entregadores||[]).find(d=>norm(d.CodigoAcesso)===norm(c.CodigoEntregador))||{};
+  return {
+    ...c,
+    ID:c.ID||c.CodigoCT,
+    TipoRegistro:"CORRIDA",
+    NomeSolicitante:c.NomeCliente||"Cliente/empresa",
+    WhatsAppSolicitante:"",
+    EnderecoColeta:"Corrida manual",
+    BairroColeta:"Código CT "+(c.CodigoCT||"-"),
+    EnderecoDestino:"",
+    BairroDestino:"",
+    NomeDestino:"",
+    PlacaMoto:c.PlacaMoto||driver.PlacaMoto||"",
+    StatusPagamento:c.StatusPagamento||"Aguardando confirmação",
+    AtualizadoEm:c.AtualizadoEm||c.CriadoEm||""
+  };
+}
+async function loadDashboard(showVisual){if(dashboardLoading)return;dashboardLoading=true;if(showVisual)showLoader("Conectando à planilha...");try{const result=await Promise.all([loadSheet(SHEETS.usuarios),loadSheet(SHEETS.empresas),loadSheet(SHEETS.entregas),loadSheet(SHEETS.entregadores),loadSheet(SHEETS.mensagens),loadSheet(SHEETS.saques),loadSheet(SHEETS.corridas)]);db={usuarios:result[0],empresas:result[1],entregas:[],entregadores:result[3],mensagens:result[4],saques:result[5],corridas:result[6]};const corridasNormalizadas=db.corridas.map(corridaComoEntrega);db.entregas=corridasNormalizadas.sort((a,b)=>(parseDate(a.CriadoEm||a.AtualizadoEm)||0)-(parseDate(b.CriadoEm||b.AtualizadoEm)||0));dashboardLastSuccess=Date.now();checkNewDeliveries();fillStatusFilter();renderAll();renderChatNotifications();document.getElementById("lastUpdate").innerText="Conectado à planilha • Entregas e corridas contabilizadas • Atualizado em "+new Date().toLocaleString("pt-BR");if(showVisual)showStatus("Dashboard atualizado com entregas e corridas.","green")}catch(err){if(showVisual)showStatus((err&&err.message?err.message:String(err))||"Erro ao carregar dados.","red")}finally{dashboardLoading=false;if(showVisual)hideLoader()}}
 function scheduleDashboardAutoUpdate(delay){if(dashboardAutoTimer)clearTimeout(dashboardAutoTimer);dashboardAutoTimer=setTimeout(async()=>{await loadDashboard(false);scheduleDashboardAutoUpdate(document.hidden?1500:800)},delay||800)}
 function startDashboardAutoUpdate(){stopDashboardAutoUpdate();dashboardLastSuccess=Date.now();scheduleDashboardAutoUpdate(200);dashboardWatchdogTimer=setInterval(()=>{if(Date.now()-dashboardLastSuccess>5000&&!dashboardLoading)loadDashboard(false)},2000);requestDashboardWakeLock()}
 function stopDashboardAutoUpdate(){if(dashboardAutoTimer){clearTimeout(dashboardAutoTimer);dashboardAutoTimer=null}if(dashboardWatchdogTimer){clearInterval(dashboardWatchdogTimer);dashboardWatchdogTimer=null}releaseDashboardWakeLock()}
