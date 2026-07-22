@@ -322,7 +322,7 @@ async function refreshPanel(){
   renderDriverHeader();
   renderWithdrawBadge();
   window.lastAvailableDeliveries=res.entregasDisponiveis||[];renderAvailable(res.entregasDisponiveis||[]);
-  renderMine(res.minhasEntregas||[]);
+  renderMine((res.minhasEntregas||[]).concat(res.corridas||[]));
   window.lastHistory=res.profile.Historico||"";
   renderDriverHeader();
 
@@ -502,7 +502,7 @@ function renderMine(list){
     return;
   }
 
-  document.getElementById("myBox").innerHTML=list.map(d=>deliveryHtml(d,false,false)).join("");
+  document.getElementById("myBox").innerHTML=list.map(d=>d.TipoRegistro==="CORRIDA"?manualRaceHtml(d):deliveryHtml(d,false,false)).join("");
   window.lastDriverDeliveries=list;
 }
 
@@ -1499,3 +1499,63 @@ document.getElementById("driverCode").value="";
 
   window.addEventListener("beforeunload",stopPersistentDeliveryAlert);
 })();
+
+/* Adicionar entrega por Código ID */
+function openManualDeliveryModal(){
+  closeSideMenu&&closeSideMenu();
+  const modal=document.getElementById("manualDeliveryModal");
+  const code=document.getElementById("manualClientIdCode");
+  const value=document.getElementById("manualDeliveryValue");
+  const located=document.getElementById("manualClientLocated");
+  if(code)code.value="";
+  if(value)value.value="";
+  if(located){located.classList.remove("active");located.innerHTML="";}
+  if(modal)modal.classList.add("active");
+}
+function closeManualDeliveryModal(){
+  const modal=document.getElementById("manualDeliveryModal");
+  if(modal)modal.classList.remove("active");
+}
+async function createManualRace(){
+  const codigoId=(document.getElementById("manualClientIdCode")?.value||"").trim();
+  const valor=(document.getElementById("manualDeliveryValue")?.value||"").trim();
+  const located=document.getElementById("manualClientLocated");
+  if(!codigoId)return showStatus("Código ID obrigatório","Digite o Código ID da empresa ou usuário.");
+  if(!valor||Number(String(valor).replace(/\./g,"").replace(",","."))<=0)return showStatus("Valor inválido","Informe o valor da entrega.");
+  showLoader("Localizando cadastro...");
+  const res=await api("createCorrida",{codigoId,valor,codigoEntregador:session.profile.CodigoAcesso},{retries:1,timeoutMs:30000});
+  hideLoader();
+  if(!res.ok){
+    if(located){located.classList.remove("active");located.innerHTML="";}
+    return showStatus("Entrega não registrada",friendlyError(res.error||"Código ID não localizado."));
+  }
+  if(located){located.classList.add("active");located.innerHTML='<i class="fa-solid fa-circle-check"></i> '+(res.corrida.NomeCliente||"Cadastro localizado");}
+  closeManualDeliveryModal();
+  showStatus("Entrega adicionada","A corrida foi registrada e já aparece em Minhas entregas.");
+  await refreshPanel();
+}
+function manualRaceHtml(d){
+  const status=String(d.Status||"Terminando uma entrega");
+  const safe=String(d.ID||"").replace(/'/g,"&#039;");
+  return `<div class="delivery pro-card">
+    <div class="delivery-top-pro">
+      <div class="delivery-user-pro"><span class="user-circle"><i class="fa-solid fa-building"></i></span><div><strong>${d.NomeCliente||"Cliente localizado"}</strong><p class="muted">Código ID: ${d.CodigoID||"-"}</p></div></div>
+      <div class="delivery-price-pro">${money(d.Valor)}</div>
+    </div>
+    <p class="info"><b>Status:</b> <span class="badge yellow">${status}</span></p>
+    <div class="delivery-actions-pro">
+      <button class="btn green" onclick="updateManualRaceStatus('${safe}','Terminando uma entrega')"><i class="fa-solid fa-flag-checkered"></i> Terminando uma entrega</button>
+      <button class="btn" onclick="updateManualRaceStatus('${safe}','Estou a caminho')"><i class="fa-solid fa-route"></i> Estou a caminho</button>
+      <button class="btn red wide" onclick="updateManualRaceStatus('${safe}','Dificuldades no local da entrega')"><i class="fa-solid fa-triangle-exclamation"></i> Dificuldades no local da entrega</button>
+      <button class="btn green wide" onclick="updateManualRaceStatus('${safe}','Entrega finalizada')"><i class="fa-solid fa-circle-check"></i> Entrega finalizada</button>
+    </div>
+  </div>`;
+}
+async function updateManualRaceStatus(id,status){
+  showLoader("Atualizando entrega...");
+  const res=await api("updateCorridaStatus",{corridaId:id,status,codigoEntregador:session.profile.CodigoAcesso},{retries:1,timeoutMs:30000});
+  hideLoader();
+  if(!res.ok)return showStatus("Não foi possível atualizar",friendlyError(res.error||"Tente novamente."));
+  if(status==="Entrega finalizada")showStatus("Entrega finalizada","A corrida foi finalizada e registrada.");
+  await refreshPanel();
+}
