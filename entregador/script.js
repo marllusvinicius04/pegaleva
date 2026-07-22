@@ -23,7 +23,7 @@ clearAppCache();
 
 
 const PIX_KEY="57293143000156";
-const API_URL="https://script.google.com/macros/s/AKfycby_9Le1vatkvIaikUipTuXlBZgvcmp-a9KDTrCWGmOxkG-KlZDU5l2Q7SIxPJuSe2Il/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxmcVMZvlt2wxVHqDok_aYYd8jg9yNE6EbNE_bz39QeXuIfzwKXp5_53oFaprRhbvTA/exec";
 
 let openDeliveryDetails=JSON.parse(localStorage.getItem("pegaleva_open_delivery_details")||"[]"),
 session=JSON.parse(localStorage.getItem("pegaleva_driver")||"null"),
