@@ -55,7 +55,7 @@ function restoreDeliveryProgress(){
   if(Number.isFinite(Number(saved.currentStep)))setStep(Number(saved.currentStep));
   if(document.getElementById("pagamento"))toggleCashObs();
   if(currentSearchingId){
-    showLoader("Atualizando sua solicitaÃ§Ã£o...",true);
+    showLoader("Atualizando sua solicitação...",true);
     refreshBusy=false;
     refreshPanel().finally(()=>hideLoader());
   }
@@ -69,7 +69,7 @@ function showSystemDelayNotice(){
   hideLoader();
   const modal=document.getElementById("systemRecoveryModal");
   if(modal)modal.classList.add("active");
-  else if(confirm("O sistema estÃ¡ um pouco lento. Atualizar a pÃ¡gina sem perder seus dados?"))safeReloadPage();
+  else if(confirm("O sistema está um pouco lento. Atualizar a página sem perder seus dados?"))safeReloadPage();
 }
 function safeReloadPage(){
   saveDeliveryProgress();
@@ -127,8 +127,8 @@ function renderQuickAccess(){
     const box=document.getElementById(id),item=all[type];
     if(!box)return;
     if(!item||!item.email||!item.codigo){box.classList.remove("active");box.innerHTML="";return}
-    const label=type==="empresa"?"empresa":"usuÃ¡rio";
-    box.innerHTML=`<strong><i class="fa-solid fa-bolt"></i> Acesso rÃ¡pido</strong><span>${item.email}</span><div class="quick-access-actions"><button type="button" class="btn green" onclick="quickLogin('${type}')">Entrar rapidamente</button><button type="button" class="btn gray" onclick="removeQuickAccess('${type}')" title="Remover acesso salvo"><i class="fa-solid fa-trash"></i></button></div>`;
+    const label=type==="empresa"?"empresa":"usuário";
+    box.innerHTML=`<strong><i class="fa-solid fa-bolt"></i> Acesso rápido</strong><span>${item.email}</span><div class="quick-access-actions"><button type="button" class="btn green" onclick="quickLogin('${type}')">Entrar rapidamente</button><button type="button" class="btn gray" onclick="removeQuickAccess('${type}')" title="Remover acesso salvo"><i class="fa-solid fa-trash"></i></button></div>`;
     box.classList.add("active");
   });
 }
@@ -162,13 +162,13 @@ function closeSupportChat(){
 }
 function answerSupport(topic){
   const answers={
-    como:{text:"Ã‰ simples: crie sua conta gratuita, informe o endereÃ§o de coleta e destino, confira o valor e confirme. A solicitaÃ§Ã£o vai para os entregadores disponÃ­veis e vocÃª acompanha tudo pelo painel.",cta:"Criar conta e solicitar",action:"user"},
-    horario:{text:"O atendimento regular funciona de segunda a sÃ¡bado, das 08h Ã s 22h, conforme disponibilidade da frota. Aos domingos nÃ£o hÃ¡ atendimento regular, salvo comunicaÃ§Ã£o oficial do Pega&Leva.",cta:"Criar minha conta",action:"user"},
-    frota:{text:"As entregas sÃ£o realizadas por entregadores cadastrados na frota Pega&Leva. A aceitaÃ§Ã£o depende da disponibilidade dos entregadores no momento da solicitaÃ§Ã£o, e todo o pedido fica registrado na plataforma.",cta:"Solicitar uma entrega",action:"user"},
-    agilidade:{text:"O sistema envia sua solicitaÃ§Ã£o aos entregadores disponÃ­veis para acelerar o atendimento. O tempo pode variar conforme demanda, distÃ¢ncia, clima e disponibilidade, mas vocÃª acompanha cada atualizaÃ§Ã£o pelo painel.",cta:"ComeÃ§ar agora",action:"user"},
-    preco:{text:"O frete Ã© calculado automaticamente conforme cidade, bairros de coleta e destino, rota de retorno e regras ativas. VocÃª pode simular o valor antes de criar a conta ou confirmar a entrega.",cta:"Simular meu frete",action:"sim"},
-    empresa:{text:"Empresas ganham um painel prÃ³prio para organizar pedidos e entregas. As 100 primeiras empresas cadastradas nÃ£o pagam mensalidade, uma oportunidade para comeÃ§ar sem custo mensal e testar o serviÃ§o no dia a dia.",cta:"Cadastrar meu negÃ³cio",action:"company"},
-    seguranca:{text:"ApÃ³s solicitar, vocÃª acompanha status, entregador e histÃ³rico diretamente no painel. As informaÃ§Ãµes da coleta e do destino ficam registradas no sistema para facilitar o acompanhamento.",cta:"Criar conta gratuita",action:"user"}
+    como:{text:"É simples: crie sua conta gratuita, informe o endereço de coleta e destino, confira o valor e confirme. A solicitação vai para os entregadores disponíveis e você acompanha tudo pelo painel.",cta:"Criar conta e solicitar",action:"user"},
+    horario:{text:"O atendimento regular funciona de segunda a sábado, das 08h às 22h, conforme disponibilidade da frota. Aos domingos não há atendimento regular, salvo comunicação oficial do Pega&Leva.",cta:"Criar minha conta",action:"user"},
+    frota:{text:"As entregas são realizadas por entregadores cadastrados na frota Pega&Leva. A aceitação depende da disponibilidade dos entregadores no momento da solicitação, e todo o pedido fica registrado na plataforma.",cta:"Solicitar uma entrega",action:"user"},
+    agilidade:{text:"O sistema envia sua solicitação aos entregadores disponíveis para acelerar o atendimento. O tempo pode variar conforme demanda, distância, clima e disponibilidade, mas você acompanha cada atualização pelo painel.",cta:"Começar agora",action:"user"},
+    preco:{text:"O frete é calculado automaticamente conforme cidade, bairros de coleta e destino, rota de retorno e regras ativas. Você pode simular o valor antes de criar a conta ou confirmar a entrega.",cta:"Simular meu frete",action:"sim"},
+    empresa:{text:"Empresas ganham um painel próprio para organizar pedidos e entregas. As 100 primeiras empresas cadastradas não pagam mensalidade, uma oportunidade para começar sem custo mensal e testar o serviço no dia a dia.",cta:"Cadastrar meu negócio",action:"company"},
+    seguranca:{text:"Após solicitar, você acompanha status, entregador e histórico diretamente no painel. As informações da coleta e do destino ficam registradas no sistema para facilitar o acompanhamento.",cta:"Criar conta gratuita",action:"user"}
   };
   const a=answers[topic]||answers.como;
   const box=document.getElementById("supportAnswer");
@@ -190,11 +190,11 @@ document.addEventListener("DOMContentLoaded",renderQuickAccess);
 function openLegalModal(type){
   const title=document.getElementById("legalTitle"),text=document.getElementById("legalText");
   if(type==="privacidade"){
-    title.innerText="PolÃ­tica de privacidade";
-    text.innerText="O Pega e Leva utiliza os dados informados no cadastro e nas solicitaÃ§Ãµes apenas para identificar o cliente, organizar a entrega, calcular fretes, facilitar contato e melhorar o atendimento. NÃ£o compartilhe seu cÃ³digo de acesso com terceiros.";
+    title.innerText="Política de privacidade";
+    text.innerText="O Pega e Leva utiliza os dados informados no cadastro e nas solicitações apenas para identificar o cliente, organizar a entrega, calcular fretes, facilitar contato e melhorar o atendimento. Não compartilhe seu código de acesso com terceiros.";
   }else{
     title.innerText="Termos de uso";
-    text.innerText="Ao usar o Pega e Leva, o usuÃ¡rio confirma que as informaÃ§Ãµes da entrega sÃ£o verdadeiras, que os itens enviados sÃ£o permitidos e que o pagamento deve seguir as regras exibidas no sistema. O serviÃ§o Ã© destinado a entregas locais de pequenos itens conforme disponibilidade da frota.";
+    text.innerText="Ao usar o Pega e Leva, o usuário confirma que as informações da entrega são verdadeiras, que os itens enviados são permitidos e que o pagamento deve seguir as regras exibidas no sistema. O serviço é destinado a entregas locais de pequenos itens conforme disponibilidade da frota.";
   }
   document.getElementById("legalModal").classList.add("active");
 }
@@ -210,8 +210,8 @@ function ensureSlowLoaderNotice(){
   box.id="slowLoaderNotice";
   box.className="slow-loader-warning";
   box.style.display="none";
-  box.innerHTML=`<strong>Ops, parece que estÃ¡ demorando mais que o esperado.</strong>
-    <span>Isso pode acontecer por instabilidade na conexÃ£o ou sincronizaÃ§Ã£o da planilha.</span>
+  box.innerHTML=`<strong>Ops, parece que está demorando mais que o esperado.</strong>
+    <span>Isso pode acontecer por instabilidade na conexão ou sincronização da planilha.</span>
     <button type="button" onclick="updateWithoutLosingProgress()">Clique aqui para atualizar</button>`;
   const inner=loader.querySelector("div");
   (inner||loader).appendChild(box);
@@ -256,12 +256,12 @@ async function api(action,data={}){
   }catch(err){
     consecutiveApiFailures++;
     if(consecutiveApiFailures>=2)showSystemDelayNotice();
-    return {ok:false,error:"Falha de conexÃ£o com o servidor. Confira a implantaÃ§Ã£o do Apps Script e tente novamente."};
+    return {ok:false,error:"Falha de conexão com o servidor. Confira a implantação do Apps Script e tente novamente."};
   }
 }
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function onlyDigits(v){return String(v||"").replace(/\D/g,"")}
-const BAIRROS_URUCUÃ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","EsperanÃ§a","Ãgua Branca","Alto Bonito","SÃ£o Francisco","BabilÃ´nia","CanaÃ£","Portal dos Cerrados","Cerrados Park","Vista Bela"];
+const BAIRROS_URUCUÍ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
 function fillBairroSelect(selectId,cidadeId){
   const select=document.getElementById(selectId),cidade=document.getElementById(cidadeId).value;
   if(!select)return;
@@ -272,23 +272,23 @@ function fillBairroSelect(selectId,cidadeId){
     return;
   }
   select.disabled=false;
-  select.innerHTML='<option value="">Selecione</option>'+BAIRROS_URUCUÃ.map(b=>`<option>${b}</option>`).join("");
+  select.innerHTML='<option value="">Selecione</option>'+BAIRROS_URUCUÍ.map(b=>`<option>${b}</option>`).join("");
 }
 function updateBairroOptions(){
   const coletaAtual=document.getElementById("bairroColeta")?.value||"";
   const destinoAtual=document.getElementById("bairroDestino")?.value||"";
   fillBairroSelect("bairroColeta","coletaCidade");
   fillBairroSelect("bairroDestino","destinoCidade");
-  if(BAIRROS_URUCUÃ.includes(coletaAtual))document.getElementById("bairroColeta").value=coletaAtual;
-  if(BAIRROS_URUCUÃ.includes(destinoAtual))document.getElementById("bairroDestino").value=destinoAtual;
+  if(BAIRROS_URUCUÍ.includes(coletaAtual))document.getElementById("bairroColeta").value=coletaAtual;
+  if(BAIRROS_URUCUÍ.includes(destinoAtual))document.getElementById("bairroDestino").value=destinoAtual;
 }
-function cidadeRota(cidade){cidade=String(cidade||"").trim();if(cidade==="UruÃ§uÃ­"||cidade==="Urucui"||cidade==="URUCUI")return "UruÃ§uÃ­-PI";if(cidade==="Benedito Leite")return "Benedito Leite-MA";return cidade}
+function cidadeRota(cidade){cidade=String(cidade||"").trim();if(cidade==="Uruçuí"||cidade==="Urucui"||cidade==="URUCUI")return "Uruçuí-PI";if(cidade==="Benedito Leite")return "Benedito Leite-MA";return cidade}
 function fullAddress(prefix){const rua=document.getElementById(prefix+"Rua").value.trim(),numero=(document.getElementById(prefix+"Numero").value.trim()||"0"),cidade=cidadeRota(document.getElementById(prefix+"Cidade").value);return[rua,numero,cidade].filter(Boolean).join(", ")}
 function pontoReferencia(prefix){return(document.getElementById(prefix+"Referencia")?.value||"").trim()}
 function showLoader(text,search=false){
   const loader=document.getElementById("loader");
   document.getElementById("loaderText").innerText=text||"Carregando...";
-  document.getElementById("loaderSub").innerText=search?"Buscando entregador disponÃ­vel.":"Aguarde um instante.";
+  document.getElementById("loaderSub").innerText=search?"Buscando entregador disponível.":"Aguarde um instante.";
   document.getElementById("searchActions").style.display=search?"block":"none";
   loader.classList.toggle("searching",!!search);
   loader.classList.add("active");
@@ -329,29 +329,29 @@ function playSuccessNotification(){
     setTimeout(()=>ctx.close&&ctx.close(),1200);
   }catch(e){}
 }
-function selectAccessType(type){document.getElementById("accessOptions").style.display="none";document.getElementById("backBtn").style.display="block";if(type==="usuario"){document.getElementById("accessTitle").innerText="Acesso do usuÃ¡rio";document.getElementById("accessSubtitle").innerText="Entre ou crie sua conta para solicitar uma entrega.";document.getElementById("userAccess").style.display="block";document.getElementById("companyAccess").style.display="none";showUserTab("login")}else{document.getElementById("accessTitle").innerText="Acesso da empresa";document.getElementById("accessSubtitle").innerText="Entre ou cadastre sua empresa.";document.getElementById("userAccess").style.display="none";document.getElementById("companyAccess").style.display="block";showCompanyTab("login")}}
-function backToOptions(){document.getElementById("accessTitle").innerText="OlÃ¡, bem-vindo";document.getElementById("accessSubtitle").innerText="Escolha uma opÃ§Ã£o para iniciar";document.getElementById("accessOptions").style.display="grid";document.getElementById("backBtn").style.display="none";document.getElementById("userAccess").style.display="none";document.getElementById("companyAccess").style.display="none"}
+function selectAccessType(type){document.getElementById("accessOptions").style.display="none";document.getElementById("backBtn").style.display="block";if(type==="usuario"){document.getElementById("accessTitle").innerText="Acesso do usuário";document.getElementById("accessSubtitle").innerText="Entre ou crie sua conta para solicitar uma entrega.";document.getElementById("userAccess").style.display="block";document.getElementById("companyAccess").style.display="none";showUserTab("login")}else{document.getElementById("accessTitle").innerText="Acesso da empresa";document.getElementById("accessSubtitle").innerText="Entre ou cadastre sua empresa.";document.getElementById("userAccess").style.display="none";document.getElementById("companyAccess").style.display="block";showCompanyTab("login")}}
+function backToOptions(){document.getElementById("accessTitle").innerText="Olá, bem-vindo";document.getElementById("accessSubtitle").innerText="Escolha uma opção para iniciar";document.getElementById("accessOptions").style.display="grid";document.getElementById("backBtn").style.display="none";document.getElementById("userAccess").style.display="none";document.getElementById("companyAccess").style.display="none"}
 function openCompanyRegistration(){document.getElementById("loginArea")?.scrollIntoView({behavior:"smooth",block:"center"});selectAccessType("empresa");showCompanyTab("create")}
 function showUserTab(tab){document.getElementById("tabUserLogin").classList.toggle("active",tab==="login");document.getElementById("tabUserCreate").classList.toggle("active",tab==="create");document.getElementById("userLoginBox").style.display=tab==="login"?"block":"none";document.getElementById("userCreateBox").style.display=tab==="create"?"block":"none";if(tab==="create")resetUserCreateSteps()}
 function showCompanyTab(tab){document.getElementById("tabCompanyLogin").classList.toggle("active",tab==="login");document.getElementById("tabCompanyCreate").classList.toggle("active",tab==="create");document.getElementById("companyLoginBox").style.display=tab==="login"?"block":"none";document.getElementById("companyCreateBox").style.display=tab==="create"?"block":"none";if(tab==="create")resetCompanyCreateSteps()}
 function resetCompanyCreateSteps(){showCompanyCreateStep(1)}
 function getCompanyCreateData(){return {responsavel:(document.getElementById("cNomeEmpresa")?.value||"").trim(),cpfCnpj:onlyDigits(document.getElementById("cCpfCnpj")?.value||""),email:(document.getElementById("cEmail")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("cWhatsapp")?.value||""),cidade:(document.getElementById("cCidade")?.value||"").trim(),rua:(document.getElementById("cRua")?.value||"").trim(),numero:(document.getElementById("cNumero")?.value||"").trim(),referencia:(document.getElementById("cReferencia")?.value||"").trim(),codigo:(document.getElementById("newCompanyCode")?.value||"").trim()}}
-function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail vÃ¡lido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informaÃ§Ãµes de endereÃ§o para continuar.");return}[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
-async function createCompanyAccount(){const data=getCompanyCreateData();if(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp||!data.cidade||!data.rua||!data.numero||!data.referencia||!data.codigo){alert("Preencha todos os dados da empresa.");return}showLoader("Cadastrando empresa...");const res=await api("adminRegisterCompany",data);hideLoader();if(!res.ok){alert(res.error||"NÃ£o foi possÃ­vel cadastrar a empresa.");return}const ok=await loginByCode(data.codigo,"empresa",data.email,true);if(ok)saveQuickAccess("empresa",data.email,data.codigo)}
+function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail válido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informações de endereço para continuar.");return}[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
+async function createCompanyAccount(){const data=getCompanyCreateData();if(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp||!data.cidade||!data.rua||!data.numero||!data.referencia||!data.codigo){alert("Preencha todos os dados da empresa.");return}showLoader("Cadastrando empresa...");const res=await api("adminRegisterCompany",data);hideLoader();if(!res.ok){alert(res.error||"Não foi possível cadastrar a empresa.");return}const ok=await loginByCode(data.codigo,"empresa",data.email,true);if(ok)saveQuickAccess("empresa",data.email,data.codigo)}
 let codeTimer;function checkCodeLive(inputId,msgId){clearTimeout(codeTimer);codeTimer=setTimeout(async()=>{const codigo=document.getElementById(inputId).value.trim();if(!codigo){document.getElementById(msgId).innerText="";return}const res=await api("checkCode",{codigo});document.getElementById(msgId).innerText=res.message||"";document.getElementById(msgId).style.color=res.available?"#047857":"#ef4444"},350)}
 let pendingUserRegisterData=null;
 function resetUserCreateSteps(){const form=document.getElementById("userCreateFormStep"),terms=document.getElementById("userTermsStep");pendingUserRegisterData=null;if(form)form.style.display="block";if(terms)terms.style.display="none"}
 function getUserCreateData(){return {nome:(document.getElementById("uNome")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("uWhatsapp")?.value||""),email:(document.getElementById("uEmail")?.value||"").trim(),cpf:onlyDigits(document.getElementById("uCpf")?.value||""),codigo:(document.getElementById("newUserCode")?.value||"").trim()}}
-function showUserTermsStep(){const data=getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuÃ¡rio para continuar.");return}pendingUserRegisterData=data;document.getElementById("userCreateFormStep").style.display="none";document.getElementById("userTermsStep").style.display="block"}
-async function createUserAccount(){const data=pendingUserRegisterData||getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuÃ¡rio para continuar.");return}showLoader("Criando conta de usuÃ¡rio...");const res=await api("registerUser",data);hideLoader();if(!res.ok){alert("CÃ³digo de acesso invÃ¡lido. Escolha outro cÃ³digo.");return}const ok=await loginByCode(data.codigo,"usuario",data.email,true);if(ok)saveQuickAccess("usuario",data.email,data.codigo)}
-async function loginSelected(type){const codigo=type==="empresa"?document.getElementById("companyLoginCode").value.trim():document.getElementById("userLoginCode").value.trim();const email=type==="empresa"?(document.getElementById("companyLoginEmail")?.value||"").trim().toLowerCase():(document.getElementById("userLoginEmail")?.value||"").trim().toLowerCase();if(!email)return alert("Digite seu e-mail.");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return alert("Digite um e-mail vÃ¡lido.");if(!codigo)return alert("Digite seu cÃ³digo de acesso.");const remember=type==="empresa"?document.getElementById("rememberCompanyAccess")?.checked:document.getElementById("rememberUserAccess")?.checked;const ok=await loginByCode(codigo,type,email);if(ok&&remember)saveQuickAccess(type,email,codigo)}
-async function loginByCode(codigo,expectedType,email="",isNewAccount=false){session=null;localStorage.removeItem("pegaleva_client");showLoader("Carregando seu painel...");const res=await api("loginClient",{codigo,email,expectedType});hideLoader();if(!res.ok){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou cÃ³digo de acesso invÃ¡lido.");return false}if(res.type!==expectedType){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou cÃ³digo de acesso invÃ¡lido.");return false}const perfilEmail=String(res.profile?.Email||"").trim().toLowerCase();if(perfilEmail!==String(email||"").trim().toLowerCase()){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou cÃ³digo de acesso invÃ¡lido.");return false}session=res;localStorage.setItem("pegaleva_client",JSON.stringify(session));openPanel();if(isNewAccount)setTimeout(showNewAccountWelcomeModal,180);return true}
-function showNewAccountWelcomeModal(){if(!session)return;const p=session.profile||{};const fullName=String(session.type==="empresa"?(p.Responsavel||""):(p.Nome||"")).trim();const firstName=fullName.split(/\s+/)[0]||"";const feminine=session.type==="empresa"||/[aÃ¡Ã Ã¢Ã£]$/i.test(firstName);const title=document.getElementById("newAccountWelcomeTitle"),text=document.getElementById("newAccountWelcomeText"),modal=document.getElementById("newAccountWelcomeModal");if(title)title.innerText=(feminine?"Bem-vinda, ":"Bem-vindo, ")+(firstName||"ao Pega&Leva")+"!";if(text)text.innerText=session.type==="empresa"?"Sua empresa foi cadastrada com sucesso no Pega&Leva. O desconto de 20% ainda estÃ¡ em processo de ativaÃ§Ã£o e pode ser liberado a qualquer momento, em atÃ© 30 minutos. Aguarde a notificaÃ§Ã£o no WhatsApp confirmando que o desconto foi ativado antes de solicitar uma entrega. Caso solicite antes da liberaÃ§Ã£o, serÃ¡ cobrado o valor normal, sem desconto. ApÃ³s receber a confirmaÃ§Ã£o, vocÃª poderÃ¡ usar o desconto normalmente dentro do nosso sistema.":"Sua conta foi criada com sucesso no Pega&Leva. Agora vocÃª jÃ¡ pode acessar o painel e solicitar sua primeira entrega.";if(modal)modal.classList.add("active")}
+function showUserTermsStep(){const data=getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuário para continuar.");return}pendingUserRegisterData=data;document.getElementById("userCreateFormStep").style.display="none";document.getElementById("userTermsStep").style.display="block"}
+async function createUserAccount(){const data=pendingUserRegisterData||getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuário para continuar.");return}showLoader("Criando conta de usuário...");const res=await api("registerUser",data);hideLoader();if(!res.ok){alert("Código de acesso inválido. Escolha outro código.");return}const ok=await loginByCode(data.codigo,"usuario",data.email,true);if(ok)saveQuickAccess("usuario",data.email,data.codigo)}
+async function loginSelected(type){const codigo=type==="empresa"?document.getElementById("companyLoginCode").value.trim():document.getElementById("userLoginCode").value.trim();const email=type==="empresa"?(document.getElementById("companyLoginEmail")?.value||"").trim().toLowerCase():(document.getElementById("userLoginEmail")?.value||"").trim().toLowerCase();if(!email)return alert("Digite seu e-mail.");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return alert("Digite um e-mail válido.");if(!codigo)return alert("Digite seu código de acesso.");const remember=type==="empresa"?document.getElementById("rememberCompanyAccess")?.checked:document.getElementById("rememberUserAccess")?.checked;const ok=await loginByCode(codigo,type,email);if(ok&&remember)saveQuickAccess(type,email,codigo)}
+async function loginByCode(codigo,expectedType,email="",isNewAccount=false){session=null;localStorage.removeItem("pegaleva_client");showLoader("Carregando seu painel...");const res=await api("loginClient",{codigo,email,expectedType});hideLoader();if(!res.ok){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}if(res.type!==expectedType){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}const perfilEmail=String(res.profile?.Email||"").trim().toLowerCase();if(perfilEmail!==String(email||"").trim().toLowerCase()){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}session=res;localStorage.setItem("pegaleva_client",JSON.stringify(session));openPanel();if(isNewAccount)setTimeout(showNewAccountWelcomeModal,180);return true}
+function showNewAccountWelcomeModal(){if(!session)return;const p=session.profile||{};const fullName=String(session.type==="empresa"?(p.Responsavel||""):(p.Nome||"")).trim();const firstName=fullName.split(/\s+/)[0]||"";const feminine=session.type==="empresa"||/[aáàâã]$/i.test(firstName);const title=document.getElementById("newAccountWelcomeTitle"),text=document.getElementById("newAccountWelcomeText"),modal=document.getElementById("newAccountWelcomeModal");if(title)title.innerText=(feminine?"Bem-vinda, ":"Bem-vindo, ")+(firstName||"ao Pega&Leva")+"!";if(text)text.innerText=session.type==="empresa"?"Sua empresa foi cadastrada com sucesso no Pega&Leva. O desconto de 20% ainda está em processo de ativação e pode ser liberado a qualquer momento, em até 30 minutos. Aguarde a notificação no WhatsApp confirmando que o desconto foi ativado antes de solicitar uma entrega. Caso solicite antes da liberação, será cobrado o valor normal, sem desconto. Após receber a confirmação, você poderá usar o desconto normalmente dentro do nosso sistema.":"Sua conta foi criada com sucesso no Pega&Leva. Agora você já pode acessar o painel e solicitar sua primeira entrega.";if(modal)modal.classList.add("active")}
 function closeNewAccountWelcomeModal(){document.getElementById("newAccountWelcomeModal")?.classList.remove("active")}
 function openPanel(){setSupportVisibility(false);setTimeout(updateBairroOptions,0);document.querySelector(".history-chat-btn").style.display="grid";document.getElementById("accessScreen").classList.remove("active");document.getElementById("appScreen").classList.add("active");
   const clientNav=document.getElementById("clientAppNav");
   if(clientNav) clientNav.style.display="";
-const p=session.profile,name=session.type==="empresa"?p.Responsavel:p.Nome;const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";document.getElementById("welcomeName").innerText="OlÃ¡, "+primeiroNome;document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuÃ¡rio";document.getElementById("companyBox").style.display=session.type==="empresa"?"block":"none";document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";toggleCouponArea();renderProfile();loadClientTools();startAutoRefresh()}
+const p=session.profile,name=session.type==="empresa"?p.Responsavel:p.Nome;const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";document.getElementById("welcomeName").innerText="Olá, "+primeiroNome;document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuário";document.getElementById("companyBox").style.display=session.type==="empresa"?"block":"none";document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";toggleCouponArea();renderProfile();loadClientTools();startAutoRefresh()}
 
 
 async function loadSavedClientContacts(){
@@ -381,24 +381,24 @@ function renderSavedClientsModal(){
   const box=document.getElementById("savedOrdersPageBody")||document.getElementById("savedClientsBody");
   if(!box)return;
   if(session&&session.type!=="empresa"){
-    box.innerHTML='<p class="muted" style="text-align:center">Essa opÃ§Ã£o fica disponÃ­vel para empresas.</p>';
+    box.innerHTML='<p class="muted" style="text-align:center">Essa opção fica disponível para empresas.</p>';
   }else if(!clientSavedContacts.length){
-    box.innerHTML='<div class="saved-list-head"><div><strong>Meus pedidos</strong><small>Os pedidos ficam disponÃ­veis por 1H. Depois disso saem da planilha e daqui tambÃ©m.</small></div><span class="badge">0</span></div><div class="saved-order-empty"><p class="muted" style="text-align:center;margin:0">Nenhum pedido salvo disponÃ­vel. Clique em Criar pedido para gerar um cÃ³digo.</p></div>';
+    box.innerHTML='<div class="saved-list-head"><div><strong>Meus pedidos</strong><small>Os pedidos ficam disponíveis por 1H. Depois disso saem da planilha e daqui também.</small></div><span class="badge">0</span></div><div class="saved-order-empty"><p class="muted" style="text-align:center;margin:0">Nenhum pedido salvo disponível. Clique em Criar pedido para gerar um código.</p></div>';
   }else{
-    box.innerHTML=`<div class="saved-list-head"><div><strong>Meus pedidos</strong><small>DisponÃ­veis por 1H. Copie a mensagem para o cliente preencher e solicite quando estiver pronto.</small></div><span class="badge">${clientSavedContacts.length}</span></div><div class="saved-orders-grid">`+clientSavedContacts.map(c=>{
+    box.innerHTML=`<div class="saved-list-head"><div><strong>Meus pedidos</strong><small>Disponíveis por 1H. Copie a mensagem para o cliente preencher e solicite quando estiver pronto.</small></div><span class="badge">${clientSavedContacts.length}</span></div><div class="saved-orders-grid">`+clientSavedContacts.map(c=>{
       const solicitado=!!(c.EntregaID||String(c.StatusPedido||"").toLowerCase().includes("solicitado"));
       return `
       <div class="saved-client-card">
         <strong style="color:#0044c3">${c.NomePedido||c.NomeDestino||"Pedido salvo"}</strong>
-        <p class="muted" style="margin-top:5px"><b>CÃ³digo do pedido:</b> <span style="font-weight:950;color:#0044c3">${c.PedidoCodigo||"---"}</span></p>
-        <p class="muted" style="margin-top:4px"><b>Coleta:</b> ${c.BairroColeta||"---"} â€¢ ${c.RotaRetorno?"com rota":"sem rota"}</p>
+        <p class="muted" style="margin-top:5px"><b>Código do pedido:</b> <span style="font-weight:950;color:#0044c3">${c.PedidoCodigo||"---"}</span></p>
+        <p class="muted" style="margin-top:4px"><b>Coleta:</b> ${c.BairroColeta||"---"} • ${c.RotaRetorno?"com rota":"sem rota"}</p>
         <p class="muted" style="margin-top:4px"><b>Status:</b> ${solicitado?"Solicitado":(c.StatusPedido||c.NomeDestino?"Preenchido":"Aguardando cliente")}</p>
-        ${c.NomeDestino?`<p class="muted" style="margin-top:5px">${c.NomeDestino} â€¢ ${c.Rua||""}, NÂº ${c.Numero||"0"} - ${c.Bairro||""}, ${c.Cidade||""}</p>`:`<p class="muted" style="margin-top:5px">Aguardando cliente preencher as informaÃ§Ãµes.</p>`}
-        ${c.FreteEscolhido?`<p class="muted" style="margin-top:4px"><b>Frete:</b> ${c.FreteEscolhido} â€¢ R$ ${Number(c.ValorFrete||0).toFixed(2).replace(".",",")}</p>`:""}
+        ${c.NomeDestino?`<p class="muted" style="margin-top:5px">${c.NomeDestino} • ${c.Rua||""}, Nº ${c.Numero||"0"} - ${c.Bairro||""}, ${c.Cidade||""}</p>`:`<p class="muted" style="margin-top:5px">Aguardando cliente preencher as informações.</p>`}
+        ${c.FreteEscolhido?`<p class="muted" style="margin-top:4px"><b>Frete:</b> ${c.FreteEscolhido} • R$ ${Number(c.ValorFrete||0).toFixed(2).replace(".",",")}</p>`:""}
         ${c.WhatsAppDestino?`<p class="muted" style="margin-top:4px"><b>WhatsApp:</b> ${c.WhatsAppDestino}</p>`:""}
         <div class="grid2" style="margin-top:10px">
           <button class="btn light" style="margin-top:0" onclick="copySavedClientCadastroLink('${c.PedidoCodigo||""}')"><i class="fa-solid fa-copy"></i> Copiar</button>
-          ${solicitado?`<button class="btn gray" style="margin-top:0" onclick="alert('Pedido jÃ¡ solicitado. O cliente pode acompanhar pelo formulÃ¡rio.')">Solicitado</button>`:(c.NomeDestino?`<button class="btn green" style="margin-top:0" onclick="startSavedOrderDelivery('${c.ID}')"><i class="fa-solid fa-motorcycle"></i> Solicitar</button>`:`<button class="btn gray" style="margin-top:0" onclick="copySavedClientCadastroLink('${c.PedidoCodigo||""}')">Aguardando</button>`)}
+          ${solicitado?`<button class="btn gray" style="margin-top:0" onclick="alert('Pedido já solicitado. O cliente pode acompanhar pelo formulário.')">Solicitado</button>`:(c.NomeDestino?`<button class="btn green" style="margin-top:0" onclick="startSavedOrderDelivery('${c.ID}')"><i class="fa-solid fa-motorcycle"></i> Solicitar</button>`:`<button class="btn gray" style="margin-top:0" onclick="copySavedClientCadastroLink('${c.PedidoCodigo||""}')">Aguardando</button>`)}
         </div>
       </div>`;
     }).join("")+"</div>";
@@ -430,10 +430,10 @@ function openSavedClientsModal(){openSavedOrdersPage()}
 function closeSavedClientsModal(){document.getElementById("savedClientsModal").classList.remove("active")}
 
 function updateNewSavedOrderBairros(){
-  const cidade=(document.getElementById("newSavedOrderCity")||{}).value||"UruÃ§uÃ­";
+  const cidade=(document.getElementById("newSavedOrderCity")||{}).value||"Uruçuí";
   const el=document.getElementById("newSavedOrderBairro");
   if(!el)return;
-  const list=cidade==="Benedito Leite"?["Centro","Benedito Leite"]:["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","EsperanÃ§a","Ãgua Branca","Alto Bonito","SÃ£o Francisco","BabilÃ´nia","CanaÃ£","Portal dos Cerrados","Cerrados Park","Vista Bela"];
+  const list=cidade==="Benedito Leite"?["Centro","Benedito Leite"]:["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
   el.innerHTML='<option value="">Selecione</option>'+list.map(b=>`<option>${b}</option>`).join("");
 }
 
@@ -443,7 +443,7 @@ function getSavedClientCadastroLink(codigoPedido){
 
 function copySavedClientCadastroLink(codigoPedido){
   const link=getSavedClientCadastroLink(codigoPedido);
-  const mensagem="INFORME SEUS DADOS NO FORMULARIO ABAIXO PARA RECEBER SEU PRODUTO EM SUA CASA COM QUALIDADE E ECONOMIA!\n\n"+link+"\n\nCÃ³digo do pedido: "+String(codigoPedido||"").toUpperCase();
+  const mensagem="INFORME SEUS DADOS NO FORMULARIO ABAIXO PARA RECEBER SEU PRODUTO EM SUA CASA COM QUALIDADE E ECONOMIA!\n\n"+link+"\n\nCódigo do pedido: "+String(codigoPedido||"").toUpperCase();
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(mensagem).then(()=>alert("Mensagem copiada.")).catch(()=>prompt("Copie a mensagem:",mensagem));
   }else{
@@ -454,7 +454,7 @@ function copySavedClientCadastroLink(codigoPedido){
 async function createSavedOrderFromPanel(){
   if(!session||session.type!=="empresa")return alert("Entre como empresa para cadastrar pedidos.");
   const nome=(document.getElementById("newSavedOrderName")||{}).value.trim();
-  const cidadeColeta=(document.getElementById("newSavedOrderCity")||{}).value||"UruÃ§uÃ­";
+  const cidadeColeta=(document.getElementById("newSavedOrderCity")||{}).value||"Uruçuí";
   const bairroColeta=(document.getElementById("newSavedOrderBairro")||{}).value||"";
   const rotaRetorno=(document.getElementById("newSavedOrderRota")||{}).value||"";
   if(!nome)return alert("Informe o nome do pedido.");
@@ -473,14 +473,14 @@ async function createSavedOrderFromPanel(){
   if(!res.ok)return alert(res.error||"Erro ao criar pedido.");
   const codigo=res.pedidoCodigo||res.codigoPedido;
   const link=getSavedClientCadastroLink(codigo);
-  const mensagem="INFORME SEUS DADOS NO FORMULARIO ABAIXO PARA RECEBER SEU PRODUTO EM SUA CASA COM QUALIDADE E ECONOMIA!\n\n"+link+"\n\nCÃ³digo do pedido: "+String(codigo||"").toUpperCase();
+  const mensagem="INFORME SEUS DADOS NO FORMULARIO ABAIXO PARA RECEBER SEU PRODUTO EM SUA CASA COM QUALIDADE E ECONOMIA!\n\n"+link+"\n\nCódigo do pedido: "+String(codigo||"").toUpperCase();
   await loadSavedClientContacts();
   closeSavedClientsModal();
   renderSavedClientsModal();
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(mensagem).catch(()=>{});
   }
-  alert("Pedido cadastrado! Mensagem copiada para enviar ao cliente.\n\nCÃ³digo: "+codigo);
+  alert("Pedido cadastrado! Mensagem copiada para enviar ao cliente.\n\nCódigo: "+codigo);
 }
 
 
@@ -492,16 +492,16 @@ function startSavedOrderDelivery(id){
   box.innerHTML=`
     <div class="saved-client-card">
       <strong style="color:#0044c3;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-motorcycle"></i> Solicitar pedido</strong>
-      <p class="muted" style="margin-top:6px"><b>${c.NomePedido||"Pedido"}</b> â€¢ CÃ³digo ${c.PedidoCodigo||"---"}</p>
-      <p class="muted" style="margin-top:6px"><b>Cliente:</b> ${c.NomeDestino||"---"} â€¢ ${c.WhatsAppDestino||"---"}</p>
-      <p class="muted" style="margin-top:6px"><b>Destino:</b> ${c.Rua||""}, NÂº ${c.Numero||"0"}, ${c.Referencia||""} - ${c.Bairro||""}, ${c.Cidade||""}</p>
-      <p class="muted" style="margin-top:6px"><b>Frete:</b> ${c.FreteEscolhido||"Normal"} â€¢ R$ ${Number(c.ValorFrete||0).toFixed(2).replace(".",",")}</p>
+      <p class="muted" style="margin-top:6px"><b>${c.NomePedido||"Pedido"}</b> • Código ${c.PedidoCodigo||"---"}</p>
+      <p class="muted" style="margin-top:6px"><b>Cliente:</b> ${c.NomeDestino||"---"} • ${c.WhatsAppDestino||"---"}</p>
+      <p class="muted" style="margin-top:6px"><b>Destino:</b> ${c.Rua||""}, Nº ${c.Numero||"0"}, ${c.Referencia||""} - ${c.Bairro||""}, ${c.Cidade||""}</p>
+      <p class="muted" style="margin-top:6px"><b>Frete:</b> ${c.FreteEscolhido||"Normal"} • R$ ${Number(c.ValorFrete||0).toFixed(2).replace(".",",")}</p>
       <div style="margin-top:12px;background:#f8fbff;border:1px solid #e5edf8;border-radius:18px;padding:12px">
-        <button class="btn light" style="margin-top:0;margin-bottom:8px" onclick="useSavedCompanyAddressForOrder()"><i class="fa-solid fa-location-dot"></i> Usar meu endereÃ§o salvo</button>
-        <label>Rua/Avenida da coleta</label><input id="savedOrderRuaColeta" placeholder="EndereÃ§o de coleta">
-        <label>NÃºmero da coleta</label><input id="savedOrderNumeroColeta" placeholder="Se nÃ£o tiver nÃºmero, coloque 0">
-        <label>Ponto de referÃªncia da coleta</label><input id="savedOrderReferenciaColeta" placeholder="ObrigatÃ³rio">
-        <label>Cidade da coleta</label><select id="savedOrderCidadeColeta"><option>${c.CidadeColeta||"UruÃ§uÃ­"}</option><option>UruÃ§uÃ­</option><option>Benedito Leite</option></select>
+        <button class="btn light" style="margin-top:0;margin-bottom:8px" onclick="useSavedCompanyAddressForOrder()"><i class="fa-solid fa-location-dot"></i> Usar meu endereço salvo</button>
+        <label>Rua/Avenida da coleta</label><input id="savedOrderRuaColeta" placeholder="Endereço de coleta">
+        <label>Número da coleta</label><input id="savedOrderNumeroColeta" placeholder="Se não tiver número, coloque 0">
+        <label>Ponto de referência da coleta</label><input id="savedOrderReferenciaColeta" placeholder="Obrigatório">
+        <label>Cidade da coleta</label><select id="savedOrderCidadeColeta"><option>${c.CidadeColeta||"Uruçuí"}</option><option>Uruçuí</option><option>Benedito Leite</option></select>
       </div>
       <div class="grid2" style="margin-top:10px">
         <button class="btn gray" onclick="renderSavedClientsModal()">Voltar</button>
@@ -520,7 +520,7 @@ function useSavedCompanyAddressForOrder(){
   if(rua)rua.value=p.Rua||p.Endereco||"";
   if(numero)numero.value=p.Numero||"";
   if(referencia)referencia.value=p.Referencia||"";
-  if(cidade)cidade.value=p.Cidade||cidade.value||"UruÃ§uÃ­";
+  if(cidade)cidade.value=p.Cidade||cidade.value||"Uruçuí";
 }
 
 
@@ -531,7 +531,7 @@ async function confirmSavedOrderDelivery(id){
   const numero=(document.getElementById("savedOrderNumeroColeta")||{}).value||"";
   const referencia=(document.getElementById("savedOrderReferenciaColeta")||{}).value||"";
   const cidade=(document.getElementById("savedOrderCidadeColeta")||{}).value||"";
-  if(!rua.trim()||!numero.trim()||!referencia.trim()||!cidade.trim())return alert("Confirme rua, nÃºmero, ponto de referÃªncia e cidade da coleta.");
+  if(!rua.trim()||!numero.trim()||!referencia.trim()||!cidade.trim())return alert("Confirme rua, número, ponto de referência e cidade da coleta.");
   showLoader("Buscando entregador...",true);
   const res=await api("createDeliveryFromSavedOrder",{
     pedidoCodigo:c.PedidoCodigo,
@@ -541,7 +541,7 @@ async function confirmSavedOrderDelivery(id){
     cidadeColeta:cidade,
     bairroColeta:c.BairroColeta||""
   });
-  if(!res.ok){hideLoader();return alert(res.error||"NÃ£o foi possÃ­vel solicitar.");}
+  if(!res.ok){hideLoader();return alert(res.error||"Não foi possível solicitar.");}
   currentSearchingId=res.delivery.ID;
   await loadSavedClientContacts();
   renderSavedClientsModal();
@@ -570,14 +570,14 @@ async function loadClientTools(){
 
 function openCouponsModal(){
   const box=document.getElementById("couponsBody");
-  box.innerHTML=clientCoupons.length?clientCoupons.map(c=>`<div class="coupon-card"><small>CUPOM DISPONÃVEL</small><b>${String(c.Cupom||"").toUpperCase()}</b><span>${Number(c.DescontoPercentual||0)}% de desconto</span></div>`).join(""):'<p class="muted" style="text-align:center">Ops, 0 cupons por aqui!</p>';
+  box.innerHTML=clientCoupons.length?clientCoupons.map(c=>`<div class="coupon-card"><small>CUPOM DISPONÍVEL</small><b>${String(c.Cupom||"").toUpperCase()}</b><span>${Number(c.DescontoPercentual||0)}% de desconto</span></div>`).join(""):'<p class="muted" style="text-align:center">Ops, 0 cupons por aqui!</p>';
   document.getElementById("couponsModal").classList.add("active");
 }
 function closeCouponsModal(){document.getElementById("couponsModal").classList.remove("active")}
 
 function openAnnouncementsModal(){
   const box=document.getElementById("announcementsBody");
-  box.innerHTML=clientAnnouncements.length?clientAnnouncements.map(c=>`<div class="msg-bubble"><b>${c.Titulo||"Comunicado PegaLeva"}</b><p style="margin-top:6px;line-height:1.45">${String(c.Mensagem||"").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p><small>${c.CriadoEm||""}</small></div>`).join(""):'<p class="muted" style="text-align:center">Nenhum comunicado disponÃ­vel.</p>';
+  box.innerHTML=clientAnnouncements.length?clientAnnouncements.map(c=>`<div class="msg-bubble"><b>${c.Titulo||"Comunicado PegaLeva"}</b><p style="margin-top:6px;line-height:1.45">${String(c.Mensagem||"").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p><small>${c.CriadoEm||""}</small></div>`).join(""):'<p class="muted" style="text-align:center">Nenhum comunicado disponível.</p>';
   document.getElementById("announcementsModal").classList.add("active");
 }
 function closeAnnouncementsModal(){document.getElementById("announcementsModal").classList.remove("active")}
@@ -586,9 +586,9 @@ function startAutoRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshPa
 function scheduleAutoRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(async()=>{await refreshPanel();scheduleAutoRefresh()},1000)}
 document.addEventListener("visibilitychange",()=>{if(!session)return;scheduleAutoRefresh();refreshPanel()});window.addEventListener("focus",()=>{if(session)refreshPanel()});window.addEventListener("pageshow",()=>{if(session)refreshPanel()})
 function useRegisteredAddress(){if(session.type!=="empresa")return;const p=session.profile;document.getElementById("coletaRua").value=p.Rua||p.Endereco||"";document.getElementById("coletaNumero").value=p.Numero||"";document.getElementById("coletaReferencia").value=p.Referencia||"";document.getElementById("coletaCidade").value=p.Cidade||""}
-function renderProfile(){const p=session.profile,pendente=Number(p.PagamentoPendente||0),payBtn=pendente>0?` <button type="button" class="btn-pay-pending" onclick="openClientPendingPaymentModal()" style="margin-top:0!important;padding:7px 10px!important;font-size:11px!important"><i class="fa-solid fa-money-bill-wave"></i> PAGAR AGORA</button>`:"";document.getElementById("profileBox").innerHTML=session.type==="empresa"?`<div class="info-row"><span>ResponsÃ¡vel</span><b>${p.Responsavel||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF/CNPJ</span><b>${p.CPF_CNPJ||""}</b></div><div class="info-row"><span>EndereÃ§o</span><b>${p.Endereco||""}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`:`<div class="info-row"><span>Nome</span><b>${p.Nome||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF</span><b>${p.CPF||""}</b></div><div class="info-row"><span>Entregas solicitadas</span><b>${p.EntregasSolicitadas||0}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`}
-async function refreshPanel(){if(!session||refreshBusy)return;refreshBusy=true;try{const res=await api("getClientPanel",{codigo:session.profile.CodigoAcesso,_t:Date.now()});if(!res.ok)return;session={ok:true,type:res.type,profile:res.profile};localStorage.setItem("pegaleva_client",JSON.stringify(session));renderProfile();loadClientTools();window.activeDrivers=res.activeDrivers!==false;renderDeliveries(res.deliveries||[]);renderClientHistory(res.deliveries||[]);handleStatusModals(res.deliveries||[]);if(currentSearchingId){const d=(res.deliveries||[]).find(x=>x.ID===currentSearchingId);if(d&&d.CodigoEntregador) {currentSearchingId="";hideLoader();playSuccessNotification();showStatus("Sua entrega foi aceita","Um entregador aceitou sua solicitaÃ§Ã£o.","ok")} if(d&&d.Status==="Cancelada"){currentSearchingId="";hideLoader();showStatus("Sua entrega foi cancelada","Tente novamente ou cancele geral no card da entrega.","bad")} if(d&&d.Status==="Cancelada Geral"){currentSearchingId="";hideLoader();showStatus("Entrega cancelada","A entrega foi cancelada definitivamente.","bad")}}if(session.type==="empresa"){document.getElementById("companyBox").style.display="block";const p=session.profile;document.getElementById("companyStats").innerHTML=`<div class="info-row"><span>Entregas restantes com desconto</span><b>${p.EntregasComDescontoRestantes||0}</b></div><div class="info-row"><span>Desconto</span><b>${p.DescontoPercentual||0}%</b></div><div class="info-row"><span>Prioridade</span><b class="badge green">${p.Prioridade||"Desativado"}</b></div>`}else document.getElementById("companyBox").style.display="none"}finally{refreshBusy=false}}
-function handleStatusModals(list){list.forEach(d=>{if(!knownStatuses[d.ID]){knownStatuses[d.ID]=d.Status;return}if(knownStatuses[d.ID]!==d.Status){knownStatuses[d.ID]=d.Status;if(d.Status==="Entrega aceita"){playSuccessNotification();showStatus("Sua entrega foi aceita","O entregador aceitou sua entrega.","ok")};if(d.Status==="Estou a caminho")showStatus("5MIN CHEGANDO...","O entregador estÃ¡ chegando para a coleta.","ok");if(d.Status==="Coletado")showStatus("Entrega em rota","Sua entrega foi coletada e estÃ¡ em rota.","ok");if(d.Status==="Entrega finalizada")showStatus("Entrega finalizada com sucesso","Sua entrega foi concluÃ­da.","ok");if(d.Status==="Cancelada")showStatus("Sua entrega foi cancelada","Tente novamente.","bad");if(d.Status==="Aguardando entregador")showStatus("Procurando outro entregador","A entrega voltou para novas entregas disponÃ­veis atÃ© outro entregador aceitar.","ok")}});localStorage.setItem("pegaleva_status_client",JSON.stringify(knownStatuses))}
+function renderProfile(){const p=session.profile,pendente=Number(p.PagamentoPendente||0),payBtn=pendente>0?` <button type="button" class="btn-pay-pending" onclick="openClientPendingPaymentModal()" style="margin-top:0!important;padding:7px 10px!important;font-size:11px!important"><i class="fa-solid fa-money-bill-wave"></i> PAGAR AGORA</button>`:"";document.getElementById("profileBox").innerHTML=session.type==="empresa"?`<div class="info-row"><span>Responsável</span><b>${p.Responsavel||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF/CNPJ</span><b>${p.CPF_CNPJ||""}</b></div><div class="info-row"><span>Endereço</span><b>${p.Endereco||""}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`:`<div class="info-row"><span>Nome</span><b>${p.Nome||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF</span><b>${p.CPF||""}</b></div><div class="info-row"><span>Entregas solicitadas</span><b>${p.EntregasSolicitadas||0}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`}
+async function refreshPanel(){if(!session||refreshBusy)return;refreshBusy=true;try{const res=await api("getClientPanel",{codigo:session.profile.CodigoAcesso,_t:Date.now()});if(!res.ok)return;session={ok:true,type:res.type,profile:res.profile};localStorage.setItem("pegaleva_client",JSON.stringify(session));renderProfile();loadClientTools();window.activeDrivers=res.activeDrivers!==false;renderDeliveries(res.deliveries||[]);renderClientHistory(res.deliveries||[]);handleStatusModals(res.deliveries||[]);if(currentSearchingId){const d=(res.deliveries||[]).find(x=>x.ID===currentSearchingId);if(d&&d.CodigoEntregador) {currentSearchingId="";hideLoader();playSuccessNotification();showStatus("Sua entrega foi aceita","Um entregador aceitou sua solicitação.","ok")} if(d&&d.Status==="Cancelada"){currentSearchingId="";hideLoader();showStatus("Sua entrega foi cancelada","Tente novamente ou cancele geral no card da entrega.","bad")} if(d&&d.Status==="Cancelada Geral"){currentSearchingId="";hideLoader();showStatus("Entrega cancelada","A entrega foi cancelada definitivamente.","bad")}}if(session.type==="empresa"){document.getElementById("companyBox").style.display="block";const p=session.profile;document.getElementById("companyStats").innerHTML=`<div class="info-row"><span>Entregas restantes com desconto</span><b>${p.EntregasComDescontoRestantes||0}</b></div><div class="info-row"><span>Desconto</span><b>${p.DescontoPercentual||0}%</b></div><div class="info-row"><span>Prioridade</span><b class="badge green">${p.Prioridade||"Desativado"}</b></div>`}else document.getElementById("companyBox").style.display="none"}finally{refreshBusy=false}}
+function handleStatusModals(list){list.forEach(d=>{if(!knownStatuses[d.ID]){knownStatuses[d.ID]=d.Status;return}if(knownStatuses[d.ID]!==d.Status){knownStatuses[d.ID]=d.Status;if(d.Status==="Entrega aceita"){playSuccessNotification();showStatus("Sua entrega foi aceita","O entregador aceitou sua entrega.","ok")};if(d.Status==="Estou a caminho")showStatus("5MIN CHEGANDO...","O entregador está chegando para a coleta.","ok");if(d.Status==="Coletado")showStatus("Entrega em rota","Sua entrega foi coletada e está em rota.","ok");if(d.Status==="Entrega finalizada")showStatus("Entrega finalizada com sucesso","Sua entrega foi concluída.","ok");if(d.Status==="Cancelada")showStatus("Sua entrega foi cancelada","Tente novamente.","bad");if(d.Status==="Aguardando entregador")showStatus("Procurando outro entregador","A entrega voltou para novas entregas disponíveis até outro entregador aceitar.","ok")}});localStorage.setItem("pegaleva_status_client",JSON.stringify(knownStatuses))}
 function isClosedDelivery(status){return ["Entrega finalizada","Cancelada","Cancelada Geral"].includes(String(status||""))}
 function showPanelMessage(text,type){const box=document.getElementById("deliveriesBox");if(!box)return;box.innerHTML=`<div class="pay-alert" style="${type==='bad'?'background:#fee2e2;color:#b91c1c':''}">${text}</div>`}
 function renderDeliveries(list){
@@ -603,13 +603,14 @@ function renderDeliveries(list){
     const going=d.Status==="Estou a caminho";
     const collected=d.Status==="Coletado";
     return `<div class="delivery-card">
-      <div class="title"><strong>${d.BairroColeta} â†’ ${d.BairroDestino}</strong><span class="badge ${d.Status==="Entrega finalizada"?"green":(d.Status==="Cancelada"||d.Status==="Cancelada Geral")?"red":"yellow"}">${going?"5MIN CHEGANDO...":d.Status}</span></div>
+      <div class="title"><strong>${d.BairroColeta} → ${d.BairroDestino}</strong><span class="badge ${d.Status==="Entrega finalizada"?"green":(d.Status==="Cancelada"||d.Status==="Cancelada Geral")?"red":"yellow"}">${going?"5MIN CHEGANDO...":(["Aguardando entregador","Procurando entregador","Buscando entregador"].includes(String(d.Status||""))?"Entrega aceita":d.Status)}</span></div>
       ${going?`<div class="route-mini">5MIN CHEGANDO...</div>`:""}
       ${collected?`<div class="route-mini">entrega em rota <i class="fa-solid fa-motorcycle"></i></div>`:""}
       <p class="muted">Quem envia: ${d.NomeSolicitante||""} - <a target="_blank" href="https://wa.me/55${waSend}">${d.WhatsAppSolicitante||""}</a></p>
       <p class="muted">Quem recebe: ${d.NomeDestino||""} - <a target="_blank" href="https://wa.me/55${waDest}">${d.WhatsAppDestino||""}</a></p>
-      <p class="muted">Valor: <b>${money(d.Valor)}</b></p><p class="muted">Pagamento: <b>${d.StatusPagamento||"Aguardando confirmaÃ§Ã£o"}</b></p>
-      ${d.NomeEntregador?driverMiniHtml(d):(!window.activeDrivers?`<p class="muted"><b>OPS, SEM ENTREGADORES NESSE HORÃRIO</b></p>`:`<p class="muted"><i class="fa-solid fa-motorcycle fa-bounce"></i> Buscando entregador...</p>`)}
+      <p class="muted">Valor: <b>${money(d.Valor)}</b></p><p class="muted">Pagamento: <b>${d.StatusPagamento||"Aguardando confirmação"}</b></p>
+      ${d.NomeEntregador?driverMiniHtml(d):`<p class="muted"><b><i class="fa-solid fa-circle-check" style="color:#10b981"></i> Entrega aceita</b></p>`}
+      <button class="btn whatsapp-notify-btn" onclick="notifyDeliveryWhatsApp('${d.ID}')"><i class="fa-brands fa-whatsapp"></i> Notificar entrega</button>
       ${!isClosedDelivery(d.Status)&&d.CodigoEntregador?`<button class="btn light" onclick="openChatModal('${d.ID}')">Enviar mensagem${Number(d.ClienteNaoLidas||0)>0?` <span class="chat-badge">${d.ClienteNaoLidas}</span>`:""}</button>`:""}
       ${canCancel?`<button class="btn red" onclick="cancelDelivery('${d.ID}')">Cancelar entrega</button>`:""}
       ${d.Status==="Cancelada"?`<button class="btn green" onclick="retryDelivery('${d.ID}')">Tentar novamente</button><button class="btn red" onclick="cancelGeneralDelivery('${d.ID}')">Cancelar geral</button>`:""}
@@ -621,6 +622,52 @@ function renderDeliveries(list){
 
 
 
+function notifyDeliveryWhatsApp(id){
+  const d=(window.lastClientDeliveries||[]).find(x=>String(x.ID)===String(id));
+  if(!d)return alert("Entrega não encontrada no painel.");
+  const p=session&&session.profile?session.profile:{};
+  const nomeSolicitante=d.NomeSolicitante||p.Nome||p.Responsavel||"";
+  const whatsappSolicitante=d.WhatsAppSolicitante||p.WhatsApp||"";
+  const mensagem=[
+    "══════════════════════",
+    "🛵 *PEGA E LEVA DELIVERY*",
+    "📦 *NOVA ENTREGA ACEITA*",
+    `🧾 Pedido: *${d.ID||""}*`,
+    "══════════════════════",
+    "",
+    "👤 *SOLICITANTE*",
+    `Nome: ${nomeSolicitante}`,
+    `WhatsApp: ${whatsappSolicitante}`,
+    "",
+    "📍 *COLETA*",
+    `Endereço: ${d.EnderecoColeta||d.enderecoColeta||""}`,
+    `Bairro: ${d.BairroColeta||""}`,
+    `Cidade: ${d.ColetaCidade||d.CidadeColeta||""}`,
+    `Referência: ${d.ReferenciaColeta||""}`,
+    "",
+    "📍 *DESTINO*",
+    `Nome: ${d.NomeDestino||""}`,
+    `WhatsApp: ${d.WhatsAppDestino||""}`,
+    `Endereço: ${d.EnderecoDestino||d.enderecoDestino||""}`,
+    `Bairro: ${d.BairroDestino||""}`,
+    `Cidade: ${d.DestinoCidade||d.CidadeDestino||""}`,
+    `Referência: ${d.ReferenciaDestino||""}`,
+    "",
+    "📦 *DADOS DO PEDIDO*",
+    `Conteúdo: ${d.Conteudo||""}`,
+    `Volumes: ${d.Volumes||""}`,
+    `Rota de retorno: ${d.RotaRetorno||"Não"}`,
+    `Valor: ${money(d.Valor)}`,
+    `Pagamento: ${d.Pagamento||d.FormaPagamento||""}`,
+    `Observação: ${d.ObservacaoPagamento||d.Observacao||""}`,
+    "",
+    "✅ *Status: Entrega aceita*",
+    "══════════════════════"
+  ].join("\n");
+  window.open(`https://wa.me/5589994027592?text=${encodeURIComponent(mensagem)}`,"_blank");
+}
+
+
 function hasClientPendingPayment(d){
   const status=String(d&&d.StatusPagamento||"").trim().toLowerCase();
   const pendente=Number(d&&d.PagamentoPendente||d&&d.ValorPendente||0);
@@ -629,12 +676,12 @@ function hasClientPendingPayment(d){
 let clientPaymentTimer=null;
 function clientPaymentDateText(){
   const d=new Date();
-  return d.toLocaleDateString("pt-BR")+" Ã s "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  return d.toLocaleDateString("pt-BR")+" às "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
 }
 function buildPendingPaymentWhatsAppLink(valorPendente,nome){
   const data=clientPaymentDateText();
   const valor=money(valorPendente||0);
-  const msg=`CONFIRMAÃ‡ÃƒO DE PAGAMENTO - PEGA E LEVA!\n\nValor pendente de ${valor} dos fretes da empresa/responsÃ¡vel ${nome||""} foi pago via PIX na data ${data}.\n\nPega e Leva!`;
+  const msg=`CONFIRMAÇÃO DE PAGAMENTO - PEGA E LEVA!\n\nValor pendente de ${valor} dos fretes da empresa/responsável ${nome||""} foi pago via PIX na data ${data}.\n\nPega e Leva!`;
   return `https://wa.me/5589994376585?text=${encodeURIComponent(msg)}`;
 }
 function copyClientPixKey(){
@@ -688,7 +735,7 @@ function openClientPendingPaymentModal(){
   const nome=p.Nome||p.Responsavel||"";
   const qrUrl="https://i.ibb.co/Nd0HHzGc/Whats-App-Image-2026-07-02-at-22-17-59.jpg";
   document.getElementById("clientPaymentBody").innerHTML=`<div class="delivery-card" style="box-shadow:none;margin-top:12px">
-    <p class="muted"><b>Cliente/ResponsÃ¡vel:</b> ${nome}</p>
+    <p class="muted"><b>Cliente/Responsável:</b> ${nome}</p>
     <p class="muted"><b>WhatsApp:</b> ${p.WhatsApp||""}</p>
     <p class="muted"><b>Valor pendente:</b> ${money(valorPendente)}</p>
     <div class="pix-box">
@@ -705,12 +752,12 @@ function openClientPendingPaymentModal(){
 }
 function openClientPaymentModal(id){
   const d=(window.lastClientDeliveries||[]).find(x=>String(x.ID)===String(id));
-  if(!d)return alert("Entrega nÃ£o encontrada no painel.");
+  if(!d)return alert("Entrega não encontrada no painel.");
   const qrUrl="https://i.ibb.co/Nd0HHzGc/Whats-App-Image-2026-07-02-at-22-17-59.jpg";
   const valorPendente=Number(d.PagamentoPendente||d.ValorPendente||d.Valor||0);
   document.getElementById("clientPaymentBody").innerHTML=`<div class="delivery-card" style="box-shadow:none;margin-top:12px">
     <p class="muted"><b>ID:</b> ${d.ID}</p>
-    <p class="muted"><b>Rota:</b> ${d.BairroColeta||""} â†’ ${d.BairroDestino||""}</p>
+    <p class="muted"><b>Rota:</b> ${d.BairroColeta||""} → ${d.BairroDestino||""}</p>
     <p class="muted"><b>Cliente:</b> ${d.NomeSolicitante||""}</p>
     <p class="muted"><b>Valor para pagar:</b> ${money(valorPendente)}</p>
     <p class="muted"><b>Status atual:</b> ${d.StatusPagamento||"Pendente"}</p>
@@ -740,7 +787,7 @@ function driverMiniHtml(d){
 }
 async function likeDriver(id){
   const likedKey="pegaleva_liked_"+id;
-  if(localStorage.getItem(likedKey))return alert("VocÃª jÃ¡ curtiu esse entregador nesta entrega.");
+  if(localStorage.getItem(likedKey))return alert("Você já curtiu esse entregador nesta entrega.");
   const res=await api("likeDriver",{deliveryId:id});
   if(!res.ok)return alert(res.error||"Erro ao curtir entregador.");
   localStorage.setItem(likedKey,"1");
@@ -753,19 +800,19 @@ function renderClientHistory(list){
   const box=document.getElementById("historyChatBox");
   if(!box)return;
   const closed=(list||[]).filter(d=>isClosedDelivery(d.Status));
-  if(!closed.length){box.innerHTML='<p class="muted">Nenhuma entrega finalizada ou cancelada nas Ãºltimas 24H.</p>';return}
+  if(!closed.length){box.innerHTML='<p class="muted">Nenhuma entrega finalizada ou cancelada nas últimas 24H.</p>';return}
   box.innerHTML=closed.map(d=>`<div class="delivery-card">
-    <div class="title"><strong>${d.BairroColeta} â†’ ${d.BairroDestino}</strong><span class="badge ${d.Status==="Entrega finalizada"?"green":"red"}">${d.Status}</span></div>
+    <div class="title"><strong>${d.BairroColeta} → ${d.BairroDestino}</strong><span class="badge ${d.Status==="Entrega finalizada"?"green":"red"}">${d.Status}</span></div>
     <p class="muted">ID: <b>${d.ID}</b></p>
     <p class="muted">Valor: <b>${money(d.Valor)}</b></p>
-    <p class="muted">Pagamento: <b>${d.StatusPagamento||"Aguardando confirmaÃ§Ã£o"}</b></p>
+    <p class="muted">Pagamento: <b>${d.StatusPagamento||"Aguardando confirmação"}</b></p>
     <p class="muted">Recebido por: <b>${d.ConfirmacaoEntrega||"-"}</b></p>
     ${d.NomeEntregador?driverMiniHtml(d):""}
     <p class="muted">Atualizado em: ${d.AtualizadoEm||d.CriadoEm||""}</p>
   </div>`).join("");
 }
 
-function validateStep(){const s=steps()[currentStep],fields=s.querySelectorAll("input,select,textarea");for(const f of fields){if(f.type!=="hidden"&&f.offsetParent!==null&&!f.dataset.optional&&!f.value.trim()){f.focus();alert("Preencha os campos desta etapa.");return false}}if(currentStep===4&&!document.getElementById("conteudo").value){alert("Selecione o tipo de conteÃºdo.");return false}return true}
+function validateStep(){const s=steps()[currentStep],fields=s.querySelectorAll("input,select,textarea");for(const f of fields){if(f.type!=="hidden"&&f.offsetParent!==null&&!f.dataset.optional&&!f.value.trim()){f.focus();alert("Preencha os campos desta etapa.");return false}}if(currentStep===4&&!document.getElementById("conteudo").value){alert("Selecione o tipo de conteúdo.");return false}return true}
 function setStep(n){const total=steps().length;n=Math.max(0,Math.min(n,total-1));steps().forEach((s,i)=>s.classList.toggle("active",i===n));dots().forEach((d,i)=>d.classList.toggle("active",i<=n));currentStep=n}
 function nextStepWithLoading(text){if(!validateStep())return;showLoader(text);setTimeout(()=>{hideLoader();setStep(currentStep+1)},500)}
 function prevStep(){if(currentStep>0)setStep(currentStep-1)}
@@ -807,127 +854,15 @@ function selectCompanyOffer(tipo){
   const val=priceEl?priceEl.innerText:"";
   if(val)document.getElementById("priceText").innerText=val;
 }
-async function loadPrice(){if(!validateStep())return;showLoader("Carregando valores...");const desconto=session.type==="empresa"&&Number(session.profile.EntregasComDescontoRestantes||0)>0?Number(session.profile.DescontoPercentual||0):0;const res=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto,cupom:"",rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!res.ok)return alert("Erro ao carregar preÃ§o.");lastPrice=res.valor;document.getElementById("priceText").innerText=money(lastPrice);renderCompanyOffers(res);document.getElementById("ecoText").style.display=res.desconto>0?"inline-block":"none";document.getElementById("ecoText").innerText=res.desconto>0?"Frete com economia "+res.desconto+"%":"Frete com economia";const c=document.getElementById("cupom");if(c)c.value="";const m=document.getElementById("cupomMsg");if(m)m.innerText="";const b=document.getElementById("cupomBtn");if(b)b.style.display="none";toggleCouponArea();setStep(6)}
-async function applyCouponPrice(){if(!session||session.type!=="usuario")return;const cupom=document.getElementById("cupom")?.value.trim()||"";const msg=document.getElementById("cupomMsg");const btn=document.getElementById("cupomBtn");if(!cupom){if(msg)msg.innerText="";if(btn)btn.style.display="none";return loadPriceWithoutStep()}showLoader("Verificando cupom...");const desconto=0;const res=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!res.ok){if(msg)msg.innerText="Cupom invÃ¡lido";return}if(msg){msg.style.color="#047857";msg.innerText=res.cupomDesconto>0?"Cupom aplicado com sucesso":""}if(btn)btn.style.display="none";lastPrice=res.valor;document.getElementById("priceText").innerText=money(lastPrice);if(res.cupomDesconto>0){document.getElementById("ecoText").style.display="inline-block";document.getElementById("ecoText").innerText="Cupom aplicado "+res.cupomDesconto+"%"}else document.getElementById("ecoText").style.display="none"}
+async function loadPrice(){if(!validateStep())return;showLoader("Carregando valores...");const desconto=session.type==="empresa"&&Number(session.profile.EntregasComDescontoRestantes||0)>0?Number(session.profile.DescontoPercentual||0):0;const res=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto,cupom:"",rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!res.ok)return alert("Erro ao carregar preço.");lastPrice=res.valor;document.getElementById("priceText").innerText=money(lastPrice);renderCompanyOffers(res);document.getElementById("ecoText").style.display=res.desconto>0?"inline-block":"none";document.getElementById("ecoText").innerText=res.desconto>0?"Frete com economia "+res.desconto+"%":"Frete com economia";const c=document.getElementById("cupom");if(c)c.value="";const m=document.getElementById("cupomMsg");if(m)m.innerText="";const b=document.getElementById("cupomBtn");if(b)b.style.display="none";toggleCouponArea();setStep(6)}
+async function applyCouponPrice(){if(!session||session.type!=="usuario")return;const cupom=document.getElementById("cupom")?.value.trim()||"";const msg=document.getElementById("cupomMsg");const btn=document.getElementById("cupomBtn");if(!cupom){if(msg)msg.innerText="";if(btn)btn.style.display="none";return loadPriceWithoutStep()}showLoader("Verificando cupom...");const desconto=0;const res=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!res.ok){if(msg)msg.innerText="Cupom inválido";return}if(msg){msg.style.color="#047857";msg.innerText=res.cupomDesconto>0?"Cupom aplicado com sucesso":""}if(btn)btn.style.display="none";lastPrice=res.valor;document.getElementById("priceText").innerText=money(lastPrice);if(res.cupomDesconto>0){document.getElementById("ecoText").style.display="inline-block";document.getElementById("ecoText").innerText="Cupom aplicado "+res.cupomDesconto+"%"}else document.getElementById("ecoText").style.display="none"}
 async function loadPriceWithoutStep(){const desconto=session.type==="empresa"&&Number(session.profile.EntregasComDescontoRestantes||0)>0?Number(session.profile.DescontoPercentual||0):0;const res=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto,cupom:"",rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});if(!res.ok)return;lastPrice=res.valor;document.getElementById("priceText").innerText=money(lastPrice);renderCompanyOffers(res);document.getElementById("ecoText").style.display=res.desconto>0?"inline-block":"none";document.getElementById("ecoText").innerText=res.desconto>0?"Frete com economia "+res.desconto+"%":"Frete com economia"}
 function toggleCashObs(){
   const pg=document.getElementById("pagamento").value;
-  document.getElementById("cashObs").style.display=pg==="EspÃ©cie"?"block":"none";
+  document.getElementById("cashObs").style.display=pg==="Espécie"?"block":"none";
   document.getElementById("paymentNotice").style.display=pg?"block":"none";
 }
-async function confirmDelivery(){
-  if(!validateStep())return;
-  const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
-  if(cupom){
-    showLoader("Verificando cupom...");
-    const check=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto:0,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});
-    hideLoader();
-    if(!check.ok){
-      document.getElementById("cupomMsg").style.color="#ef4444";
-      document.getElementById("cupomMsg").innerText="Cupom invÃ¡lido";
-      return;
-    }
-    lastPrice=Number(check.valor||lastPrice||0);
-    document.getElementById("priceText").innerText=money(lastPrice);
-  }
-  document.getElementById("whatsappDeliveryModal")?.classList.add("active");
-}
-function closeWhatsappDeliveryModal(){
-  document.getElementById("whatsappDeliveryModal")?.classList.remove("active");
-}
-function googleMapsPlaceLink(address){
-  return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(address);
-}
-function googleMapsRouteLink(origin,destination){
-  return "https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(origin)+"&destination="+encodeURIComponent(destination)+"&travelmode=driving";
-}
-function createLocalDeliveryId(){
-  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code="";
-  if(window.crypto&&crypto.getRandomValues){
-    const values=new Uint32Array(8);crypto.getRandomValues(values);
-    values.forEach(v=>code+=chars[v%chars.length]);
-  }else{
-    for(let i=0;i<8;i++)code+=chars[Math.floor(Math.random()*chars.length)];
-  }
-  return "ENT-"+code;
-}
-function deliveryClientName(){
-  const p=session?.profile||{};
-  return String(session?.type==="empresa"?(p.Responsavel||p.NomeEmpresa||p.Empresa||""):(p.Nome||p.NomeCompleto||"")).trim()||"Cliente Pega&Leva";
-}
-function deliveryClientWhatsapp(){
-  const p=session?.profile||{};
-  return onlyDigits(p.Whatsapp||p.WhatsApp||p.Telefone||p.Celular||"");
-}
-function sendDeliveryToWhatsapp(){
-  if(!session)return alert("FaÃ§a login novamente para continuar.");
-  const coleta=fullAddress("coleta");
-  const destino=fullAddress("destino");
-  const coletaRef=pontoReferencia("coleta")||"NÃ£o informado";
-  const destinoRef=pontoReferencia("destino")||"NÃ£o informado";
-  const pedido=createLocalDeliveryId();
-  const nomeCliente=deliveryClientName();
-  const whatsappCliente=deliveryClientWhatsapp();
-  const nomeDestino=(document.getElementById("nomeDestino")?.value||"").trim();
-  const whatsappDestino=onlyDigits(document.getElementById("whatsappDestino")?.value||"");
-  const conteudo=(document.getElementById("conteudo")?.value||"").trim();
-  const volumes=(document.getElementById("volumes")?.value||"").trim();
-  const pagamento=(document.getElementById("pagamento")?.value||"").trim();
-  const obsPagamento=(document.getElementById("observacaoPagamento")?.value||"").trim();
-  const retorno=(document.getElementById("rotaRetorno")?.value||"").trim();
-  const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";
-  const valor=(document.getElementById("priceText")?.innerText||money(lastPrice)).trim();
-  const coletaMaps=googleMapsPlaceLink(coleta);
-  const destinoMaps=googleMapsPlaceLink(destino);
-  const rotaMaps=googleMapsRouteLink(coleta,destino);
-  const linhas=[
-    "*PEGA E LEVA DELIVERY*",
-    "*NOVA SOLICITAÃ‡ÃƒO DE ENTREGA*",
-    "Pedido: *"+pedido+"*",
-    "",
-    "*SOLICITANTE*",
-    "Tipo: "+(session.type==="empresa"?"Empresa":"UsuÃ¡rio"),
-    "Nome: "+nomeCliente,
-    whatsappCliente?"WhatsApp: "+whatsappCliente:null,
-    "",
-    "*COLETA*",
-    "EndereÃ§o: "+coleta,
-    "Bairro: "+document.getElementById("bairroColeta").value,
-    "ReferÃªncia: "+coletaRef,
-    "Mapa: "+coletaMaps,
-    "",
-    "*ENTREGA*",
-    "DestinatÃ¡rio: "+nomeDestino,
-    "WhatsApp: "+whatsappDestino,
-    "EndereÃ§o: "+destino,
-    "Bairro: "+document.getElementById("bairroDestino").value,
-    "ReferÃªncia: "+destinoRef,
-    "Mapa: "+destinoMaps,
-    "",
-    "*DETALHES DO PEDIDO*",
-    "ConteÃºdo: "+conteudo,
-    "Volumes: "+volumes,
-    "Rota de retorno: "+(retorno||"NÃ£o"),
-    "",
-    "*PAGAMENTO*",
-    "Forma: "+pagamento,
-    obsPagamento?"ObservaÃ§Ã£o: "+obsPagamento:null,
-    cupom?"Cupom: "+cupom:null,
-    "Valor: *"+valor+"*",
-    "",
-    "*ROTA COMPLETA NO MAPA*",
-    rotaMaps,
-    "",
-    "SolicitaÃ§Ã£o enviada pelo site Pega e Leva."
-  ].filter(linha=>linha!==null);
-  const url="https://wa.me/5589994029572?text="+encodeURIComponent(linhas.join("\n"));
-  closeWhatsappDeliveryModal();
-  clearDeliveryProgress();
-  window.open(url,"_blank","noopener,noreferrer");
-  setTimeout(()=>{resetDeliveryForm(false);showStatus("SolicitaÃ§Ã£o preparada","A notinha foi aberta no WhatsApp da Central. Toque em enviar para concluir.","ok")},250);
-}
-
+async function confirmDelivery(){if(!validateStep())return;const cupom=session.type==="usuario"?(document.getElementById("cupom")?.value.trim()||""):"";if(cupom){showLoader("Verificando cupom...");const check=await api("getPrice",{bairroColeta:document.getElementById("bairroColeta").value,bairroDestino:document.getElementById("bairroDestino").value,coletaCidade:document.getElementById("coletaCidade").value,destinoCidade:document.getElementById("destinoCidade").value,desconto:0,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,forcePriceFresh:true});hideLoader();if(!check.ok){document.getElementById("cupomMsg").style.color="#ef4444";document.getElementById("cupomMsg").innerText="Cupom inválido";return}}showLoader("Registrando entrega...");const res=await api("createDelivery",{tipoCliente:session.type,codigoCliente:session.profile.CodigoAcesso,enderecoColeta:fullAddress("coleta"),bairroColeta:document.getElementById("bairroColeta").value,coletaCidade:document.getElementById("coletaCidade").value,enderecoDestino:fullAddress("destino"),referenciaColeta:pontoReferencia("coleta"),referenciaDestino:pontoReferencia("destino"),bairroDestino:document.getElementById("bairroDestino").value,destinoCidade:document.getElementById("destinoCidade").value,nomeDestino:document.getElementById("nomeDestino").value,whatsappDestino:onlyDigits(document.getElementById("whatsappDestino").value),conteudo:document.getElementById("conteudo").value,volumes:document.getElementById("volumes").value,pagamento:document.getElementById("pagamento").value,observacaoPagamento:document.getElementById("observacaoPagamento").value,cupom,rotaRetorno:document.getElementById("rotaRetorno").value,ofertaEntrega:document.getElementById("ofertaEntrega")?document.getElementById("ofertaEntrega").value:"normal",status:"Entrega aceita",Status:"Entrega aceita",aceita:true});hideLoader();if(!res.ok){showPanelMessage(res.error||"Não foi possível criar entrega.","bad");return}currentSearchingId="";clearDeliveryProgress();resetDeliveryForm(false);playSuccessNotification();showStatus("Entrega aceita","A entrega foi registrada e já está aceita. Agora clique em Notificar entrega pelo WhatsApp.","ok");refreshBusy=false;await refreshPanel()}
 function closeSearchLoader(){hideLoader()}
 async function tryAgainCurrentSearch(){
   if(!currentSearchingId){hideLoader();return}
@@ -935,7 +870,7 @@ async function tryAgainCurrentSearch(){
   const res = await api("retryDelivery",{deliveryId:currentSearchingId});
   if(!res.ok){
     hideLoader();
-    showStatus("NÃ£o foi possÃ­vel tentar novamente", res.error || "Tente novamente.", "bad");
+    showStatus("Não foi possível tentar novamente", res.error || "Tente novamente.", "bad");
     return;
   }
   refreshPanel();
@@ -943,7 +878,7 @@ async function tryAgainCurrentSearch(){
 async function retryDelivery(id){
   showLoader("Buscando entregador...", true);
   const res = await api("retryDelivery",{deliveryId:id});
-  if(!res.ok){hideLoader();showStatus("Erro",res.error||"NÃ£o foi possÃ­vel tentar novamente.","bad");return}
+  if(!res.ok){hideLoader();showStatus("Erro",res.error||"Não foi possível tentar novamente.","bad");return}
   currentSearchingId=id;
   showStatus("Pedido reenviado","A entrega foi enviada novamente para todos os entregadores ativos.","ok");
   refreshPanel();
@@ -953,9 +888,9 @@ async function cancelGeneralDelivery(id){
   showLoader("Cancelando definitivamente...");
   const res = await api("cancelGeneralDelivery",{deliveryId:id});
   hideLoader();
-  if(!res.ok){showStatus("Erro",res.error||"NÃ£o foi possÃ­vel cancelar definitivamente.","bad");return}
+  if(!res.ok){showStatus("Erro",res.error||"Não foi possível cancelar definitivamente.","bad");return}
   currentSearchingId="";
-  showStatus("Entrega cancelada","A entrega foi cancelada definitivamente e nÃ£o serÃ¡ enviada novamente.","bad");
+  showStatus("Entrega cancelada","A entrega foi cancelada definitivamente e não será enviada novamente.","bad");
   refreshPanel();
 }
 
@@ -969,7 +904,7 @@ async function cancelDelivery(id){
   localStorage.setItem("pegaleva_status_client",JSON.stringify(knownStatuses));
   refreshPanel()
 }
-function resetDeliveryForm(){["coletaRua","coletaNumero","coletaReferencia","coletaCidade","destinoRua","destinoNumero","destinoReferencia","destinoCidade","nomeDestino","whatsappDestino","conteudo","observacaoPagamento","cupom"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});updateBairroOptions();document.getElementById("bairroColeta").value="";document.getElementById("bairroDestino").value="";document.getElementById("volumes").value="1";if(document.getElementById("rotaRetorno"))document.getElementById("rotaRetorno").value="NÃ£o";lastPrice=0;if(document.getElementById("ofertaEntrega"))document.getElementById("ofertaEntrega").value="normal";if(document.getElementById("companyOfferBox"))document.getElementById("companyOfferBox").style.display="none";document.getElementById("paymentNotice").style.display="none";if(document.getElementById("cupomMsg"))document.getElementById("cupomMsg").innerText="";if(document.getElementById("cupomBtn"))document.getElementById("cupomBtn").style.display="none";toggleCouponArea();document.querySelectorAll(".choice").forEach(c=>c.classList.remove("active"));const rr=document.getElementById("rotaRetorno");if(rr){const rotaStep=rr.closest(".step");if(rotaStep){const choices=rotaStep.querySelectorAll(".choice");if(choices[1])choices[1].classList.add("active");}}setStep(0)}
+function resetDeliveryForm(){["coletaRua","coletaNumero","coletaReferencia","coletaCidade","destinoRua","destinoNumero","destinoReferencia","destinoCidade","nomeDestino","whatsappDestino","conteudo","observacaoPagamento","cupom"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});updateBairroOptions();document.getElementById("bairroColeta").value="";document.getElementById("bairroDestino").value="";document.getElementById("volumes").value="1";if(document.getElementById("rotaRetorno"))document.getElementById("rotaRetorno").value="Não";lastPrice=0;if(document.getElementById("ofertaEntrega"))document.getElementById("ofertaEntrega").value="normal";if(document.getElementById("companyOfferBox"))document.getElementById("companyOfferBox").style.display="none";document.getElementById("paymentNotice").style.display="none";if(document.getElementById("cupomMsg"))document.getElementById("cupomMsg").innerText="";if(document.getElementById("cupomBtn"))document.getElementById("cupomBtn").style.display="none";toggleCouponArea();document.querySelectorAll(".choice").forEach(c=>c.classList.remove("active"));const rr=document.getElementById("rotaRetorno");if(rr){const rotaStep=rr.closest(".step");if(rotaStep){const choices=rotaStep.querySelectorAll(".choice");if(choices[1])choices[1].classList.add("active");}}setStep(0)}
 function showStatus(title,text,type){document.getElementById("statusTitle").innerText=title;document.getElementById("statusText").innerText=text;document.getElementById("statusIcon").className=type==="bad"?"fa-solid fa-circle-xmark":"fa-solid fa-circle-check";document.getElementById("statusIcon").style.color=type==="bad"?"#ef4444":"#10b981";document.getElementById("statusModal").classList.add("active")}
 function closeStatusModal(){document.getElementById("statusModal").classList.remove("active")}
 function logout(){
@@ -1020,7 +955,7 @@ function closeSimuladorFrete(){document.getElementById("simuladorFreteModal").cl
 const simSteps=["simStepComoSolicitar","simStepLocais","simStepValor"];
 function simGoStep(index){
   simClearError();
-  if(index===1&&!document.getElementById("simTipoSolicitacao").value){simShowError("Escolha se deseja solicitar como empresa ou como usuÃ¡rio.");return}
+  if(index===1&&!document.getElementById("simTipoSolicitacao").value){simShowError("Escolha se deseja solicitar como empresa ou como usuário.");return}
   simSteps.forEach((id,i)=>document.getElementById(id).classList.toggle("active",i===index));
   document.querySelectorAll("#simuladorFreteModal .sim-progress .bar").forEach((bar,i)=>bar.classList.toggle("active",i<=index));
 }
@@ -1028,19 +963,19 @@ function simFillBairroSelect(selectId,cidadeId){
   const select=document.getElementById(selectId),cidade=document.getElementById(cidadeId).value;
   if(!select)return;
   if(cidade==="Benedito Leite"){select.innerHTML='<option value="Benedito Leite">Benedito Leite</option>';select.value="Benedito Leite";select.disabled=true;return}
-  if(cidade==="UruÃ§uÃ­"){select.disabled=false;select.innerHTML='<option value="">Selecione</option>'+BAIRROS_URUCUÃ.map(b=>`<option>${b}</option>`).join("");return}
+  if(cidade==="Uruçuí"){select.disabled=false;select.innerHTML='<option value="">Selecione</option>'+BAIRROS_URUCUÍ.map(b=>`<option>${b}</option>`).join("");return}
   select.disabled=false;select.innerHTML='<option value="">Selecione a cidade primeiro</option>';
 }
 function simUpdateBairros(){
   const coletaAtual=document.getElementById("simBairroColeta")?.value||"",destinoAtual=document.getElementById("simBairroDestino")?.value||"";
   simFillBairroSelect("simBairroColeta","simColetaCidade");simFillBairroSelect("simBairroDestino","simDestinoCidade");
-  if(BAIRROS_URUCUÃ.includes(coletaAtual))document.getElementById("simBairroColeta").value=coletaAtual;
-  if(BAIRROS_URUCUÃ.includes(destinoAtual))document.getElementById("simBairroDestino").value=destinoAtual;
+  if(BAIRROS_URUCUÍ.includes(coletaAtual))document.getElementById("simBairroColeta").value=coletaAtual;
+  if(BAIRROS_URUCUÍ.includes(destinoAtual))document.getElementById("simBairroDestino").value=destinoAtual;
 }
 function simSelectTipoSolicitacao(el,value){el.parentElement.querySelectorAll(".choice").forEach(c=>c.classList.remove("active"));el.classList.add("active");document.getElementById("simTipoSolicitacao").value=value;simClearError()}
 function simSelectRotaRetorno(el,value){el.parentElement.querySelectorAll(".choice").forEach(c=>c.classList.remove("active"));el.classList.add("active");document.getElementById("simRotaRetorno").value=value}
 function simSetLoading(active){document.getElementById("simLoader").classList.toggle("active",active)}
-function simShowError(msg){const box=document.getElementById("simErrorBox");box.innerText=msg||"NÃ£o foi possÃ­vel calcular o frete.";box.classList.add("active")}
+function simShowError(msg){const box=document.getElementById("simErrorBox");box.innerText=msg||"Não foi possível calcular o frete.";box.classList.add("active")}
 function simClearError(){const box=document.getElementById("simErrorBox");box.innerText="";box.classList.remove("active")}
 function simValidarLocais(){
   const campos=["simColetaCidade","simBairroColeta","simDestinoCidade","simBairroDestino"];
@@ -1049,16 +984,16 @@ function simValidarLocais(){
 }
 async function simCalcularFrete(){
   simClearError();
-  if(!document.getElementById("simTipoSolicitacao").value){simShowError("Escolha se deseja solicitar como empresa ou como usuÃ¡rio.");simGoStep(0);return}
+  if(!document.getElementById("simTipoSolicitacao").value){simShowError("Escolha se deseja solicitar como empresa ou como usuário.");simGoStep(0);return}
   if(!simValidarLocais())return;
   simGoStep(2);simSetLoading(true);
   const tipo=document.getElementById("simTipoSolicitacao").value;
   const payload={bairroColeta:document.getElementById("simBairroColeta").value,bairroDestino:document.getElementById("simBairroDestino").value,coletaCidade:document.getElementById("simColetaCidade").value,destinoCidade:document.getElementById("simDestinoCidade").value,rotaRetorno:document.getElementById("simRotaRetorno").value,desconto:tipo==="empresa"?20:0,cupom:"",forcePriceFresh:true};
   const res=await api("getPrice",payload);simSetLoading(false);
-  if(!res.ok){simShowError(res.error||"NÃ£o foi possÃ­vel calcular o frete.");return}
+  if(!res.ok){simShowError(res.error||"Não foi possível calcular o frete.");return}
   document.getElementById("simPriceText").innerHTML=tipo==="empresa"?`<div class="sim-offers"><div class="sim-offer"><strong><i class="fa-solid fa-motorcycle"></i> Entrega Normal</strong><small>Valor com desconto da empresa</small><b>${money(res.valorNormal||res.valor)}</b></div><div class="sim-offer promo"><strong><i class="fa-solid fa-tag"></i> Entrega Promocional</strong><small>Oferta Promocional</small><b>${money(res.valorPromocional||res.valor)}</b></div></div>`:money(res.valor);
-  const tipoTxt=tipo==="empresa"?"Empresa":"UsuÃ¡rio";
-  document.getElementById("simRouteText").innerHTML=`<i class="fa-solid fa-motorcycle"></i> ${tipoTxt} â€¢ ${payload.bairroColeta} â†’ ${payload.bairroDestino}${payload.rotaRetorno==="Sim"?" â€¢ com retorno":""}`;
+  const tipoTxt=tipo==="empresa"?"Empresa":"Usuário";
+  document.getElementById("simRouteText").innerHTML=`<i class="fa-solid fa-motorcycle"></i> ${tipoTxt} • ${payload.bairroColeta} → ${payload.bairroDestino}${payload.rotaRetorno==="Sim"?" • com retorno":""}`;
 }
 
 function openForgotModal(){document.getElementById("forgotResult").innerText="";document.getElementById("forgotModal").classList.add("active")}
@@ -1066,13 +1001,13 @@ function closeForgotModal(){document.getElementById("forgotModal").classList.rem
 async function recoverCode(){
   const email=document.getElementById("forgotEmail").value.trim();
   const res=await api("forgotCode",{email});
-  document.getElementById("forgotResult").innerText=res.ok?("SEU CÃ“DIGO Ã‰: "+res.codigo):(res.error||"E-mail nÃ£o encontrado.");
+  document.getElementById("forgotResult").innerText=res.ok?("SEU CÓDIGO É: "+res.codigo):(res.error||"E-mail não encontrado.");
 }
 
 function showSuccessToast(msg){
  const t=document.getElementById('successToast');
  if(!t)return;
- t.textContent=msg||'InformaÃ§Ãµes adicionadas';
+ t.textContent=msg||'Informações adicionadas';
  t.classList.add('show');
  clearTimeout(t._h);
  t._h=setTimeout(()=>t.classList.remove('show'),2000);
@@ -1098,12 +1033,12 @@ function enhanceClientDeliveryCards(){
     if(title&&!card.querySelector(".client-route-pro")){
       const strong=title.querySelector("strong");
       const routeText=strong?strong.innerText.trim():"";
-      if(routeText.includes("â†’")){
-        const parts=routeText.split("â†’").map(x=>x.trim()).filter(Boolean);
+      if(routeText.includes("→")){
+        const parts=routeText.split("→").map(x=>x.trim()).filter(Boolean);
         if(parts.length>=2){
           const route=document.createElement("div");
           route.className="client-route-pro";
-          route.innerHTML=`<div class="client-route-point"><div class="client-route-label">Pickup</div><div class="client-route-address">${parts[0]}</div></div><div class="client-route-point dest"><div class="client-route-label">Entrega</div><div class="client-route-address">${parts.slice(1).join(" â†’ ")}</div></div>`;
+          route.innerHTML=`<div class="client-route-point"><div class="client-route-label">Pickup</div><div class="client-route-address">${parts[0]}</div></div><div class="client-route-point dest"><div class="client-route-label">Entrega</div><div class="client-route-address">${parts.slice(1).join(" → ")}</div></div>`;
           title.insertAdjacentElement("afterend",route);
         }
       }
@@ -1131,15 +1066,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   }catch(e){}
 });
 
-// O aviso de recuperaÃ§Ã£o Ã© definido no inÃ­cio do arquivo.
+// O aviso de recuperação é definido no início do arquivo.
 
 
 /* =========================================================
-   CorreÃ§Ã£o reforÃ§ada dos selects de bairros
-   Evita bug onde os bairros Ã s vezes nÃ£o aparecem no formulÃ¡rio.
+   Correção reforçada dos selects de bairros
+   Evita bug onde os bairros às vezes não aparecem no formulário.
 ========================================================= */
 (function(){
-  const BAIRROS_PADRAO_URUCUÃ = ["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","EsperanÃ§a","Ãgua Branca","Alto Bonito","SÃ£o Francisco","BabilÃ´nia","CanaÃ£","Portal dos Cerrados","Cerrados Park","Vista Bela"];
+  const BAIRROS_PADRAO_URUCUÍ = ["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
 
   function getEl(id){
     return document.getElementById(id);
@@ -1148,9 +1083,9 @@ document.addEventListener("DOMContentLoaded",()=>{
   function bairrosPorCidade(cidade){
     cidade = String(cidade || "").trim();
     if(cidade === "Benedito Leite") return ["Benedito Leite"];
-    return (typeof BAIRROS_URUCUÃ !== "undefined" && Array.isArray(BAIRROS_URUCUÃ) && BAIRROS_URUCUÃ.length)
-      ? BAIRROS_URUCUÃ
-      : BAIRROS_PADRAO_URUCUÃ;
+    return (typeof BAIRROS_URUCUÍ !== "undefined" && Array.isArray(BAIRROS_URUCUÍ) && BAIRROS_URUCUÍ.length)
+      ? BAIRROS_URUCUÍ
+      : BAIRROS_PADRAO_URUCUÍ;
   }
 
   function ensureBairroSelect(selectId, cidadeId, keepValue=true){
