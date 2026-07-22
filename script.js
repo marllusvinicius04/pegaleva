@@ -889,7 +889,7 @@ async function sendDeliveryToWhatsapp(){
   closeWhatsappDeliveryModal();
   showLoader("Registrando sua entrega...");
 
-  const res=await api("createWhatsappAcceptedDelivery",{
+  const res=await api("createDelivery",{
     tipoCliente:session.type,
     codigoCliente:session.profile.CodigoAcesso,
     nomeSolicitante:nomeCliente,
@@ -968,7 +968,7 @@ async function sendDeliveryToWhatsapp(){
     cupom?"Cupom: "+cupom:"",
     "Valor: *"+valor+"*",
     "",
-    "Status no sistema: *Entrega aceita*",
+    "Status no sistema: *Solicitação registrada*",
     "Solicitação enviada pelo site Pega e Leva."
   ].filter(Boolean);
 
@@ -979,7 +979,7 @@ async function sendDeliveryToWhatsapp(){
   currentSearchingId="";
   refreshBusy=false;
   await refreshPanel();
-  showStatus("Entrega aceita","A entrega foi registrada na planilha e já aparece em Minhas entregas como aceita pela Central.","ok");
+  showStatus("Entrega registrada","A entrega foi salva na planilha e já aparece em Minhas entregas. A Central continuará o atendimento pelo WhatsApp.","ok");
 }
 function closeSearchLoader(){hideLoader()}
 async function tryAgainCurrentSearch(){
