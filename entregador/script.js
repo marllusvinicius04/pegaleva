@@ -502,7 +502,7 @@ function renderMine(list){
     return;
   }
 
-  document.getElementById("myBox").innerHTML=list.map(d=>d.TipoRegistro==="CORRIDA"?manualRaceHtml(d):deliveryHtml(d,false,false)).join("");
+  document.getElementById("myBox").innerHTML=list.map(d=>deliveryHtml(d,false,false)).join("");
   window.lastDriverDeliveries=list;
 }
 
@@ -645,6 +645,7 @@ async function openDeliveryConfirmation(id){
 
 
 function deliveryHtml(d,available,modalOnly){
+  if(String(d.TipoRegistro||"").toUpperCase()==="CORRIDA")return manualRaceHtml(d);
   const waDest=onlyDigits(d.WhatsAppDestino),
         waSend=onlyDigits(d.WhatsAppSolicitante),
         msg=encodeURIComponent("Olá, sou entregador do Pega e Leva. Estou na sua residência!"),
@@ -1500,62 +1501,192 @@ document.getElementById("driverCode").value="";
   window.addEventListener("beforeunload",stopPersistentDeliveryAlert);
 })();
 
-/* Adicionar entrega por Código ID */
+/* =========================================================
+   CORRIDAS MANUAIS — Código ID de 3 caracteres
+   Conectado à aba CORRIDAS pelo Google Apps Script
+========================================================= */
+function normalizeManualCodigoId(value){
+  return String(value||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,3);
+}
+
 function openManualDeliveryModal(){
-  closeSideMenu&&closeSideMenu();
+  if(typeof closeSideMenu==="function")closeSideMenu();
+
   const modal=document.getElementById("manualDeliveryModal");
   const code=document.getElementById("manualClientIdCode");
   const value=document.getElementById("manualDeliveryValue");
   const located=document.getElementById("manualClientLocated");
-  if(code)code.value="";
+
+  if(code){
+    code.value="";
+    code.maxLength=3;
+    code.setAttribute("maxlength","3");
+    code.setAttribute("autocomplete","off");
+    code.setAttribute("inputmode","text");
+    code.oninput=function(){
+      this.value=normalizeManualCodigoId(this.value);
+      if(located){
+        located.classList.remove("active");
+        located.innerHTML="";
+      }
+    };
+  }
+
   if(value)value.value="";
-  if(located){located.classList.remove("active");located.innerHTML="";}
+  if(located){
+    located.classList.remove("active");
+    located.innerHTML="";
+  }
   if(modal)modal.classList.add("active");
 }
+
 function closeManualDeliveryModal(){
   const modal=document.getElementById("manualDeliveryModal");
   if(modal)modal.classList.remove("active");
 }
-async function createManualRace(){
-  const codigoId=(document.getElementById("manualClientIdCode")?.value||"").trim();
-  const valor=(document.getElementById("manualDeliveryValue")?.value||"").trim();
+
+async function locateManualRaceClient(){
+  const codeInput=document.getElementById("manualClientIdCode");
   const located=document.getElementById("manualClientLocated");
-  if(!codigoId)return showStatus("Código ID obrigatório","Digite o Código ID da empresa ou usuário.");
-  if(!valor||Number(String(valor).replace(/\./g,"").replace(",","."))<=0)return showStatus("Valor inválido","Informe o valor da entrega.");
-  showLoader("Localizando cadastro...");
-  const res=await api("createCorrida",{codigoId,valor,codigoEntregador:session.profile.CodigoAcesso},{retries:1,timeoutMs:30000});
-  hideLoader();
-  if(!res.ok){
-    if(located){located.classList.remove("active");located.innerHTML="";}
-    return showStatus("Entrega não registrada",friendlyError(res.error||"Código ID não localizado."));
+  const codigoId=normalizeManualCodigoId(codeInput&&codeInput.value);
+
+  if(codeInput)codeInput.value=codigoId;
+  if(!/^[A-Z0-9]{3}$/.test(codigoId)){
+    if(located){
+      located.classList.remove("active");
+      located.innerHTML="";
+    }
+    return showStatus("Código ID inválido","Digite exatamente 3 letras ou números, como A48.");
   }
-  if(located){located.classList.add("active");located.innerHTML='<i class="fa-solid fa-circle-check"></i> '+(res.corrida.NomeCliente||"Cadastro localizado");}
+
+  showLoader("Localizando cadastro...");
+  const res=await api("locateClientByCodigoId",{codigoId},{retries:1,timeoutMs:30000});
+  hideLoader();
+
+  if(!res.ok){
+    if(located){
+      located.classList.remove("active");
+      located.innerHTML="";
+    }
+    return showStatus("Cadastro não localizado",friendlyError(res.error||"Código ID não localizado."));
+  }
+
+  if(located){
+    located.classList.add("active");
+    located.innerHTML='<i class="fa-solid fa-circle-check"></i> '+(res.nome||"Cadastro localizado")+
+      ' <small style="display:block;margin-top:4px">'+String(res.tipo||"").toUpperCase()+' • '+codigoId+'</small>';
+  }
+  return res;
+}
+
+async function createManualRace(){
+  if(!session||!session.profile){
+    return showStatus("Sessão encerrada","Entre novamente no painel do entregador.");
+  }
+
+  const codeInput=document.getElementById("manualClientIdCode");
+  const valueInput=document.getElementById("manualDeliveryValue");
+  const located=document.getElementById("manualClientLocated");
+  const codigoId=normalizeManualCodigoId(codeInput&&codeInput.value);
+  const valorTexto=String(valueInput&&valueInput.value||"").trim();
+  const valorNumero=Number(valorTexto.replace(/\./g,"").replace(",",".").replace(/[^0-9.-]/g,""));
+
+  if(codeInput)codeInput.value=codigoId;
+
+  if(!/^[A-Z0-9]{3}$/.test(codigoId)){
+    return showStatus("Código ID inválido","Digite exatamente 3 letras ou números, como A48.");
+  }
+  if(!Number.isFinite(valorNumero)||valorNumero<=0){
+    return showStatus("Valor inválido","Informe um valor maior que zero.");
+  }
+
+  showLoader("Criando corrida...");
+  const res=await api("createCorrida",{
+    codigoId,
+    valor:valorNumero,
+    codigoEntregador:session.profile.CodigoAcesso
+  },{retries:1,timeoutMs:30000});
+  hideLoader();
+
+  if(!res.ok){
+    if(located){
+      located.classList.remove("active");
+      located.innerHTML="";
+    }
+    return showStatus("Corrida não registrada",friendlyError(res.error||"Não foi possível criar a corrida."));
+  }
+
+  if(located){
+    located.classList.add("active");
+    located.innerHTML='<i class="fa-solid fa-circle-check"></i> '+(res.corrida&&res.corrida.NomeCliente||"Cadastro localizado");
+  }
+
   closeManualDeliveryModal();
-  showStatus("Entrega adicionada","A corrida foi registrada e já aparece em Minhas entregas.");
+  showStatus("Corrida criada","A corrida foi registrada na aba CORRIDAS e adicionada em Minhas entregas.");
+
+  refreshBusy=false;
+  lastRefreshAt=0;
   await refreshPanel();
 }
+
 function manualRaceHtml(d){
   const status=String(d.Status||"Terminando uma entrega");
   const safe=String(d.ID||"").replace(/'/g,"&#039;");
-  return `<div class="delivery pro-card">
+  const clientType=String(d.TipoCliente||"cliente").toUpperCase();
+
+  return `<div class="delivery pro-card corrida-card" data-corrida-id="${safe}">
     <div class="delivery-top-pro">
-      <div class="delivery-user-pro"><span class="user-circle"><i class="fa-solid fa-building"></i></span><div><strong>${d.NomeCliente||"Cliente localizado"}</strong><p class="muted">Código ID: ${d.CodigoID||"-"}</p></div></div>
+      <div class="delivery-user-pro">
+        <span class="user-circle"><i class="fa-solid fa-building"></i></span>
+        <div>
+          <strong>${d.NomeCliente||"Cliente localizado"}</strong>
+          <p class="muted">${clientType} • Código ID: ${d.CodigoID||"-"}</p>
+        </div>
+      </div>
       <div class="delivery-price-pro">${money(d.Valor)}</div>
     </div>
+
     <p class="info"><b>Status:</b> <span class="badge yellow">${status}</span></p>
+
     <div class="delivery-actions-pro">
-      <button class="btn green" onclick="updateManualRaceStatus('${safe}','Terminando uma entrega')"><i class="fa-solid fa-flag-checkered"></i> Terminando uma entrega</button>
-      <button class="btn" onclick="updateManualRaceStatus('${safe}','Estou a caminho')"><i class="fa-solid fa-route"></i> Estou a caminho</button>
-      <button class="btn red wide" onclick="updateManualRaceStatus('${safe}','Dificuldades no local da entrega')"><i class="fa-solid fa-triangle-exclamation"></i> Dificuldades no local da entrega</button>
-      <button class="btn green wide" onclick="updateManualRaceStatus('${safe}','Entrega finalizada')"><i class="fa-solid fa-circle-check"></i> Entrega finalizada</button>
+      <button class="btn green" onclick="updateManualRaceStatus('${safe}','Terminando uma entrega')">
+        <i class="fa-solid fa-hourglass-half"></i> Terminando uma entrega
+      </button>
+      <button class="btn" onclick="updateManualRaceStatus('${safe}','Estou a caminho')">
+        <i class="fa-solid fa-route"></i> Estou a caminho
+      </button>
+      <button class="btn red wide" onclick="updateManualRaceStatus('${safe}','Dificuldades no local da entrega')">
+        <i class="fa-solid fa-triangle-exclamation"></i> Dificuldades no local da entrega
+      </button>
+      <button class="btn green wide" onclick="updateManualRaceStatus('${safe}','Entrega finalizada')">
+        <i class="fa-solid fa-circle-check"></i> Entrega finalizada
+      </button>
     </div>
   </div>`;
 }
+
 async function updateManualRaceStatus(id,status){
-  showLoader("Atualizando entrega...");
-  const res=await api("updateCorridaStatus",{corridaId:id,status,codigoEntregador:session.profile.CodigoAcesso},{retries:1,timeoutMs:30000});
+  if(!session||!session.profile){
+    return showStatus("Sessão encerrada","Entre novamente no painel do entregador.");
+  }
+
+  showLoader("Atualizando corrida...");
+  const res=await api("updateCorridaStatus",{
+    corridaId:id,
+    status,
+    codigoEntregador:session.profile.CodigoAcesso
+  },{retries:1,timeoutMs:30000});
   hideLoader();
-  if(!res.ok)return showStatus("Não foi possível atualizar",friendlyError(res.error||"Tente novamente."));
-  if(status==="Entrega finalizada")showStatus("Entrega finalizada","A corrida foi finalizada e registrada.");
+
+  if(!res.ok){
+    return showStatus("Não foi possível atualizar",friendlyError(res.error||"Tente novamente."));
+  }
+
+  if(status==="Entrega finalizada"){
+    showStatus("Entrega finalizada","A corrida foi finalizada e permanece registrada na aba CORRIDAS.");
+  }
+
+  refreshBusy=false;
+  lastRefreshAt=0;
   await refreshPanel();
 }
