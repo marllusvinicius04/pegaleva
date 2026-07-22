@@ -968,12 +968,22 @@ async function confirmAndOpenDeliveryWhatsApp(id,button){
 
 function buildDeliveryWhatsAppUrl(d){
   const acompanhar=d.AcompanharUrl||"https://pegaelevadelivery.com.br/rastreioentrega";
+
+  const codigoRastreio=String(d.CodigoID||session?.profile?.CodigoID||"").toUpperCase();
+
+  const codigoPedido=codigoRastreio+
+    Number(d.Valor||0)
+      .toFixed(2)
+      .replace(".","")
+      .replace(/^0+/,"");
+
   const linhas=[
     "🛵 *PEGA E LEVA DELIVERY*",
     "*NOVA SOLICITAÇÃO DE ENTREGA*",
     "",
-    `Código ID da empresa/usuário: *${d.CodigoID||session?.profile?.CodigoID||""}*`,
-    `*VALOR DA ENTREGA: ${money(d.Valor||0)}*`,
+    `📦 Código de rastreio: *${codigoRastreio}*`,
+    `🧾 Código do pedido: *${codigoPedido}*`,
+    `💰 Valor da entrega: *${money(d.Valor||0)}*`,
     "",
     `🔗 *Acompanhar entrega*`,
     acompanhar,
