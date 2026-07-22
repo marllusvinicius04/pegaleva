@@ -644,61 +644,19 @@ function renderDeliveries(list){
 
 function whatsappSlideHtml(id){
   const safe=String(id||"").replace(/'/g,"&#039;");
-  return `<div class="wa-slide" data-delivery-id="${safe}">
-    <div class="wa-slide-fill"></div>
-    <span class="wa-slide-label"><i class="fa-brands fa-whatsapp"></i> Arraste para confirmar</span>
-    <button type="button" class="wa-slide-handle" aria-label="Arrastar para confirmar envio ao WhatsApp">
-      <i class="fa-solid fa-chevron-right"></i>
-    </button>
-  </div>`;
+  return `<button type="button" class="btn green whatsapp-confirm-btn" onclick="notifyDeliveryWhatsApp('${safe}')">
+    <i class="fa-brands fa-whatsapp"></i> Confirmar e enviar pelo WhatsApp
+  </button>`;
 }
-function installWhatsAppSliders(root=document){
-  root.querySelectorAll(".wa-slide:not([data-ready])").forEach(slider=>{
-    slider.dataset.ready="1";
-    const handle=slider.querySelector(".wa-slide-handle");
-    const fill=slider.querySelector(".wa-slide-fill");
-    const label=slider.querySelector(".wa-slide-label");
-    let dragging=false,startX=0,startLeft=0;
-    const maxLeft=()=>Math.max(0,slider.clientWidth-handle.offsetWidth-8);
-    const moveTo=x=>{
-      const left=Math.max(4,Math.min(maxLeft(),x));
-      handle.style.transform=`translateX(${left-4}px)`;
-      fill.style.width=`${left+handle.offsetWidth}px`;
-      const progress=maxLeft()?left/maxLeft():0;
-      label.style.opacity=String(Math.max(.18,1-progress*.75));
-      if(progress>=.94)confirmWhatsAppSlide(slider);
-    };
-    const pointX=e=>e.touches?e.touches[0].clientX:e.clientX;
-    const start=e=>{if(slider.classList.contains("confirmed"))return;dragging=true;startX=pointX(e);startLeft=parseFloat(handle.dataset.left||"4");slider.classList.add("dragging");e.preventDefault()};
-    const move=e=>{if(!dragging)return;const left=startLeft+(pointX(e)-startX);handle.dataset.left=String(left);moveTo(left);e.preventDefault()};
-    const end=()=>{if(!dragging)return;dragging=false;slider.classList.remove("dragging");if(!slider.classList.contains("confirmed")){handle.dataset.left="4";handle.style.transform="translateX(0)";fill.style.width="0";label.style.opacity="1"}};
-    handle.addEventListener("mousedown",start);
-    handle.addEventListener("touchstart",start,{passive:false});
-    window.addEventListener("mousemove",move);
-    window.addEventListener("touchmove",move,{passive:false});
-    window.addEventListener("mouseup",end);
-    window.addEventListener("touchend",end);
-  });
+
+function installWhatsAppSliders(){
+  // Mantida apenas por compatibilidade com chamadas antigas.
+  // O botão agora funciona com clique simples.
 }
-function confirmWhatsAppSlide(slider){
-  if(slider.classList.contains("confirmed"))return;
-  slider.classList.add("confirmed");
-  const label=slider.querySelector(".wa-slide-label");
-  const handle=slider.querySelector(".wa-slide-handle");
-  if(label)label.innerHTML='<i class="fa-solid fa-check"></i> Confirmado! Abrindo WhatsApp...';
-  if(handle)handle.innerHTML='<i class="fa-solid fa-check"></i>';
-  document.body.classList.add("wa-confirm-screen");
-  const deliveryId=slider.dataset.deliveryId;
-  setTimeout(()=>{
-    notifyDeliveryWhatsApp(deliveryId);
-    document.body.classList.remove("wa-confirm-screen");
-  },850);
-}
-document.addEventListener("DOMContentLoaded",()=>installWhatsAppSliders());
 
 
 function notifyDeliveryWhatsApp(id){
-  const d=(ultimaEntregaLocal&&(String(ultimaEntregaLocal.CodigoCliente)===String(id)||String(ultimaEntregaLocal.ID)===String(id)))
+  const d=(ultimaEntregaLocal&&String(ultimaEntregaLocal.ID)===String(id))
     ?ultimaEntregaLocal
     :(window.lastClientDeliveries||[]).find(x=>String(x.ID)===String(id));
   if(!d)return alert("Dados da solicitação não encontrados.");
@@ -709,8 +667,6 @@ function notifyDeliveryWhatsApp(id){
     "*NOVA SOLICITAÇÃO DE ENTREGA*",
     "",
     `Código ID da empresa/usuário: *${d.CodigoID||session?.profile?.CodigoID||""}*`,
-    `Código de rastreio: *${d.CodigoEntrega||d.CodigoCT||""}*`,
-    "",
     `*VALOR DA ENTREGA: ${money(d.Valor||0)}*`,
     "",
     `🔗 *Acompanhar entrega*`,
@@ -1073,8 +1029,7 @@ function showAcceptedStatus(id){
   }
   if(text){
     const codigoId=ultimaEntregaLocal?.CodigoID||session?.profile?.CodigoID||"";
-    const rastreio=ultimaEntregaLocal?.CodigoEntrega||ultimaEntregaLocal?.CodigoCT||"";
-    text.innerHTML=`<div style="display:grid;gap:6px;margin-bottom:16px"><p class="muted" style="margin:0">Código ID da empresa/usuário: <b>${codigoId}</b></p><p class="muted" style="margin:0">Código de rastreio: <b>${rastreio}</b></p></div>${whatsappSlideHtml(ultimaEntregaLocal?.ID||id)}`;
+    text.innerHTML=`<div style="display:grid;gap:6px;margin-bottom:16px"><p class="muted" style="margin:0">Código ID da empresa/usuário: <b>${codigoId}</b></p></div>${whatsappSlideHtml(ultimaEntregaLocal?.ID||id)}`;
     setTimeout(()=>installWhatsAppSliders(document),0);
   }
   if(!document.getElementById("motoSuccessAnimation")){
