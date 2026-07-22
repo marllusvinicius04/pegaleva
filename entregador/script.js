@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260722-corridas-v4";
+const APP_CACHE_VERSION="20260722-corridas-ct-pagamento-v5";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -820,6 +820,7 @@ async function acceptDelivery(id){
 
 
 let currentPaymentDeliveryId="";
+let currentPaymentRaceId="";
 function openPaymentModal(id){
   const d=(window.lastDriverDeliveries||[]).find(x=>x.ID===id)||(window.lastAvailableDeliveries||[]).find(x=>x.ID===id);
   if(!d)return alert("Entrega não encontrada no painel.");
@@ -842,9 +843,38 @@ function openPaymentModal(id){
   </div>`;
   document.getElementById("paymentModal").classList.add("active");
 }
-function closePaymentModal(){document.getElementById("paymentModal").classList.remove("active");currentPaymentDeliveryId=""}
+function closePaymentModal(){document.getElementById("paymentModal").classList.remove("active");currentPaymentDeliveryId="";currentPaymentRaceId=""}
 
 async function registerPayment(status){
+  if(currentPaymentRaceId){
+    const raceId=currentPaymentRaceId;
+    showLoader("Registrando pagamento da corrida...");
+    const res=await api("registerCorridaPaymentStatus",{
+      corridaId:raceId,
+      status,
+      codigoEntregador:session.profile.CodigoAcesso
+    },{retries:1,timeoutMs:30000});
+    hideLoader();
+
+    if(!res.ok)return alert(friendlyError(res.error||"Erro ao registrar pagamento da corrida."));
+
+    (window.lastDriverDeliveries||[]).forEach(d=>{
+      if(d.ID===raceId)d.StatusPagamento=status;
+    });
+
+    closePaymentModal();
+    showStatus(
+      status==="Pago"?"Pagamento da corrida registrado":"Pagamento da corrida pendente",
+      status==="Pago"
+        ?"O pagamento foi marcado como realizado com sucesso."
+        :"O pagamento ficou registrado como pendente."
+    );
+    refreshBusy=false;
+    lastRefreshAt=0;
+    await refreshPanel();
+    return;
+  }
+
   if(!currentPaymentDeliveryId)return;
   const paidId=currentPaymentDeliveryId;
   showLoader("Registrando pagamento...");
@@ -1287,7 +1317,7 @@ document.getElementById("driverCode").value="";
   };
 
   closeStatusModal = function(){ safeClassRemove("statusModal","active"); };
-  closePaymentModal = function(){ safeClassRemove("paymentModal","active"); currentPaymentDeliveryId=""; };
+  closePaymentModal = function(){ safeClassRemove("paymentModal","active"); currentPaymentDeliveryId=""; currentPaymentRaceId=""; };
   closePaymentsModal = function(){ safeClassRemove("paymentsModal","active"); };
   closeDriverHistoryModal = function(){ safeClassRemove("driverHistoryModal","active"); };
   closeWithdrawModal = function(){ safeClassRemove("withdrawModal","active"); };
@@ -1629,10 +1659,52 @@ async function createManualRace(){
   await refreshPanel();
 }
 
+function openManualRacePayment(id){
+  const d=(window.lastDriverDeliveries||[]).find(x=>String(x.ID)===String(id));
+  if(!d)return showStatus("Corrida não encontrada","Atualize o painel e tente novamente.");
+
+  currentPaymentDeliveryId="";
+  currentPaymentRaceId=id;
+
+  const qrUrl="https://i.ibb.co/Nd0HHzGc/Whats-App-Image-2026-07-02-at-22-17-59.jpg";
+  const codigoCT=d.CodigoCT||("CT"+String(d.CodigoID||"").toUpperCase());
+  const statusPagamento=d.StatusPagamento||"Aguardando confirmação";
+
+  document.getElementById("paymentBody").innerHTML=`<div class="delivery bank-payment-card">
+    <div style="text-align:center;margin-bottom:14px">
+      <span style="display:inline-flex;width:54px;height:54px;border-radius:50%;align-items:center;justify-content:center;background:#eef2ff;font-size:24px">
+        <i class="fa-solid fa-building-columns"></i>
+      </span>
+      <h3 style="margin:10px 0 4px">Pagamento da corrida</h3>
+      <p class="muted">${codigoCT} • ${d.NomeCliente||"Cliente"}</p>
+    </div>
+
+    <div style="padding:14px;border-radius:14px;background:#f8fafc;margin-bottom:14px">
+      <p class="info"><b>Valor da corrida:</b></p>
+      <div style="font-size:30px;font-weight:800;margin-top:4px">${money(d.Valor)}</div>
+      <p class="info" style="margin-top:10px"><b>Status:</b> ${statusPagamento}</p>
+    </div>
+
+    <div class="pix-box">
+      <b>PAGAR AGORA VIA PIX</b>
+      <img src="${qrUrl}" alt="QR Code PIX">
+      <p class="info"><b>Chave PIX:</b> ${PIX_KEY}</p>
+      <p class="info"><b>Banco:</b> MERCADO PAGO LTDA</p>
+      <p class="info"><b>Recebedor:</b> 57.293.143 Marllus Vinicius Silva Araujo</p>
+      <p class="pay-note">Confira o pagamento antes de registrar como realizado.</p>
+    </div>
+  </div>`;
+
+  document.getElementById("paymentModal").classList.add("active");
+}
+
 function manualRaceHtml(d){
   const status=String(d.Status||"Terminando uma entrega");
   const safe=String(d.ID||"").replace(/'/g,"&#039;");
   const clientType=String(d.TipoCliente||"cliente").toUpperCase();
+  const codigoCT=d.CodigoCT||("CT"+String(d.CodigoID||"").toUpperCase());
+  const pagamento=d.StatusPagamento||"Aguardando confirmação";
+  const pagamentoPago=pagamento==="Pago";
 
   return `<div class="delivery pro-card corrida-card" data-corrida-id="${safe}">
     <div class="delivery-top-pro">
@@ -1640,15 +1712,20 @@ function manualRaceHtml(d){
         <span class="user-circle"><i class="fa-solid fa-building"></i></span>
         <div>
           <strong>${d.NomeCliente||"Cliente localizado"}</strong>
-          <p class="muted">${clientType} • Código ID: ${d.CodigoID||"-"}</p>
+          <p class="muted">${clientType} • Código CT: ${codigoCT}</p>
+          <p class="muted">Código ID: ${d.CodigoID||"-"}</p>
         </div>
       </div>
       <div class="delivery-price-pro">${money(d.Valor)}</div>
     </div>
 
     <p class="info"><b>Status:</b> <span class="badge yellow">${status}</span></p>
+    <p class="info"><b>Pagamento:</b> <span class="badge ${pagamentoPago?"green":"yellow"}">${pagamento}</span></p>
 
     <div class="delivery-actions-pro">
+      <button class="btn light wide" onclick="openManualRacePayment('${safe}')">
+        <i class="fa-solid fa-building-columns"></i> Pagar agora
+      </button>
       <button class="btn green" onclick="updateManualRaceStatus('${safe}','Terminando uma entrega')">
         <i class="fa-solid fa-hourglass-half"></i> Terminando uma entrega
       </button>
@@ -1682,8 +1759,17 @@ async function updateManualRaceStatus(id,status){
     return showStatus("Não foi possível atualizar",friendlyError(res.error||"Tente novamente."));
   }
 
+  if(res.profile){
+    session.profile=res.profile;
+    localStorage.setItem("pegaleva_driver",JSON.stringify(session));
+    renderDriverHeader();
+  }
+
   if(status==="Entrega finalizada"){
-    showStatus("Entrega finalizada","A corrida foi finalizada e permanece registrada na aba CORRIDAS.");
+    showStatus(
+      "Entrega finalizada",
+      "A corrida foi finalizada, registrada na aba CORRIDAS e o saldo do entregador foi atualizado."
+    );
   }
 
   refreshBusy=false;
