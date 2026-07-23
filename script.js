@@ -279,6 +279,30 @@ async function api(action,data={}){
 }
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function onlyDigits(v){return String(v||"").replace(/\D/g,"")}
+function formatBrazilianWhatsApp(value){
+  const digits=onlyDigits(value).slice(0,11);
+  if(digits.length<=2)return digits?`(${digits}`:"";
+  if(digits.length<=7)return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+}
+function installWhatsAppMasks(){
+  ["uWhatsapp","cWhatsapp","whatsappDestino"].forEach(id=>{
+    const field=document.getElementById(id);
+    if(!field||field.dataset.whatsappMaskInstalled)return;
+    field.dataset.whatsappMaskInstalled="1";
+    field.value=formatBrazilianWhatsApp(field.value);
+    field.addEventListener("input",()=>{field.value=formatBrazilianWhatsApp(field.value)});
+    field.addEventListener("blur",()=>{
+      const digits=onlyDigits(field.value);
+      if(digits&&digits.length!==11){
+        field.setCustomValidity("Informe um WhatsApp válido com DDD e 11 números.");
+      }else{
+        field.setCustomValidity("");
+      }
+    });
+  });
+}
+document.addEventListener("DOMContentLoaded",installWhatsAppMasks);
 const BAIRROS_URUCUÍ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
 function fillBairroSelect(selectId,cidadeId){
   const select=document.getElementById(selectId),cidade=document.getElementById(cidadeId).value;
@@ -525,13 +549,13 @@ function validateLogradouroField(id){
   return false;
 }
 function getCompanyCreateData(){return {responsavel:(document.getElementById("cNomeEmpresa")?.value||"").trim(),cpfCnpj:onlyDigits(document.getElementById("cCpfCnpj")?.value||""),email:(document.getElementById("cEmail")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("cWhatsapp")?.value||""),cidade:(document.getElementById("cCidade")?.value||"").trim(),rua:(document.getElementById("cRua")?.value||"").trim(),numero:(document.getElementById("cNumero")?.value||"").trim(),referencia:(document.getElementById("cReferencia")?.value||"").trim(),codigo:(document.getElementById("newCompanyCode")?.value||"").trim()}}
-function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail válido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informações de endereço para continuar.");return}if(step===3&&!validateLogradouroField("cRua"))return;[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
+function showCompanyCreateStep(step){const data=getCompanyCreateData();if(step===2&&(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp)){alert("Preencha os dados da empresa para continuar.");return}if(step===2&&data.whatsapp.length!==11){alert("Informe um WhatsApp válido com DDD e 11 números.");document.getElementById("cWhatsapp")?.focus();return}if(step===2&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){alert("Digite um e-mail válido.");return}if(step===3&&(!data.cidade||!data.rua||!data.numero||!data.referencia)){alert("Preencha todas as informações de endereço para continuar.");return}if(step===3&&!validateLogradouroField("cRua"))return;[1,2,3].forEach(n=>{const el=document.getElementById("companyCreateStep"+n);if(el)el.style.display=n===step?"block":"none"})}
 async function createCompanyAccount(){const data=getCompanyCreateData();if(!data.responsavel||!data.cpfCnpj||!data.email||!data.whatsapp||!data.cidade||!data.rua||!data.numero||!data.referencia||!data.codigo){alert("Preencha todos os dados da empresa.");return}showLoader("Cadastrando empresa...");const res=await api("adminRegisterCompany",data);hideLoader();if(!res.ok){alert(res.error||"Não foi possível cadastrar a empresa.");return}const ok=await loginByCode(data.codigo,"empresa",data.email,true);if(ok)saveQuickAccess("empresa",data.email,data.codigo)}
 let codeTimer;function checkCodeLive(inputId,msgId){clearTimeout(codeTimer);codeTimer=setTimeout(async()=>{const codigo=document.getElementById(inputId).value.trim();if(!codigo){document.getElementById(msgId).innerText="";return}const res=await api("checkCode",{codigo});document.getElementById(msgId).innerText=res.message||"";document.getElementById(msgId).style.color=res.available?"#047857":"#ef4444"},350)}
 let pendingUserRegisterData=null;
 function resetUserCreateSteps(){const form=document.getElementById("userCreateFormStep"),terms=document.getElementById("userTermsStep");pendingUserRegisterData=null;if(form)form.style.display="block";if(terms)terms.style.display="none"}
 function getUserCreateData(){return {nome:(document.getElementById("uNome")?.value||"").trim(),whatsapp:onlyDigits(document.getElementById("uWhatsapp")?.value||""),email:(document.getElementById("uEmail")?.value||"").trim(),cpf:onlyDigits(document.getElementById("uCpf")?.value||""),codigo:(document.getElementById("newUserCode")?.value||"").trim()}}
-function showUserTermsStep(){const data=getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuário para continuar.");return}pendingUserRegisterData=data;document.getElementById("userCreateFormStep").style.display="none";document.getElementById("userTermsStep").style.display="block"}
+function showUserTermsStep(){const data=getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuário para continuar.");return}if(data.whatsapp.length!==11){alert("Informe um WhatsApp válido com DDD e 11 números.");document.getElementById("uWhatsapp")?.focus();return}pendingUserRegisterData=data;document.getElementById("userCreateFormStep").style.display="none";document.getElementById("userTermsStep").style.display="block"}
 async function createUserAccount(){const data=pendingUserRegisterData||getUserCreateData();if(!data.nome||!data.whatsapp||!data.email||!data.cpf||!data.codigo){alert("Preencha todos os dados do usuário para continuar.");return}showLoader("Criando conta de usuário...");const res=await api("registerUser",data);hideLoader();if(!res.ok){alert("Código de acesso inválido. Escolha outro código.");return}const ok=await loginByCode(data.codigo,"usuario",data.email,true);if(ok)saveQuickAccess("usuario",data.email,data.codigo)}
 async function loginSelected(type){const codigo=type==="empresa"?document.getElementById("companyLoginCode").value.trim():document.getElementById("userLoginCode").value.trim();const email=type==="empresa"?(document.getElementById("companyLoginEmail")?.value||"").trim().toLowerCase():(document.getElementById("userLoginEmail")?.value||"").trim().toLowerCase();if(!email)return alert("Digite seu e-mail.");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return alert("Digite um e-mail válido.");if(!codigo)return alert("Digite seu código de acesso.");const remember=type==="empresa"?document.getElementById("rememberCompanyAccess")?.checked:document.getElementById("rememberUserAccess")?.checked;const ok=await loginByCode(codigo,type,email);if(ok&&remember)saveQuickAccess(type,email,codigo)}
 async function loginByCode(codigo,expectedType,email="",isNewAccount=false){session=null;localStorage.removeItem("pegaleva_client");showLoader("Carregando seu painel...");const res=await api("loginClient",{codigo,email,expectedType});hideLoader();if(!res.ok){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}if(res.type!==expectedType){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}const perfilEmail=String(res.profile?.Email||"").trim().toLowerCase();if(perfilEmail!==String(email||"").trim().toLowerCase()){session=null;localStorage.removeItem("pegaleva_client");alert("E-mail ou código de acesso inválido.");return false}session=res;localStorage.setItem("pegaleva_client",JSON.stringify(session));openPanel();if(isNewAccount)setTimeout(showNewAccountWelcomeModal,180);return true}
@@ -617,10 +641,44 @@ function disableDeliveriesAreaUI(){
   loadMktBanner();
 }
 
-function openPanel(){setSupportVisibility(false);disableDeliveriesAreaUI();setTimeout(updateBairroOptions,0);const historyBtn=document.querySelector(".history-chat-btn");if(historyBtn)historyBtn.style.display="none";const accessScreen=document.getElementById("accessScreen");const appScreen=document.getElementById("appScreen");if(accessScreen)accessScreen.classList.remove("active");if(appScreen)appScreen.classList.add("active");
+function openPanel(){
+  setSupportVisibility(false);
+  disableDeliveriesAreaUI();
+  setTimeout(()=>{updateBairroOptions();installWhatsAppMasks()},0);
+  const historyBtn=document.querySelector(".history-chat-btn");
+  if(historyBtn)historyBtn.style.display="none";
+  const accessScreen=document.getElementById("accessScreen");
+  const appScreen=document.getElementById("appScreen");
+  if(accessScreen)accessScreen.classList.remove("active");
+  if(appScreen)appScreen.classList.add("active");
+
   const clientNav=document.getElementById("clientAppNav");
-  if(clientNav) clientNav.style.display="";
-const p=session.profile,name=session.type==="empresa"?p.Responsavel:p.Nome;const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";document.getElementById("welcomeName").innerText="Olá, "+primeiroNome;document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuário";document.getElementById("companyBox").style.display=session.type==="empresa"?"block":"none";document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";const savedAddressTip=document.getElementById("savedAddressTip");if(savedAddressTip)savedAddressTip.style.display=session.type==="empresa"?"block":"none";toggleCouponArea();renderProfile();loadClientTools();startAutoRefresh()}
+  if(clientNav)clientNav.style.display="";
+  const isCompany=session.type==="empresa";
+  document.getElementById("navCouponBtn")?.style.setProperty("display",isCompany?"none":"flex");
+  document.getElementById("navCompanyDataBtn")?.style.setProperty("display",isCompany?"flex":"none");
+  if(appScreen)appScreen.classList.toggle("company-account",isCompany);
+  const p=session.profile||{};
+  const name=session.type==="empresa"?(p.Responsavel||p.NomeEmpresa||p.Empresa):p.Nome;
+  const primeiroNome=String(name||"").trim().split(/\s+/)[0]||"";
+  document.getElementById("welcomeName").innerText="Olá, "+primeiroNome;
+  document.getElementById("welcomeType").innerText=session.type==="empresa"?"Painel da empresa":"Painel do usuário";
+
+  const companyBox=document.getElementById("companyBox");
+  if(companyBox)companyBox.style.display=session.type==="empresa"?"block":"none";
+  const profileAside=document.getElementById("profileAside");
+  if(profileAside)profileAside.style.display=session.type==="empresa"?"none":"block";
+  const invoiceCard=document.getElementById("companyInvoiceCard");
+  if(invoiceCard)invoiceCard.style.display=session.type==="empresa"?"flex":"none";
+
+  document.getElementById("useAddressBtn").style.display=session.type==="empresa"?"block":"none";
+  const savedAddressTip=document.getElementById("savedAddressTip");
+  if(savedAddressTip)savedAddressTip.style.display=session.type==="empresa"?"block":"none";
+  toggleCouponArea();
+  renderProfile();
+  loadClientTools();
+  startAutoRefresh();
+}
 
 
 async function loadSavedClientContacts(){
@@ -825,16 +883,18 @@ function updateClientNavDots(){
   const cd=document.getElementById("couponDot"),md=document.getElementById("messageDot");
   if(cd){cd.innerText=clientCoupons.length;cd.classList.toggle("active",clientCoupons.length>0)}
   if(md){md.innerText=clientAnnouncements.length;md.classList.toggle("active",clientAnnouncements.length>0)}
-  updateSavedClientDot();
 }
 
 async function loadClientTools(){
   if(!session)return;
-  const [c,m]=await Promise.all([api("getAvailableCoupons",{}),api("getActiveAnnouncements",{})]);
-  clientCoupons=c&&c.ok?c.cupons||[]:[];
+  const company=session.type==="empresa";
+  const requests=company
+    ?[Promise.resolve({ok:true,cupons:[]}),api("getActiveAnnouncements",{})]
+    :[api("getAvailableCoupons",{}),api("getActiveAnnouncements",{})];
+  const [c,m]=await Promise.all(requests);
+  clientCoupons=company?[]:(c&&c.ok?c.cupons||[]:[]);
   clientAnnouncements=m&&m.ok?m.comunicados||[]:[];
   updateClientNavDots();
-  await loadSavedClientContacts();
 }
 
 function openCouponsModal(){
@@ -855,7 +915,33 @@ function startAutoRefresh(){ refreshPanel(); }
 function scheduleAutoRefresh(){ /* Entregas desativadas. */ }
 document.addEventListener("visibilitychange",()=>{if(!session)return;scheduleAutoRefresh();refreshPanel()});window.addEventListener("focus",()=>{if(session)refreshPanel()});window.addEventListener("pageshow",()=>{if(session)refreshPanel()})
 function useRegisteredAddress(){if(session.type!=="empresa")return;const p=session.profile;document.getElementById("coletaRua").value=p.Rua||p.Endereco||"";document.getElementById("coletaNumero").value=p.Numero||"";document.getElementById("coletaReferencia").value=p.Referencia||"";document.getElementById("coletaCidade").value=p.Cidade||"";updateBairroOptions();const bairro=p.Bairro||p.bairro||p.BairroColeta||"";if(bairro&&document.getElementById("bairroColeta"))document.getElementById("bairroColeta").value=bairro;scheduleDeliveryProgressSave()}
-function renderProfile(){const p=session.profile,pendente=Number(p.PagamentoPendente||0),payBtn=pendente>0?` <button type="button" class="btn-pay-pending" onclick="openClientPendingPaymentModal()" style="margin-top:0!important;padding:7px 10px!important;font-size:11px!important"><i class="fa-solid fa-money-bill-wave"></i> PAGAR AGORA</button>`:"";document.getElementById("profileBox").innerHTML=session.type==="empresa"?`<div class="info-row"><span>Responsável</span><b>${p.Responsavel||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF/CNPJ</span><b>${p.CPF_CNPJ||""}</b></div><div class="info-row"><span>Endereço</span><b>${p.Endereco||""}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`:`<div class="info-row"><span>Nome</span><b>${p.Nome||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF</span><b>${p.CPF||""}</b></div><div class="info-row"><span>Entregas solicitadas</span><b>${p.EntregasSolicitadas||0}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`}
+function renderProfile(){
+  const p=session.profile||{};
+  const pendente=Number(p.PagamentoPendente||0);
+  const payBtn=pendente>0?` <button type="button" class="btn-pay-pending" onclick="openClientPendingPaymentModal()" style="margin-top:0!important;padding:7px 10px!important;font-size:11px!important"><i class="fa-solid fa-money-bill-wave"></i> PAGAR AGORA</button>`:"";
+  const profileHtml=session.type==="empresa"
+    ?`<div class="info-row"><span>Responsável</span><b>${p.Responsavel||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF/CNPJ</span><b>${p.CPF_CNPJ||""}</b></div><div class="info-row"><span>Endereço</span><b>${p.Endereco||""}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`
+    :`<div class="info-row"><span>Nome</span><b>${p.Nome||""}</b></div><div class="info-row"><span>WhatsApp</span><b><a target="_blank" href="https://wa.me/55${onlyDigits(p.WhatsApp)}">${p.WhatsApp||""}</a></b></div><div class="info-row"><span>Email</span><b>${p.Email||""}</b></div><div class="info-row"><span>CPF</span><b>${p.CPF||""}</b></div><div class="info-row"><span>Entregas solicitadas</span><b>${p.EntregasSolicitadas||0}</b></div><div class="info-row"><span>Valor pago</span><b>${money(p.ValorPago||0)}</b></div><div class="info-row"><span>Pagamento pendente</span><b style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">${money(p.PagamentoPendente||0)}${payBtn}</b></div>`;
+  const profileBox=document.getElementById("profileBox");
+  if(profileBox)profileBox.innerHTML=profileHtml;
+  const modalProfile=document.getElementById("companyDataModalProfile");
+  if(modalProfile&&session.type==="empresa")modalProfile.innerHTML=profileHtml;
+
+  const invoiceValue=document.getElementById("companyInvoiceValue");
+  const invoicePayBtn=document.getElementById("companyInvoicePayBtn");
+  if(invoiceValue)invoiceValue.innerText=money(pendente);
+  if(invoicePayBtn)invoicePayBtn.style.display=pendente>0?"inline-flex":"none";
+}
+function openCompanyDataModal(){
+  if(!session||session.type!=="empresa")return;
+  renderProfile();
+  const stats=document.getElementById("companyStats");
+  const modalStats=document.getElementById("companyDataModalStats");
+  if(modalStats)modalStats.innerHTML=stats?stats.innerHTML:"";
+  document.getElementById("companyDataModal")?.classList.add("active");
+}
+function closeCompanyDataModal(){document.getElementById("companyDataModal")?.classList.remove("active")}
+
 async function refreshPanel(){
   if(!session||refreshBusy)return;
   refreshBusy=true;
@@ -1172,7 +1258,7 @@ function renderClientHistory(list){
   </div>`).join("");
 }
 
-function validateStep(){const s=steps()[currentStep],fields=s.querySelectorAll("input,select,textarea");for(const f of fields){if(f.type!=="hidden"&&f.offsetParent!==null&&!f.dataset.optional&&!f.value.trim()){f.focus();alert("Preencha os campos desta etapa.");return false}}if(currentStep===0&&!validateLogradouroField("coletaRua"))return false;if(currentStep===1&&!validateLogradouroField("destinoRua"))return false;if(currentStep===4&&!document.getElementById("conteudo").value){alert("Selecione o tipo de conteúdo.");return false}return true}
+function validateStep(){const s=steps()[currentStep],fields=s.querySelectorAll("input,select,textarea");for(const f of fields){if(f.type!=="hidden"&&f.offsetParent!==null&&!f.dataset.optional&&!f.value.trim()){f.focus();alert("Preencha os campos desta etapa.");return false}}if(currentStep===0&&!validateLogradouroField("coletaRua"))return false;if(currentStep===1&&!validateLogradouroField("destinoRua"))return false;if(currentStep===3&&onlyDigits(document.getElementById("whatsappDestino")?.value||"").length!==11){alert("Informe um WhatsApp válido com DDD e 11 números.");document.getElementById("whatsappDestino")?.focus();return false}if(currentStep===4&&!document.getElementById("conteudo").value){alert("Selecione o tipo de conteúdo.");return false}return true}
 function setStep(n){const total=steps().length;n=Math.max(0,Math.min(n,total-1));steps().forEach((s,i)=>s.classList.toggle("active",i===n));dots().forEach((d,i)=>d.classList.toggle("active",i<=n));currentStep=n}
 function nextStepWithLoading(text){if(!validateStep())return;showLoader(text);setTimeout(()=>{hideLoader();setStep(currentStep+1)},500)}
 function prevStep(){if(currentStep>0)setStep(currentStep-1)}
