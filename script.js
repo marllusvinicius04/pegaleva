@@ -1057,11 +1057,19 @@ function buildDeliveryWhatsAppUrl(d){
 
   const codigoRastreio=String(d.CodigoID||session?.profile?.CodigoID||"").toUpperCase();
 
+  const letraBairroDestino=String(d.BairroDestino||"")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
   const codigoPedido=codigoRastreio+
     Number(d.Valor||0)
       .toFixed(2)
       .replace(".","")
-      .replace(/^0+/,"");
+      .replace(/^0+/,"")+
+    letraBairroDestino;
 
   const linhas=[
     "🛵 *PEGA E LEVA DELIVERY*",
