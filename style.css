@@ -1951,3 +1951,59 @@ input[inputmode="tel"]{
     padding:10px!important;
   }
 }
+
+/* ============================================================
+   CORREÇÃO RESPONSIVA DA FATURA — TELAS MAIORES
+   Evita que a fatura fique atrás dos atalhos do painel.
+   ============================================================ */
+@media(min-width:861px){
+  #appScreen.company-account .topbar{
+    padding-bottom:34px!important;
+    border-bottom-left-radius:30px!important;
+    border-bottom-right-radius:30px!important;
+  }
+
+  #appScreen.company-account #companyInvoiceCard,
+  #appScreen.company-account .company-invoice-card{
+    position:relative!important;
+    z-index:4!important;
+    width:min(1064px,calc(100% - 36px))!important;
+    margin:18px auto 14px!important;
+    transform:none!important;
+    clear:both!important;
+  }
+
+  #appScreen.company-account #clientAppNav,
+  #appScreen.company-account .client-app-nav{
+    position:relative!important;
+    z-index:3!important;
+    width:min(1100px,100%)!important;
+    margin:0 auto 18px!important;
+    padding:0 18px!important;
+    clear:both!important;
+  }
+
+  #appScreen.company-account #companyInvoiceCard + #clientAppNav{
+    margin-top:0!important;
+  }
+
+  #appScreen.company-account #clientAppNav + .container{
+    position:relative!important;
+    z-index:1!important;
+    margin-top:0!important;
+  }
+}
+
+/* Monitores bem largos: mantém tudo centralizado e sem esticar demais. */
+@media(min-width:1280px){
+  #appScreen.company-account #companyInvoiceCard,
+  #appScreen.company-account .company-invoice-card{
+    width:1064px!important;
+  }
+
+  #appScreen.company-account #clientAppNav,
+  #appScreen.company-account .client-app-nav,
+  #appScreen.company-account .container{
+    max-width:1100px!important;
+  }
+}
