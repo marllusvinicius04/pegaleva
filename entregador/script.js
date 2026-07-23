@@ -670,7 +670,6 @@ function deliveryHtml(d,available,modalOnly){
     if(collected){
       actionHtml=`<div class="delivery-actions-pro">
         <button class="btn light" onclick="openChatModal('${d.ID}')"><i class="fa-solid fa-message"></i> Mensagem${Number(d.EntregadorNaoLidas||0)>0?` <span class="chat-badge">${d.EntregadorNaoLidas}</span>`:""}</button>
-        <button class="btn light" onclick="openPaymentModal('${d.ID}')"><i class="fa-solid fa-qrcode"></i> Pagar</button>
         <button class="btn green wide" onclick="finalizeDeliveryChecked('${d.ID}')"><i class="fa-solid fa-circle-check"></i> Entrega finalizada</button>
         <a class="btn route wide" href="${mapsUrlLimpo(d)}" target="_blank"><i class="fa-solid fa-map-location-dot"></i> Abrir rota online</a>
       </div>`;
@@ -682,7 +681,6 @@ function deliveryHtml(d,available,modalOnly){
         <button class="btn green wide" onclick="finalizeDeliveryChecked('${d.ID}')"><i class="fa-solid fa-circle-check"></i> Entrega finalizada</button>
         <button class="btn red wide" onclick="cancelDelivery('${d.ID}')"><i class="fa-solid fa-ban"></i> Cancelar</button>
         <button class="btn light" onclick="openChatModal('${d.ID}')"><i class="fa-solid fa-message"></i> Mensagem${Number(d.EntregadorNaoLidas||0)>0?` <span class="chat-badge">${d.EntregadorNaoLidas}</span>`:""}</button>
-        <button class="btn light" onclick="openPaymentModal('${d.ID}')"><i class="fa-solid fa-qrcode"></i> Pagar</button>
         <a class="btn route wide" href="${mapsUrlLimpo(d)}" target="_blank"><i class="fa-solid fa-map-location-dot"></i> Abrir rota online</a>
       </div>`;
     }
@@ -893,7 +891,6 @@ function paymentWasChosen(d){
 function finalizeDeliveryChecked(id){
   const d=(window.lastDriverDeliveries||[]).find(x=>x.ID===id);
   if(!paymentWasChosen(d)){
-    showStatus("Pagamento obrigatório","Antes de finalizar, escolha uma das opções dentro de Pagar agora.");
     openPaymentModal(id);
     return;
   }
@@ -1727,9 +1724,6 @@ function manualRaceHtml(d){
     <p class="info"><b>Pagamento:</b> <span class="badge ${pagamentoPago?"green":"yellow"}">${pagamento}</span></p>
 
     <div class="delivery-actions-pro">
-      <button class="btn light wide" onclick="openManualRacePayment('${safe}')">
-        <i class="fa-solid fa-building-columns"></i> Pagar agora
-      </button>
       <button class="btn green" onclick="updateManualRaceStatus('${safe}','Terminando uma entrega')">
         <i class="fa-solid fa-hourglass-half"></i> Terminando uma entrega
       </button>
@@ -1739,11 +1733,20 @@ function manualRaceHtml(d){
       <button class="btn red wide" onclick="updateManualRaceStatus('${safe}','Dificuldades no local da entrega')">
         <i class="fa-solid fa-triangle-exclamation"></i> Dificuldades no local da entrega
       </button>
-      <button class="btn green wide" onclick="updateManualRaceStatus('${safe}','Entrega finalizada')">
+      <button class="btn green wide" onclick="finalizeManualRaceChecked('${safe}')">
         <i class="fa-solid fa-circle-check"></i> Entrega finalizada
       </button>
     </div>
   </div>`;
+}
+
+function finalizeManualRaceChecked(id){
+  const d=(window.lastDriverDeliveries||[]).find(x=>String(x.ID)===String(id));
+  if(!paymentWasChosen(d)){
+    openManualRacePayment(id);
+    return;
+  }
+  updateManualRaceStatus(id,"Entrega finalizada");
 }
 
 async function updateManualRaceStatus(id,status){
