@@ -1615,19 +1615,21 @@ async function createManualRace(){
   }
 
   const codeInput=document.getElementById("manualClientIdCode");
-  const valueInput=document.getElementById("manualDeliveryValue");
   const located=document.getElementById("manualClientLocated");
-  const codigoId=normalizeManualCodigoId(codeInput&&codeInput.value);
-  const valorTexto=String(valueInput&&valueInput.value||"").trim();
-  const valorNumero=Number(valorTexto.replace(/\./g,"").replace(",",".").replace(/[^0-9.-]/g,""));
+  const pedido=String(codeInput&&codeInput.value||"").trim().toUpperCase();
 
-  if(codeInput)codeInput.value=codigoId;
+  if(codeInput)codeInput.value=pedido;
 
-  if(!/^[A-Z0-9]{3}$/.test(codigoId)){
-    return showStatus("Código ID inválido","Digite exatamente 3 letras ou números, como A48.");
+  if(!/^[A-Z0-9]{4,}$/.test(pedido)){
+    return showStatus("Código inválido","Informe o código completo do pedido.");
   }
+
+  const codigoId=pedido.substring(0,3);
+  const valorBruto=pedido.substring(3);
+  const valorNumero=Number(valorBruto)/100;
+
   if(!Number.isFinite(valorNumero)||valorNumero<=0){
-    return showStatus("Valor inválido","Informe um valor maior que zero.");
+    return showStatus("Código inválido","Os números após os 3 primeiros caracteres devem representar o valor da entrega.");
   }
 
   showLoader("Criando corrida...");
