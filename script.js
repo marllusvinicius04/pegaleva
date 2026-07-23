@@ -1057,11 +1057,35 @@ function buildDeliveryWhatsAppUrl(d){
 
   const codigoRastreio=String(d.CodigoID||session?.profile?.CodigoID||"").toUpperCase();
 
-  const codigoPedido=codigoRastreio+
+  
+  const SIGLAS_BAIRROS={
+    "Fogoso":"F",
+    "Malvinas":"M",
+    "Vaquejada":"V",
+    "Centro":"C",
+    "Aeroporto":"A",
+    "Novo Horizonte":"N",
+    "Areia":"R",
+    "Esperança":"E","Esperanca":"E",
+    "Água Branca":"G","Agua Branca":"G",
+    "Alto Bonito":"L",
+    "São Francisco":"S","Sao Francisco":"S",
+    "Babilônia":"B","Babilonia":"B",
+    "Canaã":"K","Canaa":"K",
+    "Bela Vista":"I",
+    "Portal dos Cerrados":"P",
+    "Cerrados Park":"D",
+    "Vista Bela":"T",
+    "Benedito Leite":"Z"
+  };
+  const siglaBairro=SIGLAS_BAIRROS[String(d.BairroDestino||"").trim()]||"X";
+
+const codigoPedido=codigoRastreio+
     Number(d.Valor||0)
       .toFixed(2)
       .replace(".","")
-      .replace(/^0+/,"");
+      .replace(/^0+/,"")+
+    siglaBairro;
 
   const linhas=[
     "🛵 *PEGA E LEVA DELIVERY*",
