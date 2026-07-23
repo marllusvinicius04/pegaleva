@@ -54,6 +54,21 @@
 }
 
 .destination-mode-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}.destination-mode-card{min-height:94px;border:1px solid #dbe7ff;background:#fff;color:#334155;border-radius:16px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:none}.destination-mode-card i{font-size:22px;color:#0044c3}.destination-mode-card strong{font-size:12px;line-height:1.25;text-align:center}.destination-mode-card.active{border-color:#0044c3;background:#eef4ff;color:#0044c3}@media(max-width:480px){.destination-mode-options{grid-template-columns:1fr 1fr}.destination-mode-card{padding:12px 8px;min-height:88px}}
+
+.company-nav-three{grid-template-columns:repeat(3,1fr)!important}
+#appScreen.company-account .container{grid-template-columns:1fr!important}
+.company-invoice-card{margin:14px auto 0;width:min(1100px,calc(100% - 28px));display:flex;align-items:center;justify-content:space-between;gap:14px;padding:17px 18px;border-radius:20px;background:linear-gradient(135deg,#071b44,#0044c3);color:#fff;box-shadow:0 14px 35px rgba(0,68,195,.22)}
+.company-invoice-card small{display:block;font-size:11px;font-weight:800;opacity:.8;text-transform:uppercase;letter-spacing:.08em}
+.company-invoice-card strong{display:block;font-size:28px;line-height:1.1;margin-top:4px;font-weight:950}
+.company-invoice-card span{display:block;font-size:11px;opacity:.82;margin-top:4px}
+.company-invoice-card button{border:0;border-radius:14px;background:#10b981;color:#fff;font-weight:900;padding:12px 14px;white-space:nowrap;cursor:pointer}
+.loader .spinner{display:none!important}
+.loader .moto-loader{display:block!important;position:relative;width:150px;height:58px;margin:0 auto 12px;overflow:hidden}
+.loader .moto-loader::after{content:"";position:absolute;left:0;right:0;bottom:7px;height:3px;background:repeating-linear-gradient(90deg,#cbd5e1 0 18px,transparent 18px 34px);animation:loaderRoad .55s linear infinite}
+.loader .moto-loader i{position:absolute;left:50%;bottom:12px;z-index:2;font-size:38px;color:#10b981;animation:loaderMoto .55s ease-in-out infinite alternate}
+@keyframes loaderMoto{from{transform:translate(-60%,0) rotate(-4deg)}to{transform:translate(-40%,-7px) rotate(4deg)}}
+@keyframes loaderRoad{from{transform:translateX(0)}to{transform:translateX(-34px)}}
+@media(max-width:600px){.company-invoice-card{align-items:flex-end}.company-invoice-card strong{font-size:24px}.company-invoice-card button{padding:10px 11px;font-size:12px}}
 </style>
 
   <meta name="pegaleva-api-version" content="login-cadastro-corrigido-20260722">
@@ -145,7 +160,7 @@
       <div class="login-box" id="userCreateBox">
         <div id="userCreateFormStep">
           <label>Nome completo</label><input id="uNome" placeholder="Nome completo">
-          <label><i class="fa-brands fa-whatsapp"></i> DDD + WhatsApp</label><input id="uWhatsapp" inputmode="tel" placeholder="DDD + WhatsApp">
+          <label><i class="fa-brands fa-whatsapp"></i> DDD + WhatsApp</label><input id="uWhatsapp" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(XX) XXXXX-XXXX">
           <label>E-mail</label><input id="uEmail" placeholder="E-mail">
           <label>CPF</label><input id="uCpf" placeholder="CPF">
           <label>Criar código de acesso</label><input id="newUserCode" placeholder="Criar código de acesso" oninput="checkCodeLive('newUserCode','userCodeMsg')">
@@ -177,7 +192,7 @@
           <label>Nome da empresa</label><input id="cNomeEmpresa" placeholder="Nome da empresa">
           <label>CPF/CNPJ</label><input id="cCpfCnpj" inputmode="numeric" placeholder="CPF ou CNPJ">
           <label>E-mail</label><input id="cEmail" type="email" inputmode="email" autocomplete="email" placeholder="E-mail da empresa">
-          <label><i class="fa-brands fa-whatsapp"></i> DDD + WhatsApp</label><input id="cWhatsapp" inputmode="tel" placeholder="DDD + WhatsApp">
+          <label><i class="fa-brands fa-whatsapp"></i> DDD + WhatsApp</label><input id="cWhatsapp" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(XX) XXXXX-XXXX">
           <button type="button" class="btn green" onclick="showCompanyCreateStep(2)">Próximo</button>
         </div>
         <div id="companyCreateStep2" style="display:none">
@@ -302,10 +317,19 @@
 <section class="screen app" id="appScreen">
   <div class="topbar"><button onclick="logout()" style="float:right;background:transparent;border:0;color:white;font-weight:800;font-size:14px;box-shadow:none;margin:0;padding:0"><i class="fa-solid fa-right-from-bracket"></i> Sair</button><div class="app-head"><div class="brand"><img src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg" alt="PegaLeva"><div><strong id="welcomeName">PegaLeva</strong><span id="welcomeType">Painel</span></div></div></div></div>
 
-  <div class="client-app-nav" id="clientAppNav">
-    <button type="button" onclick="openCouponsModal()"><i class="fa-solid fa-ticket"></i><span>Cupons</span><em class="nav-dot" id="couponDot">0</em></button>
+  <div class="company-invoice-card" id="companyInvoiceCard" style="display:none">
+    <div>
+      <small>Fatura em aberto</small>
+      <strong id="companyInvoiceValue">R$ 0,00</strong>
+      <span>Valor das entregas ainda não pagas</span>
+    </div>
+    <button type="button" id="companyInvoicePayBtn" onclick="openClientPendingPaymentModal()" style="display:none"><i class="fa-solid fa-barcode"></i> Pagar agora</button>
+  </div>
+
+  <div class="client-app-nav company-nav-three" id="clientAppNav">
+    <button type="button" id="navCouponBtn" onclick="openCouponsModal()"><i class="fa-solid fa-ticket"></i><span>Cupons</span><em class="nav-dot" id="couponDot">0</em></button>
     <button type="button" onclick="openAnnouncementsModal()"><i class="fa-solid fa-comments"></i><span>Mensagem</span><em class="nav-dot" id="messageDot">0</em></button>
-    <button type="button" onclick="openSavedOrdersPage()"><i class="fa-solid fa-users"></i><span>Meus pedidos</span><em class="nav-dot" id="savedClientsDot">0</em></button>
+    <button type="button" id="navCompanyDataBtn" onclick="openCompanyDataModal()"><i class="fa-solid fa-building-user"></i><span>Meus dados</span></button>
     <button type="button" onclick="openSimuladorFrete()"><i class="fa-solid fa-calculator"></i><span>Simular</span></button>
   </div>
 
@@ -323,14 +347,14 @@
         </div>
         <div class="step"><h3>Destino</h3><p class="muted" style="margin-bottom:14px">Escolha como deseja informar o endereço do destino.</p><input type="hidden" id="destinoTipo"><div class="destination-mode-options" id="destinationModeOptions"><button type="button" class="destination-mode-card" data-mode="dados" onclick="chooseDestinationMode('dados')"><i class="fa-solid fa-keyboard"></i><strong>Digitar dados do destino</strong></button><button type="button" class="destination-mode-card" data-mode="localizacao" onclick="chooseDestinationMode('localizacao')"><i class="fa-solid fa-location-crosshairs"></i><strong>Enviar localização atual</strong></button></div><div id="destinationAddressFields" style="display:none;margin-top:16px"><h3 style="margin-bottom:12px">Endereço de destino</h3><label>Logradouro (Rua, avenida, alameda...)</label><input id="destinoRua"><label>Número</label><input id="destinoNumero" placeholder="Se não tiver número, coloque 0"><label>Ponto de referência *</label><input id="destinoReferencia" placeholder="EX: PORTÃO BRANCO, AO LADO DISSO..."><label>Cidade</label><select id="destinoCidade" onchange="updateBairroOptions()"><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando bairros...')">Continuar</button></div></div><button class="btn gray" id="destinationModeBackBtn" onclick="prevStep()" style="margin-top:14px">Voltar</button></div>
         <div class="step"><h3>Confirmar bairros</h3><label>Bairro de coleta</label><select id="bairroColeta"><option value="">Selecione</option></select><label>Bairro de destino</label><select id="bairroDestino"><option value="">Selecione</option></select><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando recebedor...')">Continuar</button></div></div>
-        <div class="step"><h3>Dados de quem vai receber</h3><label>Nome da pessoa de destino</label><input id="nomeDestino"><label>Telefone / WhatsApp com DDD</label><input id="whatsappDestino"><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando conteúdo...')">Continuar</button></div></div>
+        <div class="step"><h3>Dados de quem vai receber</h3><label>Nome da pessoa de destino</label><input id="nomeDestino"><label>Telefone / WhatsApp com DDD</label><input id="whatsappDestino" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(XX) XXXXX-XXXX"><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando conteúdo...')">Continuar</button></div></div>
         <div class="step"><h3>Conteúdo</h3><div class="grid2"><div class="choice" onclick="selectChoice(this,'conteudo','Comidas e bebidas')"><i class="fa-solid fa-burger"></i><strong>Comidas e bebidas</strong><small>Lanches e bebidas</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Frios')"><i class="fa-solid fa-snowflake"></i><strong>Frios</strong><small>Sorvetes e gelados</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Documentos e papéis')"><i class="fa-solid fa-file-lines"></i><strong>Documentos</strong><small>Papéis e envelopes</small></div><div class="choice" onclick="selectChoice(this,'conteudo','Outros')"><i class="fa-solid fa-box"></i><strong>Outros</strong><small>Pequenos itens</small></div></div><input type="hidden" id="conteudo"><label>Volumes</label><select id="volumes"><option value="1">1 volume</option><option value="2">2 volumes</option><option value="3">3 volumes</option><option value="4">4 volumes</option></select><div class="pay-alert">Capacidade da entrega: até 4 itens apenas, dentro da bag de 45L do entregador. Não serão aceitas entregas ou ofertas de valores que não sejam solicitadas pelo sistema.</div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="nextStepWithLoading('Carregando rota de retorno...')">Continuar</button></div></div>
         <div class="step"><h3>Deseja acionar rota de retorno?</h3><p class="muted">A rota de retorno é usada quando o cliente vai pagar por maquininha ou dinheiro. O entregador coleta o produto com a maquininha da empresa e depois devolve a maquininha e/ou o dinheiro em espécie no estabelecimento.</p><input type="hidden" id="rotaRetorno" value="Não"><div class="grid2"><div class="choice" onclick="selectRotaRetorno(this,'Sim')"><i class="fa-solid fa-route"></i><strong>Sim, acionar retorno</strong></div><div class="choice active" onclick="selectRotaRetorno(this,'Não')"><i class="fa-solid fa-circle-xmark"></i><strong>Não precisa</strong></div></div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn" onclick="loadPrice()">Continuar para valor</button></div></div>
         <div class="step"><h3>Valor e pagamento</h3><input type="hidden" id="ofertaEntrega" value="normal"><div class="price-card"><p class="muted">Valor da viagem</p><div class="price" id="priceText">R$0,00</div><span class="eco" id="ecoText" style="display:none">Frete com economia</span><div class="company-offers" id="companyOfferBox"><button type="button" class="company-offer active" onclick="selectCompanyOffer('normal')">Entrega Normal<small>Serviço normal</small><b id="companyNormalPrice">R$0,00</b></button><button type="button" class="company-offer" onclick="selectCompanyOffer('promocional')">Entrega Promocional<small>Oferta para usuários e empresas</small><b id="companyPromoPrice">R$0,00</b></button></div></div><label>Forma de pagamento</label><select id="pagamento" onchange="toggleCashObs()"><option>PIX</option><option>Espécie</option></select><div id="cupomArea" style="display:none"><label>Inserir cupom</label><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center"><input id="cupom" data-optional="true" placeholder="Digite seu cupom" oninput="onCouponInput()"><button id="cupomBtn" type="button" onclick="applyCouponPrice()" style="display:none;width:auto;margin:0;padding:0 14px;min-height:48px;border-radius:14px;background:#eef4ff;color:#0044c3;font-weight:900">Confirmar</button></div><div class="mini-error" id="cupomMsg"></div></div><div id="paymentNotice" class="pay-alert" style="display:none">O PAGAMENTO DEVE SER REALIZADO NO ATO DA COLETA DO ITEM PELO CODIGO DO ENTREGADOR INFORMADO</div><div id="cashObs" style="display:none"><label>Observação para dinheiro trocado</label><textarea id="observacaoPagamento"></textarea></div><div class="grid2"><button class="btn gray" onclick="prevStep()">Voltar</button><button class="btn green" onclick="confirmDelivery()"><i class="fa-solid fa-check"></i> Confirmar valor</button></div></div>
       </div>
       <div class="card" style="margin-top:18px"><h3>Minhas entregas</h3><div id="deliveriesBox"><p class="muted">Sem entregas aqui (0) Solicite agora</p></div></div>
     </main>
-    <aside><div class="card"><h3>Meus dados</h3><div id="profileBox"></div></div><div class="card" style="margin-top:18px" id="companyBox"><h3>Painel empresa</h3><div id="companyStats"></div></div></aside>
+    <aside id="profileAside"><div class="card"><h3>Meus dados</h3><div id="profileBox"></div></div><div class="card" style="margin-top:18px" id="companyBox"><h3>Painel empresa</h3><div id="companyStats"></div></div></aside>
   </div>
 
   <div class="saved-orders-page" id="savedOrdersPage">
@@ -349,6 +373,16 @@
     </div>
   </div>
 </section>
+
+<div class="modal" id="companyDataModal">
+  <div class="modal-box">
+    <button class="modal-close" type="button" onclick="closeCompanyDataModal()"><i class="fa-solid fa-xmark"></i></button>
+    <h2><i class="fa-solid fa-building-user"></i> Meus dados</h2>
+    <p class="muted" style="margin-bottom:14px">Informações e painel da empresa.</p>
+    <div id="companyDataModalProfile"></div>
+    <div id="companyDataModalStats" style="margin-top:14px"></div>
+  </div>
+</div>
 
 <button class="history-chat-btn" onclick="openHistoryChat()" title="Histórico de entregas"><i class="fa-solid fa-motorcycle"></i></button>
 
