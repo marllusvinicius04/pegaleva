@@ -157,11 +157,11 @@
     <button class="side-close" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i></button>
     <div class="manual-title-row">
       <span class="manual-title-icon"><i class="fa-solid fa-plus"></i></span>
-      <div><h2>Adicionar entrega</h2><p class="muted">Informe apenas o código do pedido.</p></div>
+      <div><h2>Adicionar entrega</h2><p class="muted">Informe apenas o código do pedido. Os 3 primeiros caracteres identificam a empresa e os números restantes formam o valor.</p></div>
     </div>
     <div class="manual-field">
       <label>Código do pedido</label>
-      <input id="manualClientIdCode" autocomplete="off" placeholder="Ex.: W1A658">
+      <input id="manualClientIdCode" autocomplete="off" placeholder="Ex.: W1A658" maxlength="30">
       <div class="manual-selected" id="manualClientLocated"></div>
     </div>
 <button class="btn green" type="button" onclick="createManualRace()"><i class="fa-solid fa-plus"></i> Adicionar entrega</button>
@@ -222,6 +222,6 @@
 
 <div class="modal" id="chatModal"><div class="chat-modal-box"><h2>Mensagem</h2><p class="muted" id="chatSub">Conversa da entrega</p><div class="chat-scroll" id="chatMessages"></div><div class="chat-send"><input id="chatInput" placeholder="Digite sua mensagem"><button class="btn green" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> Enviar</button></div><button class="btn gray" onclick="closeChatModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div></div>
 
-<script src="script.js?v=20260721-finalizar-manual"></script>
+<script src="script.js?v=20260723-codigo-pedido-corrigido"></script>
 </body>
 </html>
