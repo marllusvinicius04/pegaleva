@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260722-corridas-ct-pagamento-v6";
+const APP_CACHE_VERSION="20260723-sugestao-rota-bairros-v7";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -494,15 +494,106 @@ function renderAvailable(list){
   initAvailableHandle();
   initSwipeButtons(document.getElementById("availableBox"));
 }
+function normalizeRouteText(value){
+  return String(value||"")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .trim()
+    .toLowerCase();
+}
+
+function routeNeighborhoodName(d){
+  return String(d.BairroDestino||d.bairroDestino||"Destino não informado").trim()||"Destino não informado";
+}
+
+function routeCompanyName(d,index){
+  return String(d.NomeSolicitante||d.Empresa||d.NomeDestino||("Empresa "+String(index+1).padStart(2,"0"))).trim();
+}
+
+function buildRouteSuggestionHtml(deliveries){
+  const valid=(deliveries||[]).filter(d=>String(d.TipoRegistro||"").toUpperCase()!=="CORRIDA");
+  if(!valid.length)return "";
+
+  const groups=[];
+  const groupMap={};
+
+  valid.forEach((d,index)=>{
+    const bairro=routeNeighborhoodName(d);
+    const key=normalizeRouteText(bairro)||"destino-nao-informado";
+    if(!groupMap[key]){
+      groupMap[key]={bairro,items:[],firstIndex:index};
+      groups.push(groupMap[key]);
+    }
+    groupMap[key].items.push({delivery:d,name:routeCompanyName(d,index),originalIndex:index});
+  });
+
+  groups.sort((a,b)=>{
+    if(b.items.length!==a.items.length)return b.items.length-a.items.length;
+    return a.firstIndex-b.firstIndex;
+  });
+
+  const steps=groups.map((group,index)=>{
+    const names=group.items.map(item=>item.name);
+    const joined=names.join(" + ");
+    const proximity=names.length>1?" <b>(próximas — mesmo bairro)</b>":"";
+    return `<div style="padding:9px 0;${index<groups.length-1?'border-bottom:1px solid #e5e7eb;':''}">
+      <div style="font-weight:800">${index+1}º • ${group.bairro}</div>
+      <div style="margin-top:3px">${joined}${proximity}</div>
+    </div>`;
+  }).join("");
+
+  const summary=groups.map(group=>{
+    const names=group.items.map(item=>item.name).join(" + ");
+    return group.items.length>1?`${names} (próximas)`:names;
+  }).join(" → ");
+
+  return `<div class="delivery pro-card" style="border:2px solid #16a34a;background:#f0fdf4;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="font-size:24px">🛵</span>
+      <div>
+        <strong style="font-size:17px">Sugestão de rota por bairros</strong>
+        <p class="muted" style="margin:2px 0 0">Agrupamento automático das entregas pelo bairro de destino.</p>
+      </div>
+    </div>
+    ${steps}
+    <div style="margin-top:10px;padding:10px;border-radius:10px;background:#ffffff;border:1px solid #bbf7d0">
+      <b>Ordem sugerida:</b> ${summary}
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:12px">Confirme no mapa antes de sair. O sistema considera bairros iguais como próximos.</p>
+  </div>`;
+}
+
+function organizeDeliveriesByNeighborhood(list){
+  const active=(list||[]).filter(d=>!isClosedDelivery(d.Status));
+  const deliveries=active.filter(d=>String(d.TipoRegistro||"").toUpperCase()!=="CORRIDA");
+  const races=active.filter(d=>String(d.TipoRegistro||"").toUpperCase()==="CORRIDA");
+  const firstSeen={};
+
+  deliveries.forEach((d,index)=>{
+    const key=normalizeRouteText(routeNeighborhoodName(d));
+    if(firstSeen[key]===undefined)firstSeen[key]=index;
+  });
+
+  deliveries.sort((a,b)=>{
+    const keyA=normalizeRouteText(routeNeighborhoodName(a));
+    const keyB=normalizeRouteText(routeNeighborhoodName(b));
+    return (firstSeen[keyA]??0)-(firstSeen[keyB]??0);
+  });
+
+  return {all:deliveries.concat(races),deliveries,races};
+}
+
 function renderMine(list){
-  list=(list||[]).filter(d=>!isClosedDelivery(d.Status));
+  const organized=organizeDeliveriesByNeighborhood(list);
+  list=organized.all;
   if(!list.length){
     document.getElementById("myBox").innerHTML='<p class="muted">(0) Sem pedidos, fique atento!</p>';
     window.lastDriverDeliveries=[];
     return;
   }
 
-  document.getElementById("myBox").innerHTML=list.map(d=>deliveryHtml(d,false,false)).join("");
+  const suggestion=buildRouteSuggestionHtml(organized.deliveries);
+  document.getElementById("myBox").innerHTML=suggestion+list.map(d=>deliveryHtml(d,false,false)).join("");
   window.lastDriverDeliveries=list;
 }
 
