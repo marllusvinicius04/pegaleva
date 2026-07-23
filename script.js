@@ -303,7 +303,7 @@ function installWhatsAppMasks(){
   });
 }
 document.addEventListener("DOMContentLoaded",installWhatsAppMasks);
-const BAIRROS_URUCUÍ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
+const BAIRROS_URUCUÍ=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela","Bela Vista"];
 function fillBairroSelect(selectId,cidadeId){
   const select=document.getElementById(selectId),cidade=document.getElementById(cidadeId).value;
   if(!select)return;
@@ -760,7 +760,7 @@ function updateNewSavedOrderBairros(){
   const cidade=(document.getElementById("newSavedOrderCity")||{}).value||"Uruçuí";
   const el=document.getElementById("newSavedOrderBairro");
   if(!el)return;
-  const list=cidade==="Benedito Leite"?["Centro","Benedito Leite"]:["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
+  const list=cidade==="Benedito Leite"?["Centro","Benedito Leite"]:["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela","Bela Vista"];
   el.innerHTML='<option value="">Selecione</option>'+list.map(b=>`<option>${b}</option>`).join("");
 }
 
@@ -1128,7 +1128,7 @@ function buildPendingPaymentWhatsAppLink(valorPendente,nome){
   const data=clientPaymentDateText();
   const valor=money(valorPendente||0);
   const msg=`CONFIRMAÇÃO DE PAGAMENTO - PEGA E LEVA!\n\nValor pendente de ${valor} dos fretes da empresa/responsável ${nome||""} foi pago via PIX na data ${data}.\n\nPega e Leva!`;
-  return `https://wa.me/5589994376585?text=${encodeURIComponent(msg)}`;
+  return `https://wa.me/5589994029572?text=${encodeURIComponent(msg)}`;
 }
 function copyClientPixKey(){
   const key=String(PIX_KEY||"");
@@ -1732,7 +1732,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    Evita bug onde os bairros às vezes não aparecem no formulário.
 ========================================================= */
 (function(){
-  const BAIRROS_PADRAO_URUCUÍ = ["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela"];
+  const BAIRROS_PADRAO_URUCUÍ = ["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Novo Horizonte","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Portal dos Cerrados","Cerrados Park","Vista Bela","Bela Vista"];
 
   function getEl(id){
     return document.getElementById(id);
