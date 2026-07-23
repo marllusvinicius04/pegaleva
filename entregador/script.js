@@ -1535,8 +1535,12 @@ document.getElementById("driverCode").value="";
    CORRIDAS MANUAIS — Código ID de 3 caracteres
    Conectado à aba CORRIDAS pelo Google Apps Script
 ========================================================= */
+function normalizeManualCodigoPedido(value){
+  return String(value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+}
+
 function normalizeManualCodigoId(value){
-  return String(value||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,3);
+  return normalizeManualCodigoPedido(value).slice(0,3);
 }
 
 function openManualDeliveryModal(){
@@ -1544,17 +1548,16 @@ function openManualDeliveryModal(){
 
   const modal=document.getElementById("manualDeliveryModal");
   const code=document.getElementById("manualClientIdCode");
-  const value=document.getElementById("manualDeliveryValue");
   const located=document.getElementById("manualClientLocated");
 
   if(code){
     code.value="";
-    code.maxLength=3;
-    code.setAttribute("maxlength","3");
+    code.maxLength=30;
+    code.setAttribute("maxlength","30");
     code.setAttribute("autocomplete","off");
     code.setAttribute("inputmode","text");
     code.oninput=function(){
-      this.value=normalizeManualCodigoId(this.value);
+      this.value=normalizeManualCodigoPedido(this.value);
       if(located){
         located.classList.remove("active");
         located.innerHTML="";
@@ -1562,7 +1565,6 @@ function openManualDeliveryModal(){
     };
   }
 
-  if(value)value.value="";
   if(located){
     located.classList.remove("active");
     located.innerHTML="";
@@ -1616,12 +1618,12 @@ async function createManualRace(){
 
   const codeInput=document.getElementById("manualClientIdCode");
   const located=document.getElementById("manualClientLocated");
-  const pedido=String(codeInput&&codeInput.value||"").trim().toUpperCase();
+  const pedido=normalizeManualCodigoPedido(codeInput&&codeInput.value);
 
   if(codeInput)codeInput.value=pedido;
 
-  if(!/^[A-Z0-9]{4,}$/.test(pedido)){
-    return showStatus("Código inválido","Informe o código completo do pedido.");
+  if(!/^[A-Z0-9]{3}[0-9]+$/.test(pedido)){
+    return showStatus("Código inválido","Use 3 caracteres para identificar a empresa e, depois, apenas números para o valor. Ex.: W1A658.");
   }
 
   const codigoId=pedido.substring(0,3);
