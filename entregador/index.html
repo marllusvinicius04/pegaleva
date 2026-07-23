@@ -157,18 +157,14 @@
     <button class="side-close" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i></button>
     <div class="manual-title-row">
       <span class="manual-title-icon"><i class="fa-solid fa-plus"></i></span>
-      <div><h2>Adicionar entrega</h2><p class="muted">Informe o Código ID cadastrado e o valor da entrega.</p></div>
+      <div><h2>Adicionar entrega</h2><p class="muted">Informe apenas o código do pedido.</p></div>
     </div>
     <div class="manual-field">
-      <label>Código ID da empresa ou usuário</label>
-      <input id="manualClientIdCode" autocomplete="off" placeholder="Digite o Código ID">
+      <label>Código do pedido</label>
+      <input id="manualClientIdCode" autocomplete="off" placeholder="Ex.: W1A658">
       <div class="manual-selected" id="manualClientLocated"></div>
     </div>
-    <div class="manual-field">
-      <label>Valor da entrega</label>
-      <input id="manualDeliveryValue" inputmode="decimal" placeholder="Ex.: 15,00">
-    </div>
-    <button class="btn green" type="button" onclick="createManualRace()"><i class="fa-solid fa-plus"></i> Criar entrega</button>
+<button class="btn green" type="button" onclick="createManualRace()"><i class="fa-solid fa-plus"></i> Adicionar entrega</button>
     <button class="btn gray" type="button" onclick="closeManualDeliveryModal()"><i class="fa-solid fa-xmark"></i> Cancelar</button>
   </div>
 </div>
