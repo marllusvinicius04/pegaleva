@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260723-rota-inteligente-coletas-v9";
+const APP_CACHE_VERSION="20260723-rota-pickup-lateral-v10";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -483,17 +483,23 @@ function renderAvailable(list){
     if(now-refusedDeliveries[id]>=20000) delete refusedDeliveries[id];
   });
   localStorage.setItem("pegaleva_refused_temp",JSON.stringify(refusedDeliveries));
+
   const raw=(list||[]).filter(d=>!isClosedDelivery(d.Status));
   const ordered=raw.filter(d=>!refusedDeliveries[d.ID]);
   window.lastAvailableDeliveries=ordered;
 
-  document.getElementById("availableBox").innerHTML=ordered.length
-    ? ordered.map(d=>deliveryHtml(d,true,false)).join("")
-    : '<p class="muted" style="margin-top:12px">(0) Sem pedidos, fique atento!</p>';
+  const lateralRoute=buildLateralRouteHtml();
+  const availableHtml=ordered.length
+    ? `<div style="margin:12px 0 7px;font-weight:900">Novas entregas disponíveis</div>`+
+      ordered.map(d=>deliveryHtml(d,true,false)).join("")
+    : '<p class="muted" style="margin-top:12px">(0) Sem novos pedidos disponíveis.</p>';
+
+  document.getElementById("availableBox").innerHTML=lateralRoute+availableHtml;
   updateAvailableCount(ordered.length);
   initAvailableHandle();
   initSwipeButtons(document.getElementById("availableBox"));
 }
+
 function normalizeRouteText(value){
   return String(value||"")
     .normalize("NFD")
@@ -784,49 +790,48 @@ function buildRouteSuggestionHtml(deliveries){
   const groups=organized.groups.filter(group=>group.bairro!=="Destino não informado");
   const atual=organized.currentBairro;
 
-  const steps=groups.map((group,index)=>{
-    const names=group.items.map(item=>routeCompanyName(item.delivery,item.index));
-    const joined=names.join(" + ");
-    const proximity=names.length>1?" <b>(mesmo bairro — entregar juntas)</b>":"";
-    const distancia=group.zona.distancia
-      ?` • referência ${String(group.zona.distancia).replace(".",",")} km`
-      :"";
-    const firstWaiting=Math.max(0,Math.round((Date.now()-group.oldest)/60000));
-    const waitText=firstWaiting>0?` • aguardando aproximadamente ${firstWaiting} min`:"";
+  const pickupItems=groups.map((group,index)=>{
+    const empresas=group.items.map(item=>{
+      const nome=routeCompanyName(item.delivery,item.index).toUpperCase();
+      const bairro=String(group.bairro||"DESTINO").toUpperCase();
+      return `${nome} (${bairro})`;
+    }).join(" + ");
 
-    return `<div style="padding:10px 0;${index<groups.length-1?'border-bottom:1px solid #e5e7eb;':''}">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-        <div style="font-weight:800">${index+1}º • ${group.bairro}</div>
-        <span class="badge green">${group.zona.nome}${distancia}</span>
+    return `<div style="padding:10px 0;${index<groups.length-1?'border-bottom:1px solid #dbeafe;':''}">
+      <div style="font-weight:900;font-size:15px;line-height:1.45">
+        ${index+1}- ${empresas}
       </div>
-      <div style="margin-top:4px">${joined}${proximity}</div>
-      <div class="muted" style="margin-top:3px;font-size:12px">Prioridade calculada por espera, localização atual e proximidade${waitText}.</div>
+      <div class="muted" style="font-size:12px;margin-top:3px">
+        ${group.zona.nome}${group.items.length>1?" • entregas agrupadas no mesmo bairro":""}
+      </div>
     </div>`;
   }).join("");
 
-  const summary=groups.map(group=>{
-    const names=group.items.map(item=>routeCompanyName(item.delivery,item.index)).join(" + ");
-    return `${group.bairro} — ${names}`;
-  }).join(" → ");
-
-  return `<div class="delivery pro-card" style="border:2px solid #16a34a;background:#f0fdf4;margin-bottom:14px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <span style="font-size:24px">🛵</span>
+  return `<div class="delivery pro-card" style="border:2px solid #2563eb;background:#eff6ff;margin:0 0 14px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
+      <span style="font-size:23px">🛵</span>
       <div>
-        <strong style="font-size:17px">Melhor ordem de entrega</strong>
+        <strong style="font-size:17px">Rota Sugerida das entregas:</strong>
         <p class="muted" style="margin:2px 0 0">
-          ${atual?`Partindo de <b>${atual}</b>. `:""}O sistema equilibra tempo de espera, bairros iguais e distância.
+          ${atual?`Saída: <b>${atual}</b>`:"Informe abaixo onde terminou a última coleta."}
         </p>
       </div>
     </div>
-    ${steps}
-    <div style="margin-top:10px;padding:10px;border-radius:10px;background:#ffffff;border:1px solid #bbf7d0">
-      <b>Rota sugerida:</b> ${summary}
-    </div>
-    <p class="muted" style="margin:8px 0 0;font-size:12px">
-      O pedido mais antigo mantém prioridade. Bairros iguais são agrupados para agilizar sem deixar outro cliente esperando demais.
-    </p>
+    ${pickupItems}
   </div>`;
+}
+
+function buildLateralRouteHtml(){
+  const mine=window.lastDriverDeliveriesOriginal||window.lastDriverDeliveries||[];
+  if(!mine.length)return "";
+
+  return routeCurrentLocationHtml()+
+    (getDriverCurrentBairro()
+      ?buildRouteSuggestionHtml(mine)
+      :`<div class="delivery pro-card" style="border:1px solid #f59e0b;background:#fffbeb;margin-bottom:14px">
+          <strong>Selecione o bairro da última coleta</strong>
+          <p class="muted" style="margin:5px 0 0">A rota aparecerá aqui no formato pickup.</p>
+        </div>`);
 }
 
 function recalculateDriverRoute(){
@@ -859,22 +864,17 @@ function renderMine(list){
   if(!ordered.length){
     document.getElementById("myBox").innerHTML='<p class="muted">(0) Sem pedidos, fique atento!</p>';
     window.lastDriverDeliveries=[];
+    if(document.getElementById("availableBox"))renderAvailable(window.lastAvailableDeliveries||[]);
     return;
   }
 
-  const location=routeCurrentLocationHtml();
-  const suggestion=getDriverCurrentBairro()?buildRouteSuggestionHtml(source):`
-    <div class="delivery pro-card" style="border:1px solid #f59e0b;background:#fffbeb;margin-bottom:14px">
-      <strong>Finalize as coletas e informe onde está</strong>
-      <p class="muted" style="margin:5px 0 0">Depois o sistema organizará as entregas para reduzir a espera dos clientes.</p>
-    </div>`;
-
   document.getElementById("myBox").innerHTML=
-    location+
-    suggestion+
     ordered.map(d=>deliveryHtml(d,false,false)).join("");
 
   window.lastDriverDeliveries=ordered;
+
+  // Atualiza o painel lateral depois de receber as entregas do entregador.
+  if(document.getElementById("availableBox"))renderAvailable(window.lastAvailableDeliveries||[]);
 }
 
 function renderHistory(hist){
@@ -1068,6 +1068,9 @@ function deliveryHtml(d,available,modalOnly){
         <div class="delivery-price-pro">${money(d.Valor)}</div>
       </div>
     </div>
+    <p class="info" style="margin:8px 0 10px;font-size:14px">
+      <b>DESTINO:</b> ${routeNeighborhoodName(d).toUpperCase()}
+    </p>
     <div class="delivery-route-pro">
       <div class="route-point-pro pickup">
         <div class="route-label-pro">Pick up • ${d.BairroColeta||"Coleta"}</div>
@@ -2109,6 +2112,7 @@ function manualRaceHtml(d){
       <div class="delivery-price-pro">${money(d.Valor)}</div>
     </div>
 
+    <p class="info" style="font-size:14px"><b>DESTINO:</b> ${routeNeighborhoodName(d).toUpperCase()}</p>
     <p class="info"><b>Status:</b> <span class="badge yellow">${status}</span></p>
     <p class="info"><b>Pagamento:</b> <span class="badge ${pagamentoPago?"green":"yellow"}">${pagamento}</span></p>
 
