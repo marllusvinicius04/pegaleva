@@ -502,8 +502,48 @@ function normalizeRouteText(value){
     .toLowerCase();
 }
 
+const BAIRROS_POR_SIGLA_PEDIDO={
+  "F":"Fogoso",
+  "M":"Malvinas",
+  "V":"Vaquejada",
+  "C":"Centro",
+  "A":"Aeroporto",
+  "N":"Novo Horizonte",
+  "R":"Areia",
+  "E":"Esperança",
+  "G":"Água Branca",
+  "L":"Alto Bonito",
+  "S":"São Francisco",
+  "B":"Babilônia",
+  "K":"Canaã",
+  "I":"Bela Vista",
+  "P":"Portal dos Cerrados",
+  "D":"Cerrados Park",
+  "T":"Vista Bela",
+  "Z":"Benedito Leite"
+};
+
+function bairroDestinoPeloCodigoPedido(d){
+  const codigo=String(
+    d.CodigoPedido||
+    d.codigoPedido||
+    d.PedidoCodigo||
+    d.pedidoCodigo||
+    d.CodigoDoPedido||
+    d.codigoDoPedido||
+    ""
+  ).toUpperCase().replace(/[^A-Z0-9]/g,"");
+
+  const sigla=codigo.slice(-1);
+  return BAIRROS_POR_SIGLA_PEDIDO[sigla]||"";
+}
+
 function routeNeighborhoodName(d){
-  return String(d.BairroDestino||d.bairroDestino||"Destino não informado").trim()||"Destino não informado";
+  const informado=String(d.BairroDestino||d.bairroDestino||"").trim();
+  if(informado)return informado;
+
+  const peloCodigo=bairroDestinoPeloCodigoPedido(d);
+  return peloCodigo||"Destino não informado";
 }
 
 function routeCompanyName(d,index){
@@ -511,7 +551,7 @@ function routeCompanyName(d,index){
 }
 
 function buildRouteSuggestionHtml(deliveries){
-  const valid=(deliveries||[]).filter(d=>String(d.TipoRegistro||"").toUpperCase()!=="CORRIDA");
+  const valid=(deliveries||[]).filter(d=>routeNeighborhoodName(d)!=="Destino não informado");
   if(!valid.length)return "";
 
   const groups=[];
@@ -565,22 +605,24 @@ function buildRouteSuggestionHtml(deliveries){
 
 function organizeDeliveriesByNeighborhood(list){
   const active=(list||[]).filter(d=>!isClosedDelivery(d.Status));
-  const deliveries=active.filter(d=>String(d.TipoRegistro||"").toUpperCase()!=="CORRIDA");
-  const races=active.filter(d=>String(d.TipoRegistro||"").toUpperCase()==="CORRIDA");
   const firstSeen={};
 
-  deliveries.forEach((d,index)=>{
+  active.forEach((d,index)=>{
     const key=normalizeRouteText(routeNeighborhoodName(d));
     if(firstSeen[key]===undefined)firstSeen[key]=index;
   });
 
-  deliveries.sort((a,b)=>{
+  active.sort((a,b)=>{
     const keyA=normalizeRouteText(routeNeighborhoodName(a));
     const keyB=normalizeRouteText(routeNeighborhoodName(b));
     return (firstSeen[keyA]??0)-(firstSeen[keyB]??0);
   });
 
-  return {all:deliveries.concat(races),deliveries,races};
+  return {
+    all:active,
+    deliveries:active.filter(d=>routeNeighborhoodName(d)!=="Destino não informado"),
+    races:active.filter(d=>String(d.TipoRegistro||"").toUpperCase()==="CORRIDA")
+  };
 }
 
 function renderMine(list){
@@ -1642,6 +1684,7 @@ function openManualDeliveryModal(){
     code.value="";
     code.maxLength=30;
     code.setAttribute("maxlength","30");
+    code.setAttribute("placeholder","Ex.: W1A658V");
     code.setAttribute("autocomplete","off");
     code.setAttribute("inputmode","text");
     code.oninput=function(){
@@ -1710,12 +1753,19 @@ async function createManualRace(){
 
   if(codeInput)codeInput.value=pedido;
 
-  if(!/^[A-Z0-9]{3}[0-9]+$/.test(pedido)){
-    return showStatus("Código inválido","Use 3 caracteres para identificar a empresa e, depois, apenas números para o valor. Ex.: W1A658.");
+  if(!/^[A-Z0-9]{3}[0-9]+[A-Z]$/.test(pedido)){
+    return showStatus("Código inválido","Use 3 caracteres da empresa, os números do valor e a sigla do bairro no final. Ex.: W1A658V.");
   }
 
   const codigoId=pedido.substring(0,3);
-  const valorBruto=pedido.substring(3);
+  const siglaBairro=pedido.slice(-1);
+  const bairroDestino=BAIRROS_POR_SIGLA_PEDIDO[siglaBairro]||"";
+
+  if(!bairroDestino){
+    return showStatus("Sigla de bairro inválida","A última letra do código não corresponde a um bairro cadastrado.");
+  }
+
+  const valorBruto=pedido.substring(3,pedido.length-1);
   const valorNumero=Number(valorBruto)/100;
 
   if(!Number.isFinite(valorNumero)||valorNumero<=0){
@@ -1726,6 +1776,9 @@ async function createManualRace(){
   const res=await api("createCorrida",{
     codigoId,
     valor:valorNumero,
+    codigoPedido:pedido,
+    siglaBairro,
+    bairroDestino,
     codigoEntregador:session.profile.CodigoAcesso
   },{retries:1,timeoutMs:30000});
   hideLoader();
@@ -1738,9 +1791,16 @@ async function createManualRace(){
     return showStatus("Corrida não registrada",friendlyError(res.error||"Não foi possível criar a corrida."));
   }
 
+  if(res.corrida){
+    res.corrida.CodigoPedido=res.corrida.CodigoPedido||pedido;
+    res.corrida.BairroDestino=res.corrida.BairroDestino||bairroDestino;
+    res.corrida.SiglaBairro=res.corrida.SiglaBairro||siglaBairro;
+  }
+
   if(located){
     located.classList.add("active");
-    located.innerHTML='<i class="fa-solid fa-circle-check"></i> '+(res.corrida&&res.corrida.NomeCliente||"Cadastro localizado");
+    located.innerHTML='<i class="fa-solid fa-circle-check"></i> '+(res.corrida&&res.corrida.NomeCliente||"Cadastro localizado")+
+      '<small style="display:block;margin-top:4px">Destino: '+bairroDestino+' • Sigla '+siglaBairro+'</small>';
   }
 
   closeManualDeliveryModal();
