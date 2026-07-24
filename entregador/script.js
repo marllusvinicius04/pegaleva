@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260723-rota-pickup-lateral-v10";
+const APP_CACHE_VERSION="20260723-rota-pickup-nome-card-v11";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -609,7 +609,39 @@ function routeNeighborhoodName(d){
 }
 
 function routeCompanyName(d,index){
-  return String(d.NomeSolicitante||d.Empresa||d.NomeDestino||("Empresa "+String(index+1).padStart(2,"0"))).trim();
+  const nome=String(
+    d.NomeEmpresa||
+    d.nomeEmpresa||
+    d.Empresa||
+    d.empresa||
+    d.NomeSolicitante||
+    d.nomeSolicitante||
+    d.NomeLoja||
+    d.nomeLoja||
+    d.Estabelecimento||
+    d.estabelecimento||
+    d.Cliente||
+    d.cliente||
+    d.NomeCliente||
+    d.nomeCliente||
+    d.NomeDestino||
+    d.nomeDestino||
+    ""
+  ).trim();
+
+  if(nome)return nome;
+
+  const tituloCard=String(
+    d.Titulo||
+    d.titulo||
+    d.Descricao||
+    d.descricao||
+    ""
+  ).trim();
+
+  if(tituloCard)return tituloCard;
+
+  return "ENTREGA "+String(index+1).padStart(2,"0");
 }
 
 const DRIVER_CURRENT_BAIRRO_KEY="pegaleva_driver_current_bairro";
