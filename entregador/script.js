@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260723-cards-slide-ordem-v8";
+const APP_CACHE_VERSION="20260723-cards-completos-slide-v9";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -551,52 +551,16 @@ function routeCompanyName(d,index){
 }
 
 function buildRouteSuggestionHtml(deliveries){
-  const valid=(deliveries||[]).filter(d=>!isClosedDelivery(d.Status));
-  if(!valid.length)return "";
+  const ordered=(deliveries||[]).filter(d=>!isClosedDelivery(d.Status));
+  if(!ordered.length)return "";
 
-  const ordered=valid
-    .map((delivery,index)=>({delivery,index}))
-    .sort((a,b)=>a.index-b.index)
-    .map(item=>item.delivery);
-
-  const cards=ordered.map((d,index)=>{
-    const nome=routeCompanyName(d,index);
-    const bairro=routeNeighborhoodName(d);
-    const status=String(d.Status||"Aguardando");
-
-    return `<div class="delivery pro-card" style="
-      flex:0 0 88%;
-      min-width:0;
-      margin:0;
-      scroll-snap-align:start;
-      ${index===0?'border:2px solid #16a34a;background:#f0fdf4;':''}
-    ">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-        <div>
-          <div style="font-size:12px;font-weight:900;${index===0?'color:#15803d;':'color:#64748b;'}">
-            ${index===0?'PRIMEIRO A SER ATENDIDO':`${index+1}º DA FILA`}
-          </div>
-          <strong style="display:block;margin-top:4px;font-size:17px">${nome}</strong>
-        </div>
-        <span class="badge ${index===0?'green':'yellow'}">${index+1}</span>
-      </div>
-
-      <p class="info" style="margin:10px 0 4px">
-        <b>Destino:</b> ${bairro}
-      </p>
-
-      <p class="muted" style="margin:0">
-        <b>Status:</b> ${status}
-      </p>
-    </div>`;
-  }).join("");
+  const cards=ordered.map(d=>
+    `<div style="flex:0 0 92%;min-width:0;scroll-snap-align:start">
+      ${deliveryHtml(d,false,false)}
+    </div>`
+  ).join("");
 
   return `<div style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
-      <strong style="font-size:17px">Entregas em ordem</strong>
-      <span class="muted">${ordered.length} na fila</span>
-    </div>
-
     <div style="
       display:flex;
       gap:12px;
@@ -612,22 +576,10 @@ function buildRouteSuggestionHtml(deliveries){
 
 function organizeDeliveriesByNeighborhood(list){
   const active=(list||[]).filter(d=>!isClosedDelivery(d.Status));
-  const firstSeen={};
-
-  active.forEach((d,index)=>{
-    const key=normalizeRouteText(routeNeighborhoodName(d));
-    if(firstSeen[key]===undefined)firstSeen[key]=index;
-  });
-
-  active.sort((a,b)=>{
-    const keyA=normalizeRouteText(routeNeighborhoodName(a));
-    const keyB=normalizeRouteText(routeNeighborhoodName(b));
-    return (firstSeen[keyA]??0)-(firstSeen[keyB]??0);
-  });
 
   return {
     all:active,
-    deliveries:active.filter(d=>routeNeighborhoodName(d)!=="Destino não informado"),
+    deliveries:active.filter(d=>String(d.TipoRegistro||"").toUpperCase()!=="CORRIDA"),
     races:active.filter(d=>String(d.TipoRegistro||"").toUpperCase()==="CORRIDA")
   };
 }
@@ -635,14 +587,14 @@ function organizeDeliveriesByNeighborhood(list){
 function renderMine(list){
   const organized=organizeDeliveriesByNeighborhood(list);
   list=organized.all;
+
   if(!list.length){
     document.getElementById("myBox").innerHTML='<p class="muted">(0) Sem pedidos, fique atento!</p>';
     window.lastDriverDeliveries=[];
     return;
   }
 
-  const suggestion=buildRouteSuggestionHtml(organized.deliveries);
-  document.getElementById("myBox").innerHTML=suggestion+list.map(d=>deliveryHtml(d,false,false)).join("");
+  document.getElementById("myBox").innerHTML=buildRouteSuggestionHtml(list);
   window.lastDriverDeliveries=list;
 }
 
