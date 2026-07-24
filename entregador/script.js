@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260723-rota-pickup-nome-card-v11";
+const APP_CACHE_VERSION="20260723-sugestao-rota-bairros-v7";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -483,85 +483,23 @@ function renderAvailable(list){
     if(now-refusedDeliveries[id]>=20000) delete refusedDeliveries[id];
   });
   localStorage.setItem("pegaleva_refused_temp",JSON.stringify(refusedDeliveries));
-
   const raw=(list||[]).filter(d=>!isClosedDelivery(d.Status));
   const ordered=raw.filter(d=>!refusedDeliveries[d.ID]);
   window.lastAvailableDeliveries=ordered;
 
-  const lateralRoute=buildLateralRouteHtml();
-  const availableHtml=ordered.length
-    ? `<div style="margin:12px 0 7px;font-weight:900">Novas entregas disponíveis</div>`+
-      ordered.map(d=>deliveryHtml(d,true,false)).join("")
-    : '<p class="muted" style="margin-top:12px">(0) Sem novos pedidos disponíveis.</p>';
-
-  document.getElementById("availableBox").innerHTML=lateralRoute+availableHtml;
+  document.getElementById("availableBox").innerHTML=ordered.length
+    ? ordered.map(d=>deliveryHtml(d,true,false)).join("")
+    : '<p class="muted" style="margin-top:12px">(0) Sem pedidos, fique atento!</p>';
   updateAvailableCount(ordered.length);
   initAvailableHandle();
   initSwipeButtons(document.getElementById("availableBox"));
 }
-
 function normalizeRouteText(value){
   return String(value||"")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g,"")
     .trim()
     .toLowerCase();
-}
-
-const ZONAS_ROTA_BAIRROS={
-  "leve":{
-    nome:"Leve",
-    ordem:1,
-    distancia:2.5,
-    bairros:["Fogoso","Malvinas","Vaquejada","Centro"]
-  },
-  "media":{
-    nome:"Média",
-    ordem:2,
-    distancia:3.5,
-    bairros:[
-      "Aeroporto","Aeroporto I","Aeroporto II",
-      "Novo Horizonte","Novo Horizonte I","Novo Horizonte II",
-      "Areia","Esperança","Agua Branca","Água Branca"
-    ]
-  },
-  "densa":{
-    nome:"Densa",
-    ordem:3,
-    distancia:5.5,
-    bairros:[
-      "Alto Bonito","Sao Francisco","São Francisco",
-      "Babilonia","Babilônia","Canaa","Canaã","Bela Vista"
-    ]
-  },
-  "pesada":{
-    nome:"Pesada",
-    ordem:4,
-    distancia:15.5,
-    bairros:["Portal dos Cerrados","Cerrados Park","Vista Bela"]
-  },
-  "benedito-leite":{
-    nome:"Benedito Leite",
-    ordem:4,
-    distancia:10,
-    bairros:["Benedito Leite"]
-  }
-};
-
-function routeZoneInfo(bairro){
-  const normalizado=normalizeRouteText(bairro);
-  for(const key of Object.keys(ZONAS_ROTA_BAIRROS)){
-    const zona=ZONAS_ROTA_BAIRROS[key];
-    const encontrado=zona.bairros.some(nome=>normalizeRouteText(nome)===normalizado);
-    if(encontrado)return {...zona,key};
-  }
-  return {
-    nome:"Zona não identificada",
-    ordem:99,
-    distancia:0,
-    bairros:[],
-    key:"nao-identificada"
-  };
 }
 
 const BAIRROS_POR_SIGLA_PEDIDO={
@@ -609,304 +547,96 @@ function routeNeighborhoodName(d){
 }
 
 function routeCompanyName(d,index){
-  const nome=String(
-    d.NomeEmpresa||
-    d.nomeEmpresa||
-    d.Empresa||
-    d.empresa||
-    d.NomeSolicitante||
-    d.nomeSolicitante||
-    d.NomeLoja||
-    d.nomeLoja||
-    d.Estabelecimento||
-    d.estabelecimento||
-    d.Cliente||
-    d.cliente||
-    d.NomeCliente||
-    d.nomeCliente||
-    d.NomeDestino||
-    d.nomeDestino||
-    ""
-  ).trim();
-
-  if(nome)return nome;
-
-  const tituloCard=String(
-    d.Titulo||
-    d.titulo||
-    d.Descricao||
-    d.descricao||
-    ""
-  ).trim();
-
-  if(tituloCard)return tituloCard;
-
-  return "ENTREGA "+String(index+1).padStart(2,"0");
-}
-
-const DRIVER_CURRENT_BAIRRO_KEY="pegaleva_driver_current_bairro";
-
-function getDriverCurrentBairro(){
-  return String(localStorage.getItem(DRIVER_CURRENT_BAIRRO_KEY)||"").trim();
-}
-
-function setDriverCurrentBairro(value){
-  const bairro=String(value||"").trim();
-  if(bairro)localStorage.setItem(DRIVER_CURRENT_BAIRRO_KEY,bairro);
-  else localStorage.removeItem(DRIVER_CURRENT_BAIRRO_KEY);
-}
-
-function allRouteNeighborhoods(){
-  const list=[];
-  Object.values(ZONAS_ROTA_BAIRROS).forEach(zona=>{
-    zona.bairros.forEach(bairro=>{
-      if(!list.some(x=>normalizeRouteText(x)===normalizeRouteText(bairro)))list.push(bairro);
-    });
-  });
-  return list;
-}
-
-function routeCurrentLocationHtml(){
-  const atual=getDriverCurrentBairro();
-  const options=allRouteNeighborhoods().map(bairro=>
-    `<option value="${bairro.replace(/"/g,"&quot;")}" ${normalizeRouteText(atual)===normalizeRouteText(bairro)?"selected":""}>${bairro}</option>`
-  ).join("");
-
-  return `<div class="delivery pro-card" style="border:2px solid #2563eb;background:#eff6ff;margin-bottom:14px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <span style="font-size:23px">📍</span>
-      <div>
-        <strong style="font-size:17px">Finalizei as coletas</strong>
-        <p class="muted" style="margin:2px 0 0">Informe o bairro da última coleta para calcular a melhor ordem de entrega.</p>
-      </div>
-    </div>
-    <label for="driverCurrentBairro" style="display:block;font-weight:800;margin-bottom:5px">Onde você está agora?</label>
-    <select id="driverCurrentBairro" style="width:100%;padding:11px;border:1px solid #bfdbfe;border-radius:11px;background:#fff">
-      <option value="">Selecione o bairro atual</option>
-      ${options}
-    </select>
-    <button type="button" class="btn green" style="margin-top:10px;width:100%" onclick="recalculateDriverRoute()">
-      <i class="fa-solid fa-route"></i> Gerar melhor ordem de entrega
-    </button>
-  </div>`;
-}
-
-function parseRouteDate(value){
-  if(value===null||value===undefined||value==="")return 0;
-  if(typeof value==="number"){
-    if(value>100000000000)return value;
-    if(value>1000000000)return value*1000;
-  }
-  const raw=String(value).trim();
-  if(!raw)return 0;
-
-  const br=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if(br){
-    const d=new Date(Number(br[3]),Number(br[2])-1,Number(br[1]),Number(br[4]||0),Number(br[5]||0),Number(br[6]||0));
-    return isNaN(d.getTime())?0:d.getTime();
-  }
-
-  const parsed=Date.parse(raw.replace(" ","T"));
-  return Number.isFinite(parsed)?parsed:0;
-}
-
-function deliveryWaitTimestamp(d,index){
-  const fields=[
-    "ColetadoEm","coletadoEm","DataColeta","dataColeta",
-    "AceitoEm","aceitoEm","CriadoEm","criadoEm",
-    "DataHora","dataHora","Timestamp","timestamp"
-  ];
-
-  for(const field of fields){
-    const time=parseRouteDate(d&&d[field]);
-    if(time)return time;
-  }
-
-  return Date.now()-(1000000-index*1000);
-}
-
-function routeGroupCounts(list){
-  const counts={};
-  (list||[]).forEach(d=>{
-    const key=normalizeRouteText(routeNeighborhoodName(d));
-    counts[key]=(counts[key]||0)+1;
-  });
-  return counts;
-}
-
-function routePriorityScore(d,index,total,currentBairro,counts){
-  const bairro=routeNeighborhoodName(d);
-  const zona=routeZoneInfo(bairro);
-  const currentZone=currentBairro?routeZoneInfo(currentBairro):null;
-  const timestamp=deliveryWaitTimestamp(d,index);
-  const waitingMinutes=Math.max(0,(Date.now()-timestamp)/60000);
-
-  let score=0;
-
-  // Cliente esperando há mais tempo tem peso principal.
-  score+=Math.min(waitingMinutes,180)*12;
-  score+=(total-index)*35;
-
-  // Mesmo bairro da posição atual deve ser atendido primeiro.
-  if(currentBairro&&normalizeRouteText(bairro)===normalizeRouteText(currentBairro)){
-    score+=900;
-  }else if(currentZone&&zona.ordem===currentZone.ordem){
-    score+=260;
-  }else if(currentZone){
-    score-=Math.abs(zona.ordem-currentZone.ordem)*80;
-  }
-
-  // Entregas do mesmo bairro ficam juntas para evitar duas viagens.
-  const sameNeighborhood=counts[normalizeRouteText(bairro)]||1;
-  if(sameNeighborhood>1)score+=(sameNeighborhood-1)*180;
-
-  // Pequeno ajuste pelas zonas, sem superar o tempo de espera.
-  score-=Math.max(0,zona.ordem-1)*28;
-
-  return score;
-}
-
-function organizeDeliveriesBySmartRoute(list){
-  const active=(list||[]).filter(d=>!isClosedDelivery(d.Status));
-  const currentBairro=getDriverCurrentBairro();
-  const counts=routeGroupCounts(active);
-  const total=active.length;
-
-  const scored=active.map((delivery,index)=>({
-    delivery,
-    index,
-    bairro:routeNeighborhoodName(delivery),
-    zona:routeZoneInfo(routeNeighborhoodName(delivery)),
-    timestamp:deliveryWaitTimestamp(delivery,index),
-    score:routePriorityScore(delivery,index,total,currentBairro,counts)
-  }));
-
-  const grouped={};
-  scored.forEach(item=>{
-    const key=normalizeRouteText(item.bairro);
-    if(!grouped[key])grouped[key]={bairro:item.bairro,zona:item.zona,items:[],score:-Infinity,oldest:item.timestamp};
-    grouped[key].items.push(item);
-    grouped[key].score=Math.max(grouped[key].score,item.score);
-    grouped[key].oldest=Math.min(grouped[key].oldest,item.timestamp);
-  });
-
-  const orderedGroups=Object.values(grouped).sort((a,b)=>{
-    if(b.score!==a.score)return b.score-a.score;
-    if(a.oldest!==b.oldest)return a.oldest-b.oldest;
-    return a.zona.ordem-b.zona.ordem;
-  });
-
-  const ordered=[];
-  orderedGroups.forEach(group=>{
-    group.items.sort((a,b)=>{
-      if(a.timestamp!==b.timestamp)return a.timestamp-b.timestamp;
-      return a.index-b.index;
-    });
-    group.items.forEach(item=>ordered.push(item.delivery));
-  });
-
-  return {
-    all:ordered,
-    deliveries:ordered.filter(d=>routeNeighborhoodName(d)!=="Destino não informado"),
-    races:ordered.filter(d=>String(d.TipoRegistro||"").toUpperCase()==="CORRIDA"),
-    groups:orderedGroups,
-    currentBairro
-  };
+  return String(d.NomeSolicitante||d.Empresa||d.NomeDestino||("Empresa "+String(index+1).padStart(2,"0"))).trim();
 }
 
 function buildRouteSuggestionHtml(deliveries){
-  const organized=organizeDeliveriesBySmartRoute(deliveries);
-  const valid=organized.deliveries;
+  const valid=(deliveries||[]).filter(d=>routeNeighborhoodName(d)!=="Destino não informado");
   if(!valid.length)return "";
 
-  const groups=organized.groups.filter(group=>group.bairro!=="Destino não informado");
-  const atual=organized.currentBairro;
+  const groups=[];
+  const groupMap={};
 
-  const pickupItems=groups.map((group,index)=>{
-    const empresas=group.items.map(item=>{
-      const nome=routeCompanyName(item.delivery,item.index).toUpperCase();
-      const bairro=String(group.bairro||"DESTINO").toUpperCase();
-      return `${nome} (${bairro})`;
-    }).join(" + ");
+  valid.forEach((d,index)=>{
+    const bairro=routeNeighborhoodName(d);
+    const key=normalizeRouteText(bairro)||"destino-nao-informado";
+    if(!groupMap[key]){
+      groupMap[key]={bairro,items:[],firstIndex:index};
+      groups.push(groupMap[key]);
+    }
+    groupMap[key].items.push({delivery:d,name:routeCompanyName(d,index),originalIndex:index});
+  });
 
-    return `<div style="padding:10px 0;${index<groups.length-1?'border-bottom:1px solid #dbeafe;':''}">
-      <div style="font-weight:900;font-size:15px;line-height:1.45">
-        ${index+1}- ${empresas}
-      </div>
-      <div class="muted" style="font-size:12px;margin-top:3px">
-        ${group.zona.nome}${group.items.length>1?" • entregas agrupadas no mesmo bairro":""}
-      </div>
+  groups.sort((a,b)=>{
+    if(b.items.length!==a.items.length)return b.items.length-a.items.length;
+    return a.firstIndex-b.firstIndex;
+  });
+
+  const steps=groups.map((group,index)=>{
+    const names=group.items.map(item=>item.name);
+    const joined=names.join(" + ");
+    const proximity=names.length>1?" <b>(próximas — mesmo bairro)</b>":"";
+    return `<div style="padding:9px 0;${index<groups.length-1?'border-bottom:1px solid #e5e7eb;':''}">
+      <div style="font-weight:800">${index+1}º • ${group.bairro}</div>
+      <div style="margin-top:3px">${joined}${proximity}</div>
     </div>`;
   }).join("");
 
-  return `<div class="delivery pro-card" style="border:2px solid #2563eb;background:#eff6ff;margin:0 0 14px">
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
-      <span style="font-size:23px">🛵</span>
+  const summary=groups.map(group=>{
+    const names=group.items.map(item=>item.name).join(" + ");
+    return group.items.length>1?`${names} (próximas)`:names;
+  }).join(" → ");
+
+  return `<div class="delivery pro-card" style="border:2px solid #16a34a;background:#f0fdf4;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="font-size:24px">🛵</span>
       <div>
-        <strong style="font-size:17px">Rota Sugerida das entregas:</strong>
-        <p class="muted" style="margin:2px 0 0">
-          ${atual?`Saída: <b>${atual}</b>`:"Informe abaixo onde terminou a última coleta."}
-        </p>
+        <strong style="font-size:17px">Sugestão de rota por bairros</strong>
+        <p class="muted" style="margin:2px 0 0">Agrupamento automático das entregas pelo bairro de destino.</p>
       </div>
     </div>
-    ${pickupItems}
+    ${steps}
+    <div style="margin-top:10px;padding:10px;border-radius:10px;background:#ffffff;border:1px solid #bbf7d0">
+      <b>Ordem sugerida:</b> ${summary}
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:12px">Confirme no mapa antes de sair. O sistema considera bairros iguais como próximos.</p>
   </div>`;
 }
 
-function buildLateralRouteHtml(){
-  const mine=window.lastDriverDeliveriesOriginal||window.lastDriverDeliveries||[];
-  if(!mine.length)return "";
+function organizeDeliveriesByNeighborhood(list){
+  const active=(list||[]).filter(d=>!isClosedDelivery(d.Status));
+  const firstSeen={};
 
-  return routeCurrentLocationHtml()+
-    (getDriverCurrentBairro()
-      ?buildRouteSuggestionHtml(mine)
-      :`<div class="delivery pro-card" style="border:1px solid #f59e0b;background:#fffbeb;margin-bottom:14px">
-          <strong>Selecione o bairro da última coleta</strong>
-          <p class="muted" style="margin:5px 0 0">A rota aparecerá aqui no formato pickup.</p>
-        </div>`);
-}
+  active.forEach((d,index)=>{
+    const key=normalizeRouteText(routeNeighborhoodName(d));
+    if(firstSeen[key]===undefined)firstSeen[key]=index;
+  });
 
-function recalculateDriverRoute(){
-  const select=document.getElementById("driverCurrentBairro");
-  const bairro=String(select&&select.value||"").trim();
+  active.sort((a,b)=>{
+    const keyA=normalizeRouteText(routeNeighborhoodName(a));
+    const keyB=normalizeRouteText(routeNeighborhoodName(b));
+    return (firstSeen[keyA]??0)-(firstSeen[keyB]??0);
+  });
 
-  if(!bairro){
-    showStatus("Informe sua localização","Selecione o bairro onde terminou a última coleta.");
-    return;
-  }
-
-  setDriverCurrentBairro(bairro);
-  renderMine(window.lastDriverDeliveriesOriginal||window.lastDriverDeliveries||[]);
-  showStatus("Rota recalculada","A ordem foi atualizada considerando sua localização e o tempo de espera dos clientes.");
-}
-
-function updateDriverCurrentBairroAfterDelivery(bairro){
-  if(!bairro)return;
-  setDriverCurrentBairro(bairro);
-  if(window.lastDriverDeliveriesOriginal)renderMine(window.lastDriverDeliveriesOriginal);
+  return {
+    all:active,
+    deliveries:active.filter(d=>routeNeighborhoodName(d)!=="Destino não informado"),
+    races:active.filter(d=>String(d.TipoRegistro||"").toUpperCase()==="CORRIDA")
+  };
 }
 
 function renderMine(list){
-  const source=(list||[]).slice();
-  window.lastDriverDeliveriesOriginal=source;
-
-  const organized=organizeDeliveriesBySmartRoute(source);
-  const ordered=organized.all;
-
-  if(!ordered.length){
+  const organized=organizeDeliveriesByNeighborhood(list);
+  list=organized.all;
+  if(!list.length){
     document.getElementById("myBox").innerHTML='<p class="muted">(0) Sem pedidos, fique atento!</p>';
     window.lastDriverDeliveries=[];
-    if(document.getElementById("availableBox"))renderAvailable(window.lastAvailableDeliveries||[]);
     return;
   }
 
-  document.getElementById("myBox").innerHTML=
-    ordered.map(d=>deliveryHtml(d,false,false)).join("");
-
-  window.lastDriverDeliveries=ordered;
-
-  // Atualiza o painel lateral depois de receber as entregas do entregador.
-  if(document.getElementById("availableBox"))renderAvailable(window.lastAvailableDeliveries||[]);
+  const suggestion=buildRouteSuggestionHtml(organized.deliveries);
+  document.getElementById("myBox").innerHTML=suggestion+list.map(d=>deliveryHtml(d,false,false)).join("");
+  window.lastDriverDeliveries=list;
 }
 
 function renderHistory(hist){
@@ -1100,9 +830,6 @@ function deliveryHtml(d,available,modalOnly){
         <div class="delivery-price-pro">${money(d.Valor)}</div>
       </div>
     </div>
-    <p class="info" style="margin:8px 0 10px;font-size:14px">
-      <b>DESTINO:</b> ${routeNeighborhoodName(d).toUpperCase()}
-    </p>
     <div class="delivery-route-pro">
       <div class="route-point-pro pickup">
         <div class="route-label-pro">Pick up • ${d.BairroColeta||"Coleta"}</div>
@@ -2144,7 +1871,6 @@ function manualRaceHtml(d){
       <div class="delivery-price-pro">${money(d.Valor)}</div>
     </div>
 
-    <p class="info" style="font-size:14px"><b>DESTINO:</b> ${routeNeighborhoodName(d).toUpperCase()}</p>
     <p class="info"><b>Status:</b> <span class="badge yellow">${status}</span></p>
     <p class="info"><b>Pagamento:</b> <span class="badge ${pagamentoPago?"green":"yellow"}">${pagamento}</span></p>
 
