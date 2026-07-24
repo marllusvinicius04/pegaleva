@@ -1,5 +1,5 @@
 
-const APP_CACHE_VERSION="20260723-sugestao-rota-bairros-v7";
+const APP_CACHE_VERSION="20260723-cards-slide-ordem-v8";
 async function clearAppCache(){
   try{
     if("caches" in window){
@@ -551,55 +551,62 @@ function routeCompanyName(d,index){
 }
 
 function buildRouteSuggestionHtml(deliveries){
-  const valid=(deliveries||[]).filter(d=>routeNeighborhoodName(d)!=="Destino não informado");
+  const valid=(deliveries||[]).filter(d=>!isClosedDelivery(d.Status));
   if(!valid.length)return "";
 
-  const groups=[];
-  const groupMap={};
+  const ordered=valid
+    .map((delivery,index)=>({delivery,index}))
+    .sort((a,b)=>a.index-b.index)
+    .map(item=>item.delivery);
 
-  valid.forEach((d,index)=>{
+  const cards=ordered.map((d,index)=>{
+    const nome=routeCompanyName(d,index);
     const bairro=routeNeighborhoodName(d);
-    const key=normalizeRouteText(bairro)||"destino-nao-informado";
-    if(!groupMap[key]){
-      groupMap[key]={bairro,items:[],firstIndex:index};
-      groups.push(groupMap[key]);
-    }
-    groupMap[key].items.push({delivery:d,name:routeCompanyName(d,index),originalIndex:index});
-  });
+    const status=String(d.Status||"Aguardando");
 
-  groups.sort((a,b)=>{
-    if(b.items.length!==a.items.length)return b.items.length-a.items.length;
-    return a.firstIndex-b.firstIndex;
-  });
+    return `<div class="delivery pro-card" style="
+      flex:0 0 88%;
+      min-width:0;
+      margin:0;
+      scroll-snap-align:start;
+      ${index===0?'border:2px solid #16a34a;background:#f0fdf4;':''}
+    ">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div style="font-size:12px;font-weight:900;${index===0?'color:#15803d;':'color:#64748b;'}">
+            ${index===0?'PRIMEIRO A SER ATENDIDO':`${index+1}º DA FILA`}
+          </div>
+          <strong style="display:block;margin-top:4px;font-size:17px">${nome}</strong>
+        </div>
+        <span class="badge ${index===0?'green':'yellow'}">${index+1}</span>
+      </div>
 
-  const steps=groups.map((group,index)=>{
-    const names=group.items.map(item=>item.name);
-    const joined=names.join(" + ");
-    const proximity=names.length>1?" <b>(próximas — mesmo bairro)</b>":"";
-    return `<div style="padding:9px 0;${index<groups.length-1?'border-bottom:1px solid #e5e7eb;':''}">
-      <div style="font-weight:800">${index+1}º • ${group.bairro}</div>
-      <div style="margin-top:3px">${joined}${proximity}</div>
+      <p class="info" style="margin:10px 0 4px">
+        <b>Destino:</b> ${bairro}
+      </p>
+
+      <p class="muted" style="margin:0">
+        <b>Status:</b> ${status}
+      </p>
     </div>`;
   }).join("");
 
-  const summary=groups.map(group=>{
-    const names=group.items.map(item=>item.name).join(" + ");
-    return group.items.length>1?`${names} (próximas)`:names;
-  }).join(" → ");
+  return `<div style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+      <strong style="font-size:17px">Entregas em ordem</strong>
+      <span class="muted">${ordered.length} na fila</span>
+    </div>
 
-  return `<div class="delivery pro-card" style="border:2px solid #16a34a;background:#f0fdf4;margin-bottom:14px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <span style="font-size:24px">🛵</span>
-      <div>
-        <strong style="font-size:17px">Sugestão de rota por bairros</strong>
-        <p class="muted" style="margin:2px 0 0">Agrupamento automático das entregas pelo bairro de destino.</p>
-      </div>
+    <div style="
+      display:flex;
+      gap:12px;
+      overflow-x:auto;
+      scroll-snap-type:x mandatory;
+      padding:2px 2px 10px;
+      -webkit-overflow-scrolling:touch;
+    ">
+      ${cards}
     </div>
-    ${steps}
-    <div style="margin-top:10px;padding:10px;border-radius:10px;background:#ffffff;border:1px solid #bbf7d0">
-      <b>Ordem sugerida:</b> ${summary}
-    </div>
-    <p class="muted" style="margin:8px 0 0;font-size:12px">Confirme no mapa antes de sair. O sistema considera bairros iguais como próximos.</p>
   </div>`;
 }
 
