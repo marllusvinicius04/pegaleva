@@ -265,11 +265,94 @@ document.querySelectorAll("[data-toggle-password]").forEach(btn=>{
   };
 });
 
-const rememberedEmail=localStorage.getItem("pl_saved_email")||"";
-if(rememberedEmail){
-  $("loginEmail").value=rememberedEmail;
-  $("rememberLogin").checked=true;
-}$("registerForm").onsubmit=async e=>{
+const QUICK_LOGIN_KEY="pl_quick_login_account";
+
+function getQuickLoginAccount(){
+  try{
+    return JSON.parse(localStorage.getItem(QUICK_LOGIN_KEY)||"null");
+  }catch(e){
+    localStorage.removeItem(QUICK_LOGIN_KEY);
+    return null;
+  }
+}
+
+function saveQuickLoginAccount(user,email,password){
+  const account={
+    name:String(user&&user.name||"Conta salva").trim(),
+    email:String(email||"").trim().toLowerCase(),
+    password:String(password||"")
+  };
+  localStorage.setItem(QUICK_LOGIN_KEY,JSON.stringify(account));
+  renderQuickLoginAccount();
+}
+
+function removeQuickLoginAccount(){
+  localStorage.removeItem(QUICK_LOGIN_KEY);
+  localStorage.removeItem("pl_saved_email");
+  renderQuickLoginAccount();
+}
+
+function renderQuickLoginAccount(){
+  const account=getQuickLoginAccount();
+  const valid=!!(account&&account.email&&account.password);
+  $("quickLoginBox")?.classList.toggle("hide",!valid);
+  if(!valid)return;
+  $("quickLoginName").textContent=account.name||"Conta salva";
+  $("quickLoginEmail").textContent=account.email;
+}
+
+async function performLogin(email,password,quick=false){
+  loginError.textContent="";
+  quickLoginError.textContent="";
+
+  try{
+    if(quick)setLoading("quickLoginLoading",true);
+    else setLoading("loginLoading",true);
+
+    const j=await api("login",{email,password});
+
+    if(!quick){
+      if($("rememberLogin").checked){
+        saveQuickLoginAccount(j.user,email,password);
+      }else{
+        removeQuickLoginAccount();
+      }
+    }
+
+    openApp(j.user,j.token);
+  }catch(x){
+    if(quick){
+      quickLoginError.textContent=x.message;
+      if(/senha inválidos|e-mail ou senha/i.test(x.message||"")){
+        removeQuickLoginAccount();
+        toast("Os dados salvos não são mais válidos. Entre novamente.");
+      }
+    }else{
+      loginError.textContent=x.message;
+    }
+  }finally{
+    setLoading("quickLoginLoading",false);
+    setLoading("loginLoading",false);
+  }
+}
+
+renderQuickLoginAccount();
+
+$("quickLoginAccount").onclick=async()=>{
+  const account=getQuickLoginAccount();
+  if(!account||!account.email||!account.password){
+    removeQuickLoginAccount();
+    return;
+  }
+  await performLogin(account.email,account.password,true);
+};
+
+$("removeQuickLogin").onclick=()=>{
+  if(confirm("Deseja remover esta conta salva deste aparelho?")){
+    removeQuickLoginAccount();
+    toast("Conta salva removida.");
+  }
+};$("registerForm").onsubmit=async e=>{
   e.preventDefault();
   if(!currentRegisterFieldsValid())return;
 
@@ -306,20 +389,19 @@ if(rememberedEmail){
   }
 };$("loginForm").onsubmit=async e=>{
   e.preventDefault();
-  loginError.textContent="";
   const email=loginEmail.value.trim().toLowerCase();
   const password=loginPassword.value;
-  try{
-    setLoading("loginLoading",true);
-    const j=await api("login",{email,password});
-    if($("rememberLogin").checked)localStorage.setItem("pl_saved_email",email);
-    else localStorage.removeItem("pl_saved_email");
-    openApp(j.user,j.token);
-  }catch(x){loginError.textContent=x.message}finally{setLoading("loginLoading",false)}
+  await performLogin(email,password,false);
 };$("logoutBtn").onclick=async()=>{
   try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
-  clearInterval(state.dashboardTimer);sessionStorage.removeItem("pl_session");
-  state.user=null;state.token="";state.revision="";show("loginView")
+  clearInterval(state.dashboardTimer);
+  sessionStorage.removeItem("pl_session");
+  state.user=null;
+  state.token="";
+  state.revision="";
+  loginPassword.value="";
+  show("loginView");
+  renderQuickLoginAccount();
 };function choices(type){choiceTitle.textContent=type==="origin"?"Local de origem":"Local de destino";const a=type==="origin"?[["Usar minha localização de cadastro","registered"],["Alterar localização","manual"]]:[["Enviar localização atual","whatsapp"],["Informar localização de destino","manual"]];choiceOptions.innerHTML=a.map(x=>`<button class="pick" data-type="${type}" data-mode="${x[1]}">${x[0]}</button>`).join("");choiceOptions.querySelectorAll("button").forEach(b=>b.onclick=()=>choose(b.dataset.type,b.dataset.mode));openL("choiceSheet")}originTrigger.onclick=()=>choices("origin");destinationTrigger.onclick=()=>choices("destination");function choose(type,mode){closeL("choiceSheet");if(mode==="registered"){state.request.origin={mode,street:state.user.street,number:state.user.number,reference:state.user.reference,city:state.user.city};labels();return}if(mode==="whatsapp"){state.request.destination={mode,street:"Localização via WhatsApp",number:"-",reference:"Localização atual",city:state.user.city};labels();openL("whatsappInfo");return}addressForm(type)}function addressForm(type){wizardTitle.textContent=type==="origin"?"Alterar origem":"Informar destino";steps.innerHTML="<span class='on'></span>";wizardContent.innerHTML=`<div class="field"><label>Logradouro (rua, avenida ou alameda)</label><input id="aStreet"></div><div class="grid2"><div class="field"><label>Número</label><input id="aNumber"></div><div class="field"><label>Cidade</label><select id="aCity"><option>Uruçuí</option><option>Benedito Leite</option></select></div></div><div class="field"><label>Ponto de referência obrigatório</label><input id="aRef"></div>`;backStep.classList.add("hide");nextStep.textContent="Salvar localização";nextStep.onclick=()=>{const a={mode:"manual",street:aStreet.value.trim(),number:aNumber.value.trim(),reference:aRef.value.trim(),city:aCity.value};if(!a.street||!a.number||!a.reference)return toast("Preencha todos os dados.");state.request[type]=a;labels();closeL("wizardSheet");resetButtons()};openL("wizardSheet")}function resetButtons(){backStep.classList.remove("hide");nextStep.textContent="Continuar";nextStep.onclick=nextWizard}let step=0;function startWizard(){if(!state.request.origin||!state.request.destination)return toast("Escolha origem e destino.");step=0;render();openL("wizardSheet")}continueRequest.onclick=startWizard;function progress(){steps.innerHTML=Array.from({length:6},(_,i)=>`<span class="${i<=step?"on":""}"></span>`).join("")}function render(){$("wizardMotoLoading")?.classList.remove("on");resetButtons();progress();backStep.style.visibility=step===0?"hidden":"visible";if(step===0){wizardTitle.textContent="Bairros da entrega";wizardContent.innerHTML=`<div class="field"><label>Bairro de origem</label><select id="bO"><option value="">Selecione</option>${bairros.map(b=>`<option>${b}</option>`).join("")}</select></div><div class="field"><label>Bairro de destino</label><select id="bD"><option value="">Selecione</option>${bairros.map(b=>`<option>${b}</option>`).join("")}</select></div>`}if(step===1){
   wizardTitle.textContent="Quem vai receber?";
   wizardContent.innerHTML=`<div class="field"><label>Nome</label><input id="rName" value="${state.request.receiverName}"></div>
