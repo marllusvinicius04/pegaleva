@@ -1,1 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Painel da Empresa - Catálogo</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<section id="loginView" class="login"><div class="box"><div class="logo"><img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png"></div><h1>Painel do catálogo</h1><p>Gerencie sua empresa, categorias e produtos.</p><form id="loginForm"><div class="field"><label>E-mail</label><input id="email" type="email" required></div><div class="field"><label>Senha</label><input id="password" type="password" required></div><label class="remember"><input id="rememberAccess" type="checkbox"> Salvar minhas informações para entrar rapidamente</label><button class="btn primary full">Entrar</button><div id="loginError" style="text-align:center;color:var(--danger);font-size:.75rem;margin-top:9px"></div></form></div></section>
+<section id="appView" class="hide"><header class="top"><div class="topin"><img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png"><button class="logout" id="logoutBtn">Sair</button></div></header>
+<main>
+<section class="welcome"><small>ÁREA DA EMPRESA</small><h2 id="welcomeName">Olá!</h2><p>Edite seu catálogo e controle o que aparece para seus clientes.</p><span class="company-code">ID da empresa: <b id="companyCode"></b></span></section>
+<nav class="nav"><button class="active" data-panel="companyPanel">Empresa</button><button data-panel="categoriesPanel">Categorias</button><button data-panel="productsPanel">Produtos</button></nav>
 
+<section id="companyPanel" class="panel active"><form id="companyForm" class="card"><h3>Informações da empresa</h3><img id="logoPreview" class="upload-preview" src=""><div class="field"><label>Logo da empresa</label><input id="companyLogo" type="file" accept="image/*"></div><div class="grid2"><div class="field"><label>Nome da empresa</label><input id="companyName" required></div><div class="field"><label>WhatsApp</label><input id="companyWhatsapp" required></div><div class="field"><label>Horário de funcionamento</label><input id="companyHours" placeholder="08:00-22:00" required></div><div class="field"><label>Cidade</label><select id="companyCity"><option>Uruçuí</option><option>Benedito Leite</option></select></div><div class="field"><label>Bairro da empresa</label><input id="companyNeighborhood" required></div><div class="field"><label>Slug do catálogo</label><input id="companySlug" readonly></div></div><button class="btn primary full">Salvar informações</button></form></section>
+
+<section id="categoriesPanel" class="panel"><div class="card"><h3>Cadastrar categoria</h3><form id="categoryForm"><div class="field"><label>Nome da categoria</label><input id="categoryName" required></div><button class="btn primary full">Adicionar categoria</button></form></div><div class="card"><h3>Suas categorias</h3><div id="categoriesList" class="list"></div></div></section>
+
+<section id="productsPanel" class="panel"><div class="card"><h3>Cadastrar produto</h3><form id="productForm"><div class="field"><label>Imagem</label><input id="productImage" type="file" accept="image/*" required></div><div class="grid2"><div class="field"><label>Nome do produto</label><input id="productName" required></div><div class="field"><label>Categoria</label><select id="productCategory" required></select></div></div><div class="field"><label>Descrição breve (opcional)</label><textarea id="productDescription"></textarea></div><div class="field"><label>Valor</label><input id="productPrice" type="number" min="0" step="0.01" required></div><button class="btn primary full">Cadastrar produto</button></form></div><div class="card"><h3>Seus produtos</h3><div id="productsList" class="list"></div></div></section>
+</main></section>
+<div class="action-loading" id="actionLoading"><div class="action-box"><div class="action-spinner"></div><h3 id="loadingTitle">Carregando...</h3><p id="loadingText">Aguarde um momento.</p></div></div><div class="toast" id="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
