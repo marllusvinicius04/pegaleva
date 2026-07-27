@@ -126,7 +126,7 @@ function renderTrips(){
   <div class="trip-top">
     <div><div class="trip-code">${t.code}</div><span class="status">${statusLabel(t.status)}</span></div>
     <div style="display:flex;align-items:center;gap:8px">
-      <div class="trip-price">${money.format(t.driverValue)}</div>
+      <div class="trip-price">${money.format(t.value)}</div>
       <button class="card-menu-btn" onclick="toggleTripCommands('${t.code}')" title="Comandos da corrida">
         <i class="fa-solid fa-plus"></i>
       </button>
@@ -158,7 +158,7 @@ function renderTrips(){
 
   requestAnimationFrame(()=>{tripCarousel.scrollLeft=0});
 }
-function renderHistory(){const done=state.trips.filter(t=>String(t.status).toUpperCase()==="FINALIZADA");historyList.innerHTML=done.length?done.map(t=>`<div class="trip-card" style="margin-bottom:10px"><div class="trip-top"><div class="trip-code">${t.code}</div><div class="trip-price">${money.format(t.driverValue)}</div></div><p class="muted">${t.originNeighborhood} → ${t.destinationNeighborhood}</p><span class="status">${t.paymentStatus}</span>${t.photoUrl?`<p><a href="${t.photoUrl}" target="_blank">Ver comprovante da entrega</a></p>`:""}</div>`).join(""):`<div class="empty">Nenhuma corrida finalizada.</div>`}
+function renderHistory(){const done=state.trips.filter(t=>String(t.status).toUpperCase()==="FINALIZADA");historyList.innerHTML=done.length?done.map(t=>`<div class="trip-card" style="margin-bottom:10px"><div class="trip-top"><div class="trip-code">${t.code}</div><div class="trip-price">${money.format(t.value)}</div></div><p class="muted">${t.originNeighborhood} → ${t.destinationNeighborhood}</p><span class="status">${t.paymentStatus}</span>${t.photoUrl?`<p><a href="${t.photoUrl}" target="_blank">Ver comprovante da entrega</a></p>`:""}</div>`).join(""):`<div class="empty">Nenhuma corrida finalizada.</div>`}
 manualAddTripBtn.onclick=()=>{tripCodeInput.value="";openL("addTripSheet")}
 newRequestsBtn.onclick=()=>{openRequestsDrawer()}
 closeRequestsBtn.onclick=()=>closeRequestsDrawer()
@@ -200,7 +200,7 @@ function renderAvailableTrips(){
     <article class="request-card">
       <div class="trip-top">
         <div><div class="trip-code">${t.code}</div><span class="request-new">Nova solicitação</span></div>
-        <div class="trip-price">${money.format(t.driverValue)}</div>
+        <div class="trip-price">${money.format(t.value)}</div>
       </div>
       <div class="route">
         <div class="route-line"><div class="dot"><i class="fa-solid fa-circle"></i></div><div class="dot" style="margin-top:30px"><i class="fa-solid fa-flag-checkered"></i></div></div>
@@ -357,12 +357,39 @@ async function setPaymentStatus(paymentStatus){
 }
 async function finalizeTrip(code){
   if(!confirm("Confirma que a entrega foi concluída e deseja finalizar esta corrida?"))return;
+
+  const tripBeforeFinalize=state.trips.find(
+    t=>String(t.code)===String(code)
+  );
+
   try{
-    const j=await withActionLoading("Finalizando corrida","Calculando o ganho e atualizando o saldo do entregador.",()=>api("driverFinalizeTrip",{driverId:state.driver.id,code}));
+    const j=await withActionLoading(
+      "Finalizando corrida",
+      "Calculando o ganho e atualizando o saldo do entregador.",
+      ()=>api("driverFinalizeTrip",{driverId:state.driver.id,code})
+    );
+
     toast("Corrida finalizada com sucesso.");
-    if(j.notifyWhatsapp&&j.phone&&confirm("Deseja avisar o cliente pelo WhatsApp que a corrida foi finalizada?"))wa(j.phone,j.message);
+
+    // Ao finalizar, avisa sempre quem SOLICITOU a entrega.
+    const requesterPhone=String(
+      tripBeforeFinalize&&tripBeforeFinalize.requesterWhatsapp||""
+    ).trim();
+
+    const finalPhone=requesterPhone||String(j.phone||"").trim();
+
+    if(
+      j.notifyWhatsapp&&
+      finalPhone&&
+      confirm("Deseja avisar o solicitante pelo WhatsApp que a corrida foi finalizada?")
+    ){
+      wa(finalPhone,j.message);
+    }
+
     await dashboard()
-  }catch(x){toast(x.message)}
+  }catch(x){
+    toast(x.message)
+  }
 }
 async function cancelTrip(code){
   if(!confirm("Deseja cancelar esta corrida? Ela ficará disponível para outro entregador."))return;
@@ -466,4 +493,8 @@ try{
   sessionStorage.removeItem("pl_driver");
   localStorage.removeItem("pl_driver_saved");
 }
-if(saved?.driver&&saved?.token)openApp(saved.driver,saved.token,!!localStorage.getItem("pl_driver_saved"));
+if(saved?.driver&&saved?.token){
+  const remembered=!!localStorage.getItem("pl_driver_saved");
+  if($("saveLogin"))$("saveLogin").checked=remembered;
+  openApp(saved.driver,saved.token,remembered);
+}
