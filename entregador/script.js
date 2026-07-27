@@ -63,16 +63,25 @@ function wa(number,message){
 }
 function statusLabel(s){const m={"AGUARDANDO ENTREGADOR":"Aguardando entregador","ACEITA":"Corrida aceita","FINALIZANDO CORRIDA PRÓXIMA":"Finalizando corrida próxima","ESTOU INDO":"Estou indo","FINALIZADA":"Corrida finalizada"};return m[String(s||"").toUpperCase()]||s}
 togglePassword.onclick=()=>{const visible=password.type==="text";password.type=visible?"password":"text";togglePassword.innerHTML=`<i class="fa-regular ${visible?"fa-eye":"fa-eye-slash"}"></i>`}
+function rememberLoginCheckbox(){
+  return $("saveLogin")||$("rememberLogin")||$("saveInfo")||
+    loginForm.querySelector('input[type="checkbox"]');
+}
 loginForm.onsubmit=async e=>{
   e.preventDefault();loginError.textContent="";
   try{
     const j=await withActionLoading("Entrando no painel","Conferindo seu e-mail e sua senha.",()=>api("driverLogin",{email:email.value.trim().toLowerCase(),password:password.value}));
-    openApp(j.driver,j.token)
+    const remember=!!rememberLoginCheckbox()?.checked;
+    openApp(j.driver,j.token,remember)
   }catch(x){loginError.textContent=x.message}
 }
-function openApp(driver,token){
+function openApp(driver,token,remember=false){
 state.driver=driver;state.token=token||state.token;state.revision="";
-sessionStorage.setItem("pl_driver",JSON.stringify({driver,token:state.token}));const firstName=String(driver.name||"").trim().split(/\s+/)[0]||"Entregador";
+const savedSession=JSON.stringify({driver,token:state.token});
+sessionStorage.setItem("pl_driver",savedSession);
+if(remember)localStorage.setItem("pl_driver_saved",savedSession);
+else if(!localStorage.getItem("pl_driver_saved"))localStorage.removeItem("pl_driver_saved");
+const firstName=String(driver.name||"").trim().split(/\s+/)[0]||"Entregador";
 welcomeName.textContent=`Olá, ${firstName}!`;driverInfo.textContent=`${driver.plate||"Sem placa"} • ${driver.whatsapp||""}`;withdrawEmail.value=driver.email||"";show("appView");dashboard();startDriverPolling()
 }
 async function dashboard(useLoading=false){
@@ -295,6 +304,7 @@ whatsappNoBtn.onclick=()=>{
 
 async function updateTrip(code,status){
   try{
+    const tripBeforeUpdate=state.trips.find(t=>String(t.code)===String(code));
     const j=await withActionLoading(
       "Atualizando situação",
       `${statusLabel(status)}. Salvando a alteração na corrida.`,
@@ -303,8 +313,16 @@ async function updateTrip(code,status){
     toast(statusLabel(status));
     playUpdateSound();
     await dashboard();
-    if(j.notifyWhatsapp&&j.phone){
-      askWhatsappNotification(j.phone,j.message);
+
+    // FINALIZANDO e ESTOU INDO avisam sempre o SOLICITANTE da entrega.
+    const normalizedStatus=String(status||"").toUpperCase();
+    const requesterPhone=String(tripBeforeUpdate&&tripBeforeUpdate.requesterWhatsapp||"").trim();
+    const notificationPhone=["FINALIZANDO CORRIDA PRÓXIMA","ESTOU INDO"].includes(normalizedStatus)
+      ?requesterPhone
+      :String(j.phone||"").trim();
+
+    if(j.notifyWhatsapp&&notificationPhone){
+      askWhatsappNotification(notificationPhone,j.message);
     }
   }catch(x){
     toast(x.message)
@@ -372,7 +390,9 @@ toggleBalance.onclick=()=>{
 }
 historyNav.onclick=()=>openL("historySheet");refreshBtn.onclick=()=>dashboard(true);logoutBtn.onclick=async()=>{
   try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
-  clearInterval(state.dashboardTimer);sessionStorage.removeItem("pl_driver");
+  clearInterval(state.dashboardTimer);
+  sessionStorage.removeItem("pl_driver");
+  localStorage.removeItem("pl_driver_saved");
   state.driver=null;state.token="";state.revision="";show("loginView")
 }
 function toggleTripCommands(code){
@@ -435,4 +455,15 @@ uploadPhotoBtn.onclick=async()=>{
 }
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeL(b.dataset.close));
 document.querySelectorAll(".sheet,.modal").forEach(x=>x.onclick=e=>{if(e.target===x)closeL(x.id)});
-const saved=JSON.parse(sessionStorage.getItem("pl_driver")||"null");if(saved?.driver&&saved?.token)openApp(saved.driver,saved.token);
+let saved=null;
+try{
+  saved=JSON.parse(
+    sessionStorage.getItem("pl_driver")||
+    localStorage.getItem("pl_driver_saved")||
+    "null"
+  );
+}catch(e){
+  sessionStorage.removeItem("pl_driver");
+  localStorage.removeItem("pl_driver_saved");
+}
+if(saved?.driver&&saved?.token)openApp(saved.driver,saved.token,!!localStorage.getItem("pl_driver_saved"));
