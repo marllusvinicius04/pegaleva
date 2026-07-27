@@ -63,26 +63,118 @@ function wa(number,message){
 }
 function statusLabel(s){const m={"AGUARDANDO ENTREGADOR":"Aguardando entregador","ACEITA":"Corrida aceita","FINALIZANDO CORRIDA PRÓXIMA":"Finalizando corrida próxima","ESTOU INDO":"Estou indo","FINALIZADA":"Corrida finalizada"};return m[String(s||"").toUpperCase()]||s}
 togglePassword.onclick=()=>{const visible=password.type==="text";password.type=visible?"password":"text";togglePassword.innerHTML=`<i class="fa-regular ${visible?"fa-eye":"fa-eye-slash"}"></i>`}
-function rememberLoginCheckbox(){
-  return $("saveLogin")||$("rememberLogin")||$("saveInfo")||
-    loginForm.querySelector('input[type="checkbox"]');
-}
-loginForm.onsubmit=async e=>{
-  e.preventDefault();loginError.textContent="";
+const QUICK_DRIVER_LOGIN_KEY="pl_quick_driver_account";
+
+function getQuickDriverAccount(){
   try{
-    const j=await withActionLoading("Entrando no painel","Conferindo seu e-mail e sua senha.",()=>api("driverLogin",{email:email.value.trim().toLowerCase(),password:password.value}));
-    const remember=!!rememberLoginCheckbox()?.checked;
-    openApp(j.driver,j.token,remember)
-  }catch(x){loginError.textContent=x.message}
+    return JSON.parse(localStorage.getItem(QUICK_DRIVER_LOGIN_KEY)||"null");
+  }catch(e){
+    localStorage.removeItem(QUICK_DRIVER_LOGIN_KEY);
+    return null;
+  }
 }
-function openApp(driver,token,remember=false){
-state.driver=driver;state.token=token||state.token;state.revision="";
-const savedSession=JSON.stringify({driver,token:state.token});
-sessionStorage.setItem("pl_driver",savedSession);
-if(remember)localStorage.setItem("pl_driver_saved",savedSession);
-else if(!localStorage.getItem("pl_driver_saved"))localStorage.removeItem("pl_driver_saved");
-const firstName=String(driver.name||"").trim().split(/\s+/)[0]||"Entregador";
-welcomeName.textContent=`Olá, ${firstName}!`;driverInfo.textContent=`${driver.plate||"Sem placa"} • ${driver.whatsapp||""}`;withdrawEmail.value=driver.email||"";show("appView");dashboard();startDriverPolling()
+
+function saveQuickDriverAccount(driver,emailValue,passwordValue){
+  const account={
+    name:String(driver&&driver.name||"Entregador").trim(),
+    email:String(emailValue||"").trim().toLowerCase(),
+    password:String(passwordValue||"")
+  };
+
+  localStorage.setItem(QUICK_DRIVER_LOGIN_KEY,JSON.stringify(account));
+  renderQuickDriverAccount();
+}
+
+function removeQuickDriverAccount(){
+  localStorage.removeItem(QUICK_DRIVER_LOGIN_KEY);
+  renderQuickDriverAccount();
+}
+
+function renderQuickDriverAccount(){
+  const account=getQuickDriverAccount();
+  const valid=!!(account&&account.email&&account.password);
+
+  $("quickDriverLoginBox")?.classList.toggle("hide",!valid);
+
+  if(!valid)return;
+
+  $("quickDriverName").textContent=account.name||"Entregador";
+  $("quickDriverEmail").textContent=account.email;
+}
+
+async function performDriverLogin(emailValue,passwordValue,quickLogin=false){
+  loginError.textContent="";
+  if($("quickDriverLoginError"))$("quickDriverLoginError").textContent="";
+
+  try{
+    if(quickLogin){
+      $("quickDriverLoginLoading")?.classList.add("on");
+    }
+
+    const j=await withActionLoading(
+      quickLogin?"Entrando rapidamente":"Entrando no painel",
+      quickLogin
+        ?"Abrindo sua conta salva."
+        :"Conferindo seu e-mail e sua senha.",
+      ()=>api("driverLogin",{
+        email:String(emailValue||"").trim().toLowerCase(),
+        password:String(passwordValue||"")
+      })
+    );
+
+    if(!quickLogin){
+      if($("saveLogin")?.checked){
+        saveQuickDriverAccount(j.driver,emailValue,passwordValue);
+      }else{
+        removeQuickDriverAccount();
+      }
+    }
+
+    openApp(j.driver,j.token);
+  }catch(x){
+    if(quickLogin){
+      if($("quickDriverLoginError"))$("quickDriverLoginError").textContent=x.message;
+
+      if(/senha|e-mail|email|credenciais|inválid/i.test(String(x.message||""))){
+        removeQuickDriverAccount();
+        toast("A conta salva não é mais válida. Entre novamente.");
+      }
+    }else{
+      loginError.textContent=x.message;
+    }
+  }finally{
+    $("quickDriverLoginLoading")?.classList.remove("on");
+  }
+}
+
+loginForm.onsubmit=async e=>{
+  e.preventDefault();
+
+  await performDriverLogin(
+    email.value.trim().toLowerCase(),
+    password.value,
+    false
+  );
+};
+
+function openApp(driver,token){
+  state.driver=driver;
+  state.token=token||state.token;
+  state.revision="";
+
+  // Mantém apenas a sessão atual. A conta rápida é salva separadamente.
+  sessionStorage.setItem(
+    "pl_driver",
+    JSON.stringify({driver,token:state.token})
+  );
+
+  const firstName=String(driver.name||"").trim().split(/\s+/)[0]||"Entregador";
+  welcomeName.textContent=`Olá, ${firstName}!`;
+  driverInfo.textContent=`${driver.plate||"Sem placa"} • ${driver.whatsapp||""}`;
+  withdrawEmail.value=driver.email||"";
+  show("appView");
+  dashboard();
+  startDriverPolling();
 }
 async function dashboard(useLoading=false){
   if(state.dashboardBusy)return;
@@ -417,10 +509,17 @@ toggleBalance.onclick=()=>{
 }
 historyNav.onclick=()=>openL("historySheet");refreshBtn.onclick=()=>dashboard(true);logoutBtn.onclick=async()=>{
   try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
+
   clearInterval(state.dashboardTimer);
   sessionStorage.removeItem("pl_driver");
-  localStorage.removeItem("pl_driver_saved");
-  state.driver=null;state.token="";state.revision="";show("loginView")
+
+  state.driver=null;
+  state.token="";
+  state.revision="";
+
+  password.value="";
+  show("loginView");
+  renderQuickDriverAccount();
 }
 function toggleTripCommands(code){
   const menu=$("tripCommands-"+code);
@@ -482,19 +581,41 @@ uploadPhotoBtn.onclick=async()=>{
 }
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeL(b.dataset.close));
 document.querySelectorAll(".sheet,.modal").forEach(x=>x.onclick=e=>{if(e.target===x)closeL(x.id)});
+renderQuickDriverAccount();
+
+$("quickDriverAccount").onclick=async()=>{
+  const account=getQuickDriverAccount();
+
+  if(!account||!account.email||!account.password){
+    removeQuickDriverAccount();
+    return;
+  }
+
+  await performDriverLogin(
+    account.email,
+    account.password,
+    true
+  );
+};
+
+$("removeQuickDriverLogin").onclick=()=>{
+  if(confirm("Deseja remover esta conta salva deste aparelho?")){
+    removeQuickDriverAccount();
+    toast("Conta salva removida.");
+  }
+};
+
 let saved=null;
+
 try{
   saved=JSON.parse(
     sessionStorage.getItem("pl_driver")||
-    localStorage.getItem("pl_driver_saved")||
     "null"
   );
 }catch(e){
   sessionStorage.removeItem("pl_driver");
-  localStorage.removeItem("pl_driver_saved");
 }
+
 if(saved?.driver&&saved?.token){
-  const remembered=!!localStorage.getItem("pl_driver_saved");
-  if($("saveLogin"))$("saveLogin").checked=remembered;
-  openApp(saved.driver,saved.token,remembered);
+  openApp(saved.driver,saved.token);
 }
