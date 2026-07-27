@@ -62,6 +62,55 @@ function wa(number,message){
   window.open(`https://wa.me/${n}?text=${encodeURIComponent(organizedMessage)}`,"_blank")
 }
 function statusLabel(s){const m={"AGUARDANDO ENTREGADOR":"Aguardando entregador","ACEITA":"Corrida aceita","FINALIZANDO CORRIDA PRÓXIMA":"Finalizando corrida próxima","ESTOU INDO":"Estou indo","FINALIZADA":"Corrida finalizada"};return m[String(s||"").toUpperCase()]||s}
+function escapeCardText(value){
+  return String(value??"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+function tripPeopleInfo(t){
+  const sender=String(
+    t.requesterName||
+    t.companyName||
+    t.company||
+    t.userName||
+    t.senderName||
+    "Solicitante não informado"
+  ).trim();
+
+  const receiver=String(
+    t.receiverName||
+    t.recipientName||
+    "Recebedor não informado"
+  ).trim();
+
+  return `
+  <div style="margin:12px 0 14px;padding:12px;border-radius:13px;background:#f8fafc;border:1px solid #e2e8f0">
+    <div style="display:flex;gap:9px;align-items:flex-start">
+      <span style="width:32px;height:32px;min-width:32px;border-radius:9px;display:grid;place-items:center;background:#e8f0ff;color:#0646c8">
+        <i class="fa-solid fa-store"></i>
+      </span>
+      <div style="min-width:0">
+        <small style="display:block;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Quem está enviando</small>
+        <strong style="display:block;margin-top:2px;color:#172033;overflow-wrap:anywhere">${escapeCardText(sender)}</strong>
+      </div>
+    </div>
+
+    <div style="height:1px;background:#e2e8f0;margin:10px 0"></div>
+
+    <div style="display:flex;gap:9px;align-items:flex-start">
+      <span style="width:32px;height:32px;min-width:32px;border-radius:9px;display:grid;place-items:center;background:#eafaf0;color:#16803d">
+        <i class="fa-solid fa-user"></i>
+      </span>
+      <div style="min-width:0">
+        <small style="display:block;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Quem vai receber</small>
+        <strong style="display:block;margin-top:2px;color:#172033;overflow-wrap:anywhere">${escapeCardText(receiver)}</strong>
+      </div>
+    </div>
+  </div>`;
+}
 togglePassword.onclick=()=>{const visible=password.type==="text";password.type=visible?"password":"text";togglePassword.innerHTML=`<i class="fa-regular ${visible?"fa-eye":"fa-eye-slash"}"></i>`}
 const QUICK_DRIVER_LOGIN_KEY="pl_quick_driver_account";
 
@@ -224,6 +273,7 @@ function renderTrips(){
       </button>
     </div>
   </div>
+  ${tripPeopleInfo(t)}
   <div class="route">
     <div class="route-line"><div class="dot"><i class="fa-solid fa-circle"></i></div><div class="dot" style="margin-top:30px"><i class="fa-solid fa-flag-checkered"></i></div></div>
     <div><strong>${t.originNeighborhood}</strong><span>${t.origin}</span><strong style="margin-top:18px">${t.destinationNeighborhood}</strong><span>${t.destination}</span></div>
@@ -250,7 +300,21 @@ function renderTrips(){
 
   requestAnimationFrame(()=>{tripCarousel.scrollLeft=0});
 }
-function renderHistory(){const done=state.trips.filter(t=>String(t.status).toUpperCase()==="FINALIZADA");historyList.innerHTML=done.length?done.map(t=>`<div class="trip-card" style="margin-bottom:10px"><div class="trip-top"><div class="trip-code">${t.code}</div><div class="trip-price">${money.format(t.value)}</div></div><p class="muted">${t.originNeighborhood} → ${t.destinationNeighborhood}</p><span class="status">${t.paymentStatus}</span>${t.photoUrl?`<p><a href="${t.photoUrl}" target="_blank">Ver comprovante da entrega</a></p>`:""}</div>`).join(""):`<div class="empty">Nenhuma corrida finalizada.</div>`}
+function renderHistory(){
+  const done=state.trips.filter(t=>String(t.status).toUpperCase()==="FINALIZADA");
+  historyList.innerHTML=done.length?done.map(t=>`
+    <div class="trip-card" style="margin-bottom:10px">
+      <div class="trip-top">
+        <div class="trip-code">${t.code}</div>
+        <div class="trip-price">${money.format(t.value)}</div>
+      </div>
+      ${tripPeopleInfo(t)}
+      <p class="muted">${t.originNeighborhood} → ${t.destinationNeighborhood}</p>
+      <span class="status">${t.paymentStatus}</span>
+      ${t.photoUrl?`<p><a href="${t.photoUrl}" target="_blank">Ver comprovante da entrega</a></p>`:""}
+    </div>
+  `).join(""):`<div class="empty">Nenhuma corrida finalizada.</div>`;
+}
 manualAddTripBtn.onclick=()=>{tripCodeInput.value="";openL("addTripSheet")}
 newRequestsBtn.onclick=()=>{openRequestsDrawer()}
 closeRequestsBtn.onclick=()=>closeRequestsDrawer()
@@ -294,6 +358,7 @@ function renderAvailableTrips(){
         <div><div class="trip-code">${t.code}</div><span class="request-new">Nova solicitação</span></div>
         <div class="trip-price">${money.format(t.value)}</div>
       </div>
+      ${tripPeopleInfo(t)}
       <div class="route">
         <div class="route-line"><div class="dot"><i class="fa-solid fa-circle"></i></div><div class="dot" style="margin-top:30px"><i class="fa-solid fa-flag-checkered"></i></div></div>
         <div><strong>${t.originNeighborhood}</strong><span>${t.origin}</span><strong style="margin-top:18px">${t.destinationNeighborhood}</strong><span>${t.destination}</span></div>
