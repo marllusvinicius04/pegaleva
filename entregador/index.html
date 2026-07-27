@@ -17,6 +17,10 @@
     <form id="loginForm">
       <div class="field"><label>E-mail</label><div class="input-icon-wrap"><i class="fa-regular fa-envelope"></i><input id="email" type="email" placeholder="seuemail@exemplo.com" required></div></div>
       <div class="field"><label>Senha</label><div class="input-icon-wrap"><i class="fa-solid fa-lock"></i><input id="password" type="password" placeholder="Digite sua senha" required><button class="password-toggle" id="togglePassword" type="button"><i class="fa-regular fa-eye"></i></button></div></div>
+      <label style="display:flex;align-items:center;gap:9px;margin:2px 0 14px;font-size:14px;cursor:pointer">
+        <input id="saveLogin" type="checkbox" style="width:18px;height:18px">
+        Salvar informações para entrar rapidamente
+      </label>
       <button class="btn primary full" type="submit"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
       <div class="loading-row" id="loginLoading"><span class="spinner"></span>Entrando...</div>
       <div class="err" id="loginError"></div>
@@ -109,7 +113,6 @@
   <img id="photoPreview" class="photo-preview hide">
   <button class="btn primary full" id="uploadPhotoBtn" style="margin-top:12px"><i class="fa-solid fa-cloud-arrow-up"></i> Salvar comprovante</button>
 </div></div>
-
 
 <div class="modal" id="whatsappConfirmModal">
   <div class="modal-box accepted">
