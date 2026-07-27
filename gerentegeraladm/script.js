@@ -1,323 +1,446 @@
 
-const ADMIN_ACCESS_CODE="ADMINDEUS1";
-const SPREADSHEET_ID="1FCV9ca7XdwW2ZnJICq65kRme5fAXaAVURsQKPdOHV90";
-const APP_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz_QyJ1x8YR_0Z2O_kCG2yw-vXhBsqei_EW3P3gziZFZ7cZaQVII96oXydfWej0AU1c/exec";
-const SHEETS={usuarios:"usuarios",empresas:"empresas",entregas:"entregas",entregadores:"entregadores",mensagens:"mensagens",saques:"saques",corridas:"CORRIDAS"};
-let db={usuarios:[],empresas:[],entregas:[],entregadores:[],mensagens:[],saques:[],corridas:[]};let currentDeliveryExport=[];let currentDriverSummary=null;let currentPayWithdrawId="";let currentRouteDelivery=null;let deliveryNotifications=[];let alertAudioCtx=null;let alertSoundTimer=null;let dashboardAutoTimer=null;let dashboardLoading=false;let dashboardLastSuccess=0;let dashboardWatchdogTimer=null;let dashboardWakeLock=null;
-function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}function num(v){if(typeof v==="number")return v;return Number(String(v||"0").replace(/\./g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0}function norm(v){return String(v==null?"":v).trim()}function lower(v){return norm(v).toLowerCase()}function onlyDigits(v){return String(v||"").replace(/\D/g,"")}function escapeHtml(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}function showLoader(t){document.getElementById("loaderText").innerText=t||"Carregando...";document.getElementById("loader").classList.add("active")}function hideLoader(){document.getElementById("loader").classList.remove("active")}function showStatus(text,type){const el=document.getElementById("statusBox");el.innerText=text;el.className="status-box active "+(type||"");setTimeout(()=>el.classList.remove("active"),6500)}
-function loginAdmin(){const code=norm(document.getElementById("adminCode").value).toUpperCase();if(code!==ADMIN_ACCESS_CODE){alert("Código de acesso administrativo inválido.");return}localStorage.setItem("pegaleva_admin_access","1");document.getElementById("loginScreen").style.display="none";document.getElementById("appScreen").classList.add("active");setToday();unlockAlertAudio();requestDeliveryNotificationPermission();loadDashboard(true);startDashboardAutoUpdate()}function logoutAdmin(){stopDashboardAutoUpdate();localStorage.removeItem("pegaleva_admin_access");document.getElementById("appScreen").classList.remove("active");document.getElementById("loginScreen").style.display="flex";document.getElementById("adminCode").value=""}if(localStorage.getItem("pegaleva_admin_access")==="1"){document.getElementById("loginScreen").style.display="none";document.getElementById("appScreen").classList.add("active");setToday();loadDashboard(true);startDashboardAutoUpdate()}
-function todayISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}function setToday(){document.getElementById("salesDate").value=todayISO();renderAll()}
+const API_URL="https://script.google.com/macros/s/AKfycbxOjQ_sUd5f5_yUCl-YCJNyI0HqaxsB1DCBMDtaeIzrd-Qf_aZR9qkAkQ9Pyzgd_Dd6/exec";
+const ADMIN_PASSWORD="ADMMINDEUS1";
+const $=id=>document.getElementById(id);
+const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
+const state={token:sessionStorage.getItem("pl_admin_token")||"",revision:"",data:null,tripCodes:new Set(),firstLoad:true,timer:null,busy:false,loadingCount:0,allMode:"sales",dailySummary:null};
 
 
-/* =========================================================
-   PENDENTES DE CORRIDAS — SOMENTE FRONTEND ADMIN
-   Calcula pela aba CORRIDAS usando CodigoCliente ou CodigoID.
-   Não altera o Apps Script.
-========================================================= */
-function corridaPendente(c){
-  return lower(c&&c.StatusPagamento)!=="pago";
+function showLoading(title="Carregando...",text="Aguarde enquanto processamos as informações."){
+ state.loadingCount++;
+ loadingTitle.textContent=title;
+ loadingText.textContent=text;
+ globalLoading.classList.add("on");
+}
+function hideLoading(){
+ state.loadingCount=Math.max(0,state.loadingCount-1);
+ if(state.loadingCount===0)globalLoading.classList.remove("on");
+}
+async function withLoading(title,text,task){
+ showLoading(title,text);
+ try{return await task()}finally{hideLoading()}
+}
+function setSyncing(on){
+ liveStatus.classList.toggle("syncing",!!on);
+ liveStatus.textContent=on?"Sincronizando dados...":"Atualização automática";
+}
+function tableLoading(){
+ const row='<tr><td colspan="7" class="table-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando informações...</td></tr>';
+ tripsTable.innerHTML=row;usersTable.innerHTML=row;driversTable.innerHTML=row;
+ pendingTable.innerHTML='<tr><td colspan="4" class="table-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando pendências...</td></tr>';
+ withdrawalsTable.innerHTML='<tr><td colspan="6" class="table-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando solicitações...</td></tr>';
+ overviewTrips.innerHTML='<div class="table-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando corridas...</div>';
+ overviewPending.innerHTML='<div class="table-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando pendências...</div>';
 }
 
-function corridasDoCliente(cliente){
-  const codigoAcesso=norm(cliente&&cliente.CodigoAcesso);
-  const codigoId=norm(cliente&&cliente.CodigoID).toUpperCase();
-
-  return (db.corridas||[]).filter(c=>{
-    const corridaCodigoCliente=norm(c.CodigoCliente);
-    const corridaCodigoId=norm(c.CodigoID).toUpperCase();
-
-    return (codigoAcesso&&corridaCodigoCliente===codigoAcesso)||
-           (codigoId&&corridaCodigoId===codigoId);
-  });
+function loadingButton(btn,text){
+ const old=btn.innerHTML;
+ btn.disabled=true;
+ btn.classList.add("loading-btn");
+ btn.innerHTML=`<i class="fa-solid fa-spinner"></i> ${text}`;
+ return()=>{btn.disabled=false;btn.classList.remove("loading-btn");btn.innerHTML=old};
 }
 
-function resumoCorridasCliente(cliente){
-  const corridas=corridasDoCliente(cliente);
-  const pendentes=corridas.filter(corridaPendente);
-  const pagas=corridas.filter(c=>!corridaPendente(c));
+async function api(action,data={},retry=true){
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),18000);
+ try{
+  const r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,token:state.token,...data}),signal:ctrl.signal});
+  const j=await r.json();if(!j.ok)throw new Error(j.error||"Erro no servidor.");return j
+ }catch(e){
+  if(retry&&navigator.onLine){await new Promise(r=>setTimeout(r,900));return api(action,data,false)}
+  throw e
+ }finally{clearTimeout(timer)}
+}
+function showApp(){loginView.classList.add("hide");appView.classList.remove("hide");startSync()}
+function toastMsg(m){toast.textContent=m;toast.classList.add("on");setTimeout(()=>toast.classList.remove("on"),2800)}
+toggleAdminPassword.onclick=()=>{
+ const showing=adminPassword.type==="text";
+ adminPassword.type=showing?"password":"text";
+ toggleAdminPassword.innerHTML=`<i class="fa-solid ${showing?"fa-eye":"fa-eye-slash"}"></i>`;
+ toggleAdminPassword.setAttribute("aria-label",showing?"Mostrar senha":"Ocultar senha");
+ toggleAdminPassword.title=showing?"Mostrar senha":"Ocultar senha";
+ adminPassword.focus();
+};
+loginForm.onsubmit=async e=>{
+ e.preventDefault();
+ if(adminPassword.value!==ADMIN_PASSWORD)return toastMsg("Senha incorreta.");
+ try{
+  const j=await withLoading("Entrando no dashboard","Validando sua senha e preparando a central de gestão.",()=>api("adminLogin",{password:adminPassword.value}));
+  state.token=j.token;sessionStorage.setItem("pl_admin_token",j.token);showApp()
+ }catch(x){toastMsg(x.message)}
+};
+function finishLogout(){
+ clearInterval(state.timer);
+ state.timer=null;
+ state.token="";
+ state.revision="";
+ state.data=null;
+ state.tripCodes=new Set();
+ state.firstLoad=true;
+ state.busy=false;
+ state.loadingCount=0;
+ sessionStorage.removeItem("pl_admin_token");
+ globalLoading.classList.remove("on");
+ appView.classList.add("hide");
+ loginView.classList.remove("hide");
+ adminPassword.value="";
+ adminPassword.type="password";
+ toggleAdminPassword.innerHTML='<i class="fa-solid fa-eye"></i>';
+ toggleAdminPassword.setAttribute("aria-label","Mostrar senha");
+ toggleAdminPassword.title="Mostrar senha";
+}
+logoutBtn.onclick=async()=>{
+ if(!confirm("Deseja realmente sair do painel?"))return;
+ showLoading("Saindo do painel","Encerrando sua sessão administrativa.");
+ try{
+  await Promise.race([
+   api("logout",{},false),
+   new Promise(resolve=>setTimeout(resolve,2500))
+  ]);
+ }catch(e){}
+ finally{
+  finishLogout();
+ }
+};
 
-  return {
-    totalCorridas:corridas.length,
-    quantidadePendente:pendentes.length,
-    valorPendente:pendentes.reduce((s,c)=>s+num(c.Valor),0),
-    quantidadePaga:pagas.length,
-    valorPago:pagas.reduce((s,c)=>s+num(c.Valor),0)
-  };
+function startSync(){clearInterval(state.timer);loadDashboard();state.timer=setInterval(()=>{if(!document.hidden&&navigator.onLine)loadDashboard(true)},6000)}
+async function loadDashboard(silent=false){
+ if(state.busy)return;state.busy=true;
+ const initial=!state.data;
+ if(initial){tableLoading();showLoading("Carregando dashboard","Buscando corridas, usuários, entregadores e financeiro.")}
+ else if(silent)setSyncing(true);
+ try{
+  const j=await api("adminDashboard",{sinceRevision:state.revision});
+  if(j.unchanged)return;
+  detectNewTrips(j.trips||[]);
+  state.revision=j.revision;state.data=j;renderAll()
+ }catch(x){
+  if(String(x.message).includes("Sessão expirada")){sessionStorage.removeItem("pl_admin_token");location.reload()}
+  else if(!silent)toastMsg(x.message)
+ }finally{
+  if(initial)hideLoading();
+  if(silent)setSyncing(false);
+  state.busy=false
+ }
+}
+function detectNewTrips(trips){
+ const current=new Set(trips.map(t=>t.code));
+ if(!state.firstLoad){
+  const fresh=trips.filter(t=>!state.tripCodes.has(t.code));
+  if(fresh.length){
+   const t=fresh[0];newTripText.textContent=`${t.code} • ${t.requester} • ${money.format(t.value)}`;
+   newTripAlert.classList.add("on");setTimeout(()=>newTripAlert.classList.remove("on"),6000);
+   try{new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=").play()}catch(e){}
+  }
+ }
+ state.tripCodes=current;state.firstLoad=false
 }
 
-function valorPendenteCorridas(cliente){
-  return resumoCorridasCliente(cliente).valorPendente;
+function parseDateBR(value){
+ const s=String(value||"");
+ const m=s.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+ if(m)return `${m[3]}-${m[2]}-${m[1]}`;
+ const iso=s.match(/(\d{4})-(\d{2})-(\d{2})/);
+ return iso?`${iso[1]}-${iso[2]}-${iso[3]}`:"";
+}
+function todayISO(){
+ const d=new Date(),p=n=>String(n).padStart(2,"0");
+ return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function uniqueValues(items,key){
+ return [...new Set(items.map(x=>String(x[key]||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+function openAllModal(mode){
+ state.allMode=mode;
+ showLoading("Carregando informações",mode==="sales"?"Preparando o histórico completo de vendas.":"Preparando todas as pendências.");
+ setTimeout(()=>{
+  configureAllModal();
+  allDataModal.classList.add("on");
+  hideLoading();
+ },350);
+}
+function configureAllModal(){
+ const sales=state.allMode==="sales";
+ allDataTitle.textContent=sales?"Histórico de vendas":"Todas as pendências";
+ allDataSubtitle.textContent=sales?"Consulte vendas por hoje, data, empresa e status.":"Consulte débitos por empresa e faça cobranças ou baixas.";
+ allSearch.value="";allPeriod.value=sales?"TODAY":"ALL";allDate.value="";allDate.classList.add("hide");
+ const items=sales?(state.data?.trips||[]):(state.data?.users||[]).filter(u=>Number(u.invoiceBalance)>0);
+ const companies=uniqueValues(items,sales?"requester":"name");
+ allCompany.innerHTML='<option value="">Todas as empresas</option>'+companies.map(v=>`<option>${v}</option>`).join("");
+ if(sales){
+  const statuses=uniqueValues(items,"status");
+  allStatus.classList.remove("hide");
+  allStatus.innerHTML='<option value="">Todos os status</option>'+statuses.map(v=>`<option>${v}</option>`).join("");
+  allTableHead.innerHTML="<tr><th>Código</th><th>Empresa</th><th>Rota</th><th>Entregador</th><th>Status</th><th>Valor</th><th>Data</th></tr>";
+ }else{
+  allStatus.classList.add("hide");
+  allTableHead.innerHTML="<tr><th>Empresa</th><th>Contato</th><th>Cidade</th><th>Valor pendente</th><th>Ações</th></tr>";
+ }
+ renderAllModal();
+}
+function renderAllModal(){
+ if(!state.data)return;
+ const sales=state.allMode==="sales";
+ const q=allSearch.value.trim().toLowerCase();
+ const company=allCompany.value;
+ const status=allStatus.value;
+ const period=allPeriod.value;
+ const dateValue=allDate.value;
+ let items=sales?[...state.data.trips]:state.data.users.filter(u=>Number(u.invoiceBalance)>0);
+ items=items.filter(item=>{
+  const text=JSON.stringify(item).toLowerCase();
+  if(q&&!text.includes(q))return false;
+  const itemCompany=sales?item.requester:item.name;
+  if(company&&itemCompany!==company)return false;
+  if(sales&&status&&item.status!==status)return false;
+  if(sales){
+   const itemDate=parseDateBR(item.createdAt);
+   if(period==="TODAY"&&itemDate!==todayISO())return false;
+   if(period==="CUSTOM"&&dateValue&&itemDate!==dateValue)return false;
+  }
+  return true;
+ });
+ if(sales){
+  allTableBody.innerHTML=items.map(t=>`<tr><td><strong>${t.code}</strong></td><td>${t.requester}</td><td>${t.origin} → ${t.destination}</td><td>${t.driver||"Aguardando"}</td><td><span class="badge blue">${t.status}</span><br><span class="badge ${String(t.paymentStatus).toUpperCase()==="PAGO"?"ok":""}" style="margin-top:5px">${t.paymentStatus||"PENDENTE"}</span></td><td>${money.format(t.value)}</td><td>${t.createdAt}</td></tr>`).join("")||'<tr><td colspan="7" class="empty">Nenhuma venda encontrada.</td></tr>';
+  allTotal.textContent=`Total: ${money.format(items.reduce((s,t)=>s+Number(t.value||0),0))}`;
+ }else{
+  allTableBody.innerHTML=items.map(u=>`<tr><td><strong>${u.name}</strong><br>${u.email}</td><td>${u.whatsapp}</td><td>${u.city}</td><td><strong>${money.format(u.invoiceBalance)}</strong></td><td><div class="actions"><button class="btn secondary mini" onclick="chargeUser('${u.id}')"><i class="fa-brands fa-whatsapp"></i> Cobrar</button><button class="btn secondary mini" onclick="openDailySummary('${u.id}')"><i class="fa-solid fa-calendar-day"></i> Resumo do dia</button><button class="btn success mini" onclick="markPaid('${u.id}')"><i class="fa-solid fa-check"></i> Marcar pago</button></div></td></tr>`).join("")||'<tr><td colspan="5" class="empty">Nenhuma pendência encontrada.</td></tr>';
+  allTotal.textContent=`Total pendente: ${money.format(items.reduce((s,u)=>s+Number(u.invoiceBalance||0),0))}`;
+ }
+ allCount.textContent=`${items.length} ${items.length===1?"registro":"registros"}`;
 }
 
-function corridaComoEntrega(c){
-  const driver=(db.entregadores||[]).find(d=>norm(d.CodigoAcesso)===norm(c.CodigoEntregador))||{};
-  return {
-    ...c,
-    ID:c.ID||c.CodigoCT,
-    TipoRegistro:"CORRIDA",
-    NomeSolicitante:c.NomeCliente||"Cliente/empresa",
-    WhatsAppSolicitante:"",
-    EnderecoColeta:"Corrida manual",
-    BairroColeta:"Código CT "+(c.CodigoCT||"-"),
-    EnderecoDestino:"",
-    BairroDestino:"",
-    NomeDestino:"",
-    PlacaMoto:c.PlacaMoto||driver.PlacaMoto||"",
-    StatusPagamento:c.StatusPagamento||"Aguardando confirmação",
-    AtualizadoEm:c.AtualizadoEm||c.CriadoEm||""
-  };
+
+function openDailySummary(userId=""){
+ if(!state.data)return toastMsg("Os dados ainda estão sendo carregados.");
+ const users=[...(state.data.users||[])].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+ dailySummaryUser.innerHTML='<option value="">Selecione a empresa</option>'+users.map(u=>`<option value="${u.id}">${u.name} • ${u.travelCode||u.city||""}</option>`).join("");
+ if(userId)dailySummaryUser.value=userId;
+ dailySummaryDate.value=todayISO();
+ dailySummaryPreview.textContent="Selecione uma empresa e uma data para gerar o resumo.";
+ dailySummaryStats.classList.add("hide");
+ copyDailySummary.disabled=true;
+ sendDailySummaryWhatsapp.disabled=true;
+ state.dailySummary=null;
+ dailySummaryModal.classList.add("on");
 }
-async function loadDashboard(showVisual){if(dashboardLoading)return;dashboardLoading=true;if(showVisual)showLoader("Conectando à planilha...");try{const result=await Promise.all([loadSheet(SHEETS.usuarios),loadSheet(SHEETS.empresas),loadSheet(SHEETS.entregas),loadSheet(SHEETS.entregadores),loadSheet(SHEETS.mensagens),loadSheet(SHEETS.saques),loadSheet(SHEETS.corridas)]);db={usuarios:result[0],empresas:result[1],entregas:[],entregadores:result[3],mensagens:result[4],saques:result[5],corridas:result[6]};const corridasNormalizadas=db.corridas.map(corridaComoEntrega);db.entregas=corridasNormalizadas.sort((a,b)=>(parseDate(a.CriadoEm||a.AtualizadoEm)||0)-(parseDate(b.CriadoEm||b.AtualizadoEm)||0));dashboardLastSuccess=Date.now();checkNewDeliveries();fillStatusFilter();renderAll();renderChatNotifications();document.getElementById("lastUpdate").innerText="Conectado à planilha • Entregas e corridas contabilizadas • Atualizado em "+new Date().toLocaleString("pt-BR");if(showVisual)showStatus("Dashboard atualizado com entregas e corridas.","green")}catch(err){if(showVisual)showStatus((err&&err.message?err.message:String(err))||"Erro ao carregar dados.","red")}finally{dashboardLoading=false;if(showVisual)hideLoader()}}
-function scheduleDashboardAutoUpdate(delay){if(dashboardAutoTimer)clearTimeout(dashboardAutoTimer);dashboardAutoTimer=setTimeout(async()=>{await loadDashboard(false);scheduleDashboardAutoUpdate(document.hidden?1500:800)},delay||800)}
-function startDashboardAutoUpdate(){stopDashboardAutoUpdate();dashboardLastSuccess=Date.now();scheduleDashboardAutoUpdate(200);dashboardWatchdogTimer=setInterval(()=>{if(Date.now()-dashboardLastSuccess>5000&&!dashboardLoading)loadDashboard(false)},2000);requestDashboardWakeLock()}
-function stopDashboardAutoUpdate(){if(dashboardAutoTimer){clearTimeout(dashboardAutoTimer);dashboardAutoTimer=null}if(dashboardWatchdogTimer){clearInterval(dashboardWatchdogTimer);dashboardWatchdogTimer=null}releaseDashboardWakeLock()}
-async function requestDashboardWakeLock(){try{if("wakeLock"in navigator&&document.visibilityState==="visible"){dashboardWakeLock=await navigator.wakeLock.request("screen");dashboardWakeLock.addEventListener("release",()=>{dashboardWakeLock=null})}}catch(e){dashboardWakeLock=null}}
-function releaseDashboardWakeLock(){try{if(dashboardWakeLock)dashboardWakeLock.release()}catch(e){}dashboardWakeLock=null}
-function forceDashboardSync(){if(localStorage.getItem("pegaleva_admin_access")!=="1")return;dashboardLoading=false;loadDashboard(false);scheduleDashboardAutoUpdate(500);unlockAlertAudio();requestDashboardWakeLock()}
-window.addEventListener("online",forceDashboardSync);window.addEventListener("focus",forceDashboardSync);window.addEventListener("pageshow",forceDashboardSync);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")forceDashboardSync();else releaseDashboardWakeLock()});
-async function loadSheet(sheetName){const url=`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&_t=${Date.now()}`;const res=await fetch(url);if(!res.ok)throw new Error("Não foi possível ler a aba "+sheetName+". Publique/compartilhe a planilha para leitura ou confira o nome da aba.");const csv=await res.text();return parseCSV(csv)}
-function parseCSV(csv){const rows=[];let row=[],cur="",q=false;for(let i=0;i<csv.length;i++){const c=csv[i],n=csv[i+1];if(c==='"'&&q&&n==='"'){cur+='"';i++;continue}if(c==='"'){q=!q;continue}if(c===","&&!q){row.push(cur);cur="";continue}if((c==="\n"||c==="\r")&&!q){if(c==="\r"&&n==="\n")i++;row.push(cur);cur="";if(row.some(v=>norm(v)!==""))rows.push(row);row=[];continue}cur+=c}row.push(cur);if(row.some(v=>norm(v)!==""))rows.push(row);if(!rows.length)return[];const headers=rows.shift().map(h=>norm(h));return rows.map(r=>{const obj={};headers.forEach((h,i)=>obj[h]=r[i]!==undefined?r[i]:"");return obj})}
-function parseDate(v){if(!v)return null;if(Object.prototype.toString.call(v)==="[object Date]"&&!isNaN(v.getTime()))return v;const s=norm(v);let m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?/);if(m)return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),Number(m[4]||0),Number(m[5]||0),Number(m[6]||0));m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2}):(\d{2}))?/);if(m)return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),Number(m[4]||0),Number(m[5]||0),Number(m[6]||0));const d=new Date(s);return isNaN(d.getTime())?null:d}function dateISO(v){const d=parseDate(v);if(!d)return"";return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}function dateBR(v){const d=parseDate(v);if(!d)return escapeHtml(v);return d.toLocaleString("pt-BR")}
-function fillStatusFilter(){const sel=document.getElementById("deliveryStatusFilter");const current=sel.value;const statuses=[...new Set(db.entregas.map(d=>norm(d.Status)).filter(Boolean))].sort();sel.innerHTML='<option value="">Todos os status</option>'+statuses.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");sel.value=current}
-function renderAll(){renderBankCard();renderKpis();renderFinanceSummary();renderStatusSummary();renderDeliveries();renderUsers();renderCompanies();renderDrivers();renderMessages()}function isClosed(d){return["Entrega finalizada","Cancelada","Cancelada Geral"].includes(norm(d.Status))}function isPaid(d){return lower(d.StatusPagamento)==="pago"}function isPending(d){const p=lower(d.StatusPagamento);return p==="pendente"||p==="aguardando confirmação"||!p}
-function renderBankCard(){const selected=document.getElementById("salesDate").value||todayISO();const todayList=db.entregas.filter(d=>dateISO(d.CriadoEm||d.AtualizadoEm)===selected);const todayRevenue=todayList.reduce((s,d)=>s+num(d.Valor),0);const paidToday=todayList.filter(isPaid).reduce((s,d)=>s+num(d.Valor),0);const pendingToday=todayList.filter(isPending).reduce((s,d)=>s+num(d.Valor),0);document.getElementById("todayRevenue").innerText=money(todayRevenue);document.getElementById("todaySales").innerText=todayList.length;document.getElementById("todayInfo").innerText=`Pago: ${money(paidToday)} • Pendente/Aguardando: ${money(pendingToday)}`}
-function driverFinancial(d){const list=driverDeliveries(d).filter(e=>norm(e.Status)==="Entrega finalizada"&&(isPaid(e)||isPending(e)));const total=list.reduce((sum,e)=>sum+num(e.Valor),0);const taxa=list.length*1.98;const liquido=Math.max(0,total-taxa);const pago=(db.saques||[]).filter(s=>lower(s.Status)==="pago"&&norm(s.CodigoEntregador)===norm(d.CodigoAcesso)).reduce((sum,s)=>sum+num(s.ValorSolicitado),0);const saldo=Math.max(0,liquido-pago);return{entregas:list.length,total,taxa,liquido,pago,saldo}}
-function allDriversFinancial(){return db.entregadores.map(driverFinancial).reduce((acc,f)=>{acc.entregas+=f.entregas;acc.total+=f.total;acc.taxa+=f.taxa;acc.liquido+=f.liquido;acc.pago+=f.pago;acc.saldo+=f.saldo;return acc},{entregas:0,total:0,taxa:0,liquido:0,pago:0,saldo:0})}
-function renderKpis(){const totalRevenue=db.entregas.reduce((s,d)=>s+num(d.Valor),0);const pending=db.entregas.filter(isPending).reduce((s,d)=>s+num(d.Valor),0);const running=db.entregas.filter(d=>!isClosed(d)).length;const done=db.entregas.filter(d=>norm(d.Status)==="Entrega finalizada").length;const activeDrivers=db.entregadores.filter(d=>lower(d.Ativo)==="ativo").length;const df=allDriversFinancial();document.getElementById("kpiTotalRevenue").innerText=money(totalRevenue);document.getElementById("kpiDriverFees").innerText=money(df.taxa);document.getElementById("kpiDriverNet").innerText=money(df.saldo);document.getElementById("kpiPending").innerText=money(pending);document.getElementById("kpiDeliveries").innerText=db.entregas.length;document.getElementById("kpiRunning").innerText=running;document.getElementById("kpiDone").innerText=done;document.getElementById("kpiUsers").innerText=db.usuarios.length;document.getElementById("kpiCompanies").innerText=db.empresas.length;document.getElementById("kpiActiveDrivers").innerText=activeDrivers}
-function renderFinanceSummary(){
-  const totalEntregas=db.entregas.reduce((s,d)=>s+num(d.Valor),0);
-  const pagas=db.entregas.filter(isPaid).reduce((s,d)=>s+num(d.Valor),0);
-  const pendentes=db.entregas.filter(isPending).reduce((s,d)=>s+num(d.Valor),0);
-  const df=allDriversFinancial();
-  const saldoEmpresas=db.empresas.reduce((s,e)=>s+num(e.SaldoDevedor),0);
-  const pagoUsuarios=db.usuarios.reduce((s,u)=>s+resumoCorridasCliente(u).valorPago,0);
-  const pagoEmpresas=db.empresas.reduce((s,e)=>s+resumoCorridasCliente(e).valorPago,0);
-  const pendUsuarios=db.usuarios.reduce((s,u)=>s+valorPendenteCorridas(u),0);
-  const pendEmpresas=db.empresas.reduce((s,e)=>s+valorPendenteCorridas(e),0);
-  const qtdPendUsuarios=db.usuarios.reduce((s,u)=>s+resumoCorridasCliente(u).quantidadePendente,0);
-  const qtdPendEmpresas=db.empresas.reduce((s,e)=>s+resumoCorridasCliente(e).quantidadePendente,0);
 
-  const rows=[
-    ["Valor total em corridas",money(totalEntregas),"money"],
-    ["Corridas pagas",money(pagas),"money green"],
-    ["Corridas pendentes/aguardando",money(pendentes),"money red"],
-    ["Bruto finalizado dos entregadores",money(df.total),"money"],
-    ["Taxa sistema/serviço dos entregadores (pagas e pendentes)",money(df.taxa),"money red"],
-    ["Saldo líquido a transferir aos entregadores",money(df.saldo),"money green"],
-    ["Saques já pagos aos entregadores",money(df.pago),"money green"],
-    ["Valor pago por usuários nas corridas",money(pagoUsuarios),"money green"],
-    ["Valor pago por empresas nas corridas",money(pagoEmpresas),"money green"],
-    [`Pendente usuários nas corridas (${qtdPendUsuarios})`,money(pendUsuarios),"money red"],
-    [`Pendente empresas nas corridas (${qtdPendEmpresas})`,money(pendEmpresas),"money red"],
-    ["Saldo devedor empresas",money(saldoEmpresas),"money red"]
-  ];
-
-  document.getElementById("financeSummary").innerHTML=rows.map(([a,b,c])=>`<div class="mini-row"><span>${a}</span><b class="${c}">${b}</b></div>`).join("");
+function buildDailySummaryMessage(summary){
+ const trips=Array.isArray(summary.trips)?summary.trips:[];
+ const lines=trips.map((t,index)=>{
+  const payment=String(t.paymentStatus||"PENDENTE").toUpperCase();
+  return `${index+1}. ${t.code} • ${t.origin} → ${t.destination} • ${money.format(Number(t.value||0))} • ${payment}`;
+ });
+ return[
+  `Olá, ${firstName(summary.user?.name)}! Tudo bem? 😊`,
+  "",
+  `Segue o resumo das entregas realizadas em *${summary.dateLabel}*:`,
+  "",
+  lines.length?lines.join("\n"):"Nenhuma viagem foi encontrada nessa data.",
+  "",
+  `*Quantidade de viagens: ${summary.count||0}*`,
+  `*Valor total do dia: ${money.format(Number(summary.total||0))}*`,
+  `*Total pago: ${money.format(Number(summary.paidTotal||0))}*`,
+  `*Total pendente: ${money.format(Number(summary.pendingTotal||0))}*`,
+  "",
+  "Obrigado pela parceria com a Pega&Leva! 💙🏍️"
+ ].join("\n");
 }
-function renderStatusSummary(){const map={};db.entregas.forEach(d=>{const s=norm(d.Status)||"Sem status";map[s]=(map[s]||0)+1});const rows=Object.keys(map).sort().map(k=>`<div class="mini-row"><span>${escapeHtml(k)}</span><b>${map[k]}</b></div>`).join("");document.getElementById("statusSummary").innerHTML=rows||'<p class="muted">Nenhuma entrega encontrada.</p>'}
-function statusBadge(status){const s=norm(status);if(s==="Entrega finalizada")return'<span class="badge green">Entrega finalizada</span>';if(s==="Cancelada"||s==="Cancelada Geral")return`<span class="badge red">${escapeHtml(s)}</span>`;if(s==="Aguardando entregador")return'<span class="badge yellow">Aguardando entregador</span>';if(s==="Entrega aceita")return'<span class="badge purple">Entrega aceita</span>';return`<span class="badge">${escapeHtml(s||"Sem status")}</span>`}function paymentBadge(status){const s=norm(status)||"Aguardando confirmação";if(s==="Pago")return'<span class="badge green">Pago</span>';if(s==="Pendente")return'<span class="badge red">Pendente</span>';return`<span class="badge yellow">${escapeHtml(s)}</span>`}function waLink(v){const d=onlyDigits(v);if(!d)return"-";return`<a target="_blank" href="https://wa.me/55${d}">${escapeHtml(v)}</a>`}
 
-function whatsappCobranca(nome,whatsapp,valor){const d=onlyDigits(whatsapp);if(!d){alert("WhatsApp não cadastrado para enviar cobrança.");return}const msg=`COBRANÇA DO DIA PEGA E LEVA - OLÁ ${norm(nome)||"CLIENTE"} PASSANDO PARA AVISAR DO PAGAMENTO DAS ENTREGAS DO DIA NO VALOR DE ${money(num(valor))} E AS INFORMAÇÕES PARA PAGEMENTO CHAVE PIX: 57293143000156 - BANCO MERCADO PAGO MARLLUS VINICIUS S ARAUJO`;window.open(`https://web.whatsapp.com/send?phone=55${d}&text=${encodeURIComponent(msg)}`,"_blank")}
-async function apiPost(payload){if(!APP_SCRIPT_URL||APP_SCRIPT_URL.includes("COLE_AQUI"))throw new Error("Cole a URL do Apps Script Web App em APP_SCRIPT_URL no painel.");const res=await fetch(APP_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});const data=await res.json().catch(()=>({ok:false,error:"Resposta inválida do Apps Script."}));if(!data.ok)throw new Error(data.error||"Ação não concluída.");return data}
-let pendingDebtPayment=null;
-function openDebtPaymentModal(tipo,codigo,nome,id,valor){if(!codigo&&!id)return alert("Cadastro sem ID ou código de acesso.");pendingDebtPayment={tipo,codigo,nome,id,valor:num(valor)};const body=document.getElementById("debtPaymentModalBody");if(body)body.innerHTML=`<div class="mini-row"><span>Cadastro</span><b>${escapeHtml(nome||"Cliente/empresa")}</b></div><div class="mini-row"><span>Tipo</span><b>${tipo==="empresa"?"Empresa":"Usuário"}</b></div><div class="mini-row"><span>Valor pendente</span><b class="money red">${money(num(valor))}</b></div><p class="muted">Ao confirmar, todas as corridas pendentes deste cadastro serão atualizadas na aba CORRIDAS para StatusPagamento = Pago.</p>`;document.getElementById("debtPaymentModal").classList.add("active")}
-function closeDebtPaymentModal(){document.getElementById("debtPaymentModal").classList.remove("active");pendingDebtPayment=null}
-async function confirmDebtPayment(){
-  const p=pendingDebtPayment;
-  if(!p)return;
+async function generateSelectedDailySummary(){
+ const userId=dailySummaryUser.value;
+ const date=dailySummaryDate.value;
+ if(!userId)return toastMsg("Selecione uma empresa ou usuário.");
+ if(!date)return toastMsg("Selecione a data.");
 
-  const cliente=(p.tipo==="empresa"?db.empresas:db.usuarios).find(item=>
-    norm(item.ID)===norm(p.id)||
-    norm(item.CodigoAcesso)===norm(p.codigo)
+ try{
+  const j=await withLoading(
+   "Gerando resumo diário",
+   "Buscando todas as viagens da empresa na data selecionada.",
+   ()=>api("adminDailyUserSummary",{userId,date})
   );
-
-  if(!cliente){
-    showStatus("Cliente ou empresa não encontrado.","red");
-    return;
-  }
-
-  const corridasPendentes=corridasDoCliente(cliente).filter(corridaPendente);
-
-  if(!corridasPendentes.length){
-    showStatus("Não existem corridas pendentes para marcar como pagas.","red");
-    closeDebtPaymentModal();
-    await loadDashboard(true);
-    return;
-  }
-
-  showLoader("Marcando corridas como pagas...");
-
-  try{
-    let atualizadas=0;
-    const falhas=[];
-
-    for(const corrida of corridasPendentes){
-      const corridaId=norm(corrida.ID);
-      if(!corridaId){
-        falhas.push("Corrida sem ID");
-        continue;
-      }
-
-      try{
-        await apiPost({
-          action:"registerCorridaPaymentStatus",
-          corridaId,
-          id:corridaId,
-          status:"Pago"
-        });
-        atualizadas++;
-      }catch(err){
-        falhas.push((corrida.CodigoCT||corridaId)+": "+(err.message||String(err)));
-      }
-    }
-
-    if(atualizadas>0){
-      closeDebtPaymentModal();
-      await loadDashboard(true);
-
-      if(falhas.length){
-        showStatus(
-          atualizadas+" corrida(s) marcada(s) como paga(s). "+falhas.length+" não foram atualizadas.",
-          "red"
-        );
-      }else{
-        showStatus(
-          atualizadas+" corrida(s) marcada(s) como paga(s) com sucesso.",
-          "green"
-        );
-      }
-    }else{
-      throw new Error(falhas[0]||"Nenhuma corrida foi atualizada.");
-    }
-  }catch(err){
-    showStatus(err.message||String(err),"red");
-  }finally{
-    hideLoader();
-  }
+  state.dailySummary=j;
+  const message=buildDailySummaryMessage(j);
+  dailySummaryPreview.textContent=message;
+  dailySummaryCount.textContent=String(j.count||0);
+  dailySummaryTotal.textContent=money.format(Number(j.total||0));
+  dailySummaryPending.textContent=money.format(Number(j.pendingTotal||0));
+  dailySummaryStats.classList.remove("hide");
+  copyDailySummary.disabled=false;
+  sendDailySummaryWhatsapp.disabled=!String(j.user?.whatsapp||"").trim();
+  if(!j.count)toastMsg("Nenhuma viagem encontrada para essa data.");
+ }catch(x){
+  toastMsg(x.message);
+ }
 }
-async function quitarPendente(tipo,codigo,nome,id){const item=(tipo==="empresa"?db.empresas:db.usuarios).find(x=>norm(x.ID)===norm(id)||norm(x.CodigoAcesso)===norm(codigo));openDebtPaymentModal(tipo,codigo,nome,id,item?valorPendenteCorridas(item):0)}
-async function cadastrarEntregador(){const p={action:"adminRegisterDriver",nome:norm(document.getElementById("driverNome").value),whatsapp:norm(document.getElementById("driverWhatsApp").value),cpf:norm(document.getElementById("driverCPF").value),placaMoto:norm(document.getElementById("driverPlaca").value),codigo:norm(document.getElementById("driverCodigo").value),email:norm(document.getElementById("driverEmail").value)};if(!p.nome||!p.whatsapp||!p.cpf||!p.placaMoto||!p.codigo||!p.email)return alert("Preencha todos os dados do entregador.");showLoader("Cadastrando entregador...");try{await apiPost(p);["driverNome","driverWhatsApp","driverCPF","driverPlaca","driverCodigo","driverEmail"].forEach(id=>document.getElementById(id).value="");showStatus("Entregador cadastrado com sucesso.","green");await loadDashboard(false)}catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}}
-async function cadastrarEmpresa(){const p={action:"adminRegisterCompany",responsavel:norm(document.getElementById("empresaResponsavel").value),whatsapp:norm(document.getElementById("empresaWhatsApp").value),cpfCnpj:norm(document.getElementById("empresaCpfCnpj").value),codigo:norm(document.getElementById("empresaCodigo").value),email:norm(document.getElementById("empresaEmail").value),rua:norm(document.getElementById("empresaRua").value),numero:norm(document.getElementById("empresaNumero").value),referencia:norm(document.getElementById("empresaReferencia").value),cidade:norm(document.getElementById("empresaCidade").value)};if(!p.responsavel||!p.whatsapp||!p.cpfCnpj||!p.codigo||!p.email||!p.rua||!p.numero||!p.referencia||!p.cidade)return alert("Preencha todos os dados da empresa.");showLoader("Cadastrando empresa...");try{await apiPost(p);["empresaResponsavel","empresaWhatsApp","empresaCpfCnpj","empresaCodigo","empresaEmail","empresaRua","empresaNumero","empresaReferencia"].forEach(id=>document.getElementById(id).value="");document.getElementById("empresaCidade").value="Uruçuí";showStatus("Empresa cadastrada com sucesso.","green");await loadDashboard(false)}catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}}
-function acoesCobranca(tipo,codigo,nome,whatsapp,valor,id){const v=num(valor);if(v<=0)return'<span class="muted">Quitado</span>';return`<div class="action-stack"><button class="mini-btn blue" onclick="whatsappCobranca('${escapeHtml(String(nome)).replace(/'/g,"&#039;")}','${escapeHtml(String(whatsapp)).replace(/'/g,"&#039;")}',${v})"><i class="fa-brands fa-whatsapp"></i> Cobrar</button><button class="mini-btn green" onclick="openDebtPaymentModal('${tipo}','${escapeHtml(String(codigo)).replace(/'/g,"&#039;")}','${escapeHtml(String(nome)).replace(/'/g,"&#039;")}','${escapeHtml(String(id||"")).replace(/'/g,"&#039;")}',${v})"><i class="fa-solid fa-check"></i> Marcar pago</button></div>`}
 
-
-function deliveryKey(d){return norm(d.ID)||[norm(d.CriadoEm),norm(d.NomeSolicitante),norm(d.BairroColeta),norm(d.BairroDestino),norm(d.Valor)].join("|")}
-function checkNewDeliveries(){const ids=db.entregas.map(deliveryKey).filter(Boolean);const oldRaw=localStorage.getItem("pegaleva_known_deliveries");if(!oldRaw){localStorage.setItem("pegaleva_known_deliveries",JSON.stringify(ids));return}let old=[];try{old=JSON.parse(oldRaw)||[]}catch(e){old=[]}const oldSet=new Set(old);const novas=db.entregas.filter(d=>!oldSet.has(deliveryKey(d)));if(novas.length){const list=novas.slice().reverse();deliveryNotifications=[...list.map(d=>({id:deliveryKey(d),title:"NOVA ENTREGA",text:`${norm(d.NomeSolicitante)||"Cliente"} • ${norm(d.BairroColeta)||"-"} → ${norm(d.BairroDestino)||"-"} • ${money(num(d.Valor))}`,time:new Date().toLocaleString("pt-BR")})),...deliveryNotifications].slice(0,30);showNewDeliveryAlert(list[0],novas.length)}localStorage.setItem("pegaleva_known_deliveries",JSON.stringify(ids))}
-function deliveryField(d,names,fallback="-"){for(const name of names){const value=norm(d&&d[name]);if(value)return value}return fallback}
-function deliveryMapsLink(d){const coleta=deliveryField(d,["EnderecoColeta","LocalColeta","EnderecoRetirada","Coleta"],"");const entrega=deliveryField(d,["EnderecoDestino","EnderecoEntrega","LocalEntrega","Destino"],"");if(!coleta&&!entrega)return"";return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(coleta)}&destination=${encodeURIComponent(entrega)}&travelmode=driving`}
-function activeDeliveryList(){const activeStatuses=["aguardando entregador","entrega aceita","em andamento","em rota","coleta realizada","saindo para entrega","a caminho","nova","nova entrega"];return (db.entregas||[]).filter(d=>{const s=lower(d.Status);return !isClosed(d)&&(activeStatuses.includes(s)||!s)}).slice().reverse()}
-function renderChatNotifications(){const entregas=activeDeliveryList();document.getElementById("chatCount").innerText=entregas.length;document.getElementById("chatList").innerHTML=entregas.length?entregas.map(d=>{const id=deliveryKey(d);const solicitante=deliveryField(d,["NomeSolicitante","Cliente","NomeCliente"],"Cliente");const coleta=deliveryField(d,["BairroColeta","EnderecoColeta","LocalColeta"],"Coleta não informada");const destino=deliveryField(d,["BairroDestino","EnderecoDestino","EnderecoEntrega","LocalEntrega"],"Entrega não informada");return `<div class="chat-item delivery-chat-item"><strong><i class="fa-solid fa-box"></i> ${escapeHtml(solicitante)}</strong><p><span class="badge ${lower(d.Status)==="aguardando entregador"?"yellow":"purple"}">${escapeHtml(norm(d.Status)||"Nova entrega")}</span><br><b>Rota:</b> ${escapeHtml(coleta)} → ${escapeHtml(destino)}<br><b>Valor:</b> ${money(num(d.Valor))}</p><small>${dateBR(d.CriadoEm||d.AtualizadoEm||"")}</small><button class="mini-btn blue delivery-view-btn" onclick="openDeliveryDetails('${escapeHtml(String(id)).replace(/'/g,"&#039;")}')"><i class="fa-solid fa-eye"></i> Visualizar</button></div>`}).join(""):'<p class="muted">Nenhuma entrega nova ou em andamento.</p>'}
-function toggleSideChat(force){const el=document.getElementById("sideChat");if(force===false)el.classList.remove("active");else if(force===true)el.classList.add("active");else el.classList.toggle("active")}
-function findDeliveryByKey(id){return (db.entregas||[]).find(d=>deliveryKey(d)===String(id)||norm(d.ID)===String(id))||null}
-function deliveryDetailRow(label,value,wide=false){return `<div class="delivery-detail ${wide?"wide":""}"><span>${escapeHtml(label)}</span><b>${escapeHtml(value||"-")}</b></div>`}
-function openDeliveryDetails(id){const d=findDeliveryByKey(id);if(!d){alert("Entrega não encontrada.");return}currentRouteDelivery=d;const solicitante=deliveryField(d,["NomeSolicitante","Cliente","NomeCliente"],"-");const recebedor=deliveryField(d,["NomeRecebedor","QuemRecebe","NomeDestinatario","Destinatario","Recebedor"],"-");const telefone=deliveryField(d,["WhatsAppRecebedor","TelefoneRecebedor","TelefoneDestino","WhatsAppDestino","TelefoneDestinatario"],"-");const coleta=deliveryField(d,["EnderecoColeta","LocalColeta","EnderecoRetirada","Coleta"],"-");const entrega=deliveryField(d,["EnderecoDestino","EnderecoEntrega","LocalEntrega","Destino"],"-");const referenciaColeta=deliveryField(d,["ReferenciaColeta","PontoReferenciaColeta"],"");const referenciaEntrega=deliveryField(d,["ReferenciaDestino","ReferenciaEntrega","PontoReferenciaEntrega"],"");const maps=deliveryMapsLink(d);document.getElementById("deliveryDetailsModalBody").innerHTML=[deliveryDetailRow("Solicitante",solicitante),deliveryDetailRow("Valor da entrega",money(num(d.Valor))),deliveryDetailRow("Quem vai receber",recebedor),deliveryDetailRow("Telefone de quem recebe",telefone),deliveryDetailRow("Status",norm(d.Status)||"Nova entrega"),deliveryDetailRow("Pagamento",norm(d.StatusPagamento)||"Não informado"),deliveryDetailRow("Local de coleta",coleta+(referenciaColeta?` • Referência: ${referenciaColeta}`:""),true),deliveryDetailRow("Local de entrega",entrega+(referenciaEntrega?` • Referência: ${referenciaEntrega}`:""),true),maps?`<div class="delivery-detail wide"><span>Rota no Google Maps</span><b><a href="${maps}" target="_blank" rel="noopener"><i class="fa-solid fa-map-location-dot"></i> Abrir rota de coleta até a entrega</a></b></div>`:deliveryDetailRow("Rota no Google Maps","Endereços insuficientes para gerar a rota",true)].join("");document.getElementById("deliveryDetailsModal").classList.add("active")}
-function closeDeliveryDetailsModal(){document.getElementById("deliveryDetailsModal").classList.remove("active");currentRouteDelivery=null}
-function buildDeliveryRouteNote(d){const solicitante=deliveryField(d,["NomeSolicitante","Cliente","NomeCliente"],"-");const telefoneSolicitante=deliveryField(d,["WhatsAppSolicitante","TelefoneSolicitante","WhatsAppCliente"],"-");const recebedor=deliveryField(d,["NomeRecebedor","QuemRecebe","NomeDestinatario","Destinatario","Recebedor"],"-");const telefoneRecebedor=deliveryField(d,["WhatsAppRecebedor","TelefoneRecebedor","TelefoneDestino","WhatsAppDestino","TelefoneDestinatario"],"-");const coleta=deliveryField(d,["EnderecoColeta","LocalColeta","EnderecoRetirada","Coleta"],"-");const entrega=deliveryField(d,["EnderecoDestino","EnderecoEntrega","LocalEntrega","Destino"],"-");const referenciaColeta=deliveryField(d,["ReferenciaColeta","PontoReferenciaColeta"],"");const referenciaEntrega=deliveryField(d,["ReferenciaDestino","ReferenciaEntrega","PontoReferenciaEntrega"],"");const valorReceber=num(d.ValorReceber||d.ValorParaReceber||d.ValorCobrar||0);const maps=deliveryMapsLink(d)||"Rota não disponível";return `📦 ENTREGA PEGALEVA\n\nSolicitante: ${solicitante}\nTelefone do solicitante: ${telefoneSolicitante}\nQuem vai receber: ${recebedor}\nTelefone de quem recebe: ${telefoneRecebedor}\n\n📍 COLETA\n${coleta}${referenciaColeta?`\nReferência: ${referenciaColeta}`:""}\n\n📍 ENTREGA\n${entrega}${referenciaEntrega?`\nReferência: ${referenciaEntrega}`:""}\n\nValor da entrega: ${money(num(d.Valor))}\nValor para receber no destino: ${money(valorReceber)}\nForma de pagamento: ${deliveryField(d,["FormaPagamento","MetodoPagamento"],"Não informada")}\nStatus: ${norm(d.Status)||"Nova entrega"}\n\n🗺️ ROTA GOOGLE MAPS\n${maps}`}
-async function copyCurrentDeliveryRoute(){const d=currentRouteDelivery;if(!d)return;const note=buildDeliveryRouteNote(d);try{await navigator.clipboard.writeText(note);showStatus("Rota e dados da entrega copiados para a área de transferência.","green")}catch(e){const ta=document.createElement("textarea");ta.value=note;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();showStatus("Rota e dados da entrega copiados para a área de transferência.","green")}}
-function openPayWithdrawModal(){}function closePayWithdrawModal(){}async function confirmPayWithdraw(){}async function payWithdraw(){}
-function unlockAlertAudio(){try{alertAudioCtx=alertAudioCtx||new (window.AudioContext||window.webkitAudioContext)();if(alertAudioCtx.state==="suspended")alertAudioCtx.resume()}catch(e){}}
-function beepOnce(){try{unlockAlertAudio();const now=alertAudioCtx.currentTime;[740,980,1240].forEach((freq,i)=>{const osc=alertAudioCtx.createOscillator();const gain=alertAudioCtx.createGain();osc.type="square";osc.frequency.value=freq;gain.gain.setValueAtTime(.001,now+i*.12);gain.gain.exponentialRampToValueAtTime(.75,now+i*.12+.03);gain.gain.exponentialRampToValueAtTime(.001,now+i*.12+.22);osc.connect(gain);gain.connect(alertAudioCtx.destination);osc.start(now+i*.12);osc.stop(now+i*.12+.24)})}catch(e){}}
-function startAlertSound(){stopAlertSound();beepOnce();alertSoundTimer=setInterval(()=>{beepOnce();if(navigator.vibrate)navigator.vibrate([180,80,180])},650)}
-function stopAlertSound(){if(alertSoundTimer){clearInterval(alertSoundTimer);alertSoundTimer=null}}
-function requestDeliveryNotificationPermission(){try{if("Notification"in window&&Notification.permission==="default")Notification.requestPermission()}catch(e){}}
-function showSystemDeliveryNotification(d,total){try{if(!("Notification"in window)||Notification.permission!=="granted")return;const title=total>1?`${total} novas entregas`:"Nova entrega Pega e Leva";const body=total>1?"Abra o painel para visualizar os pedidos.":`${norm(d.NomeSolicitante)||"Cliente"} • ${norm(d.BairroColeta)||"-"} → ${norm(d.BairroDestino)||"-"} • ${money(num(d.Valor))}`;const n=new Notification(title,{body,icon:"https://i.ibb.co/v40mdWxK/logopegaleva.jpg",tag:"pegaleva-nova-entrega",renotify:true,requireInteraction:true});n.onclick=()=>{window.focus();n.close()}}catch(e){}}
-function showNewDeliveryAlert(d,total){document.getElementById("newDeliveryAlertText").innerText=total>1?`${total} novas entregas apareceram no dashboard.`:`${norm(d.NomeSolicitante)||"Cliente"} solicitou uma nova entrega: ${norm(d.BairroColeta)||"-"} → ${norm(d.BairroDestino)||"-"}.`;document.getElementById("newDeliveryAlert").classList.add("active");startAlertSound();showSystemDeliveryNotification(d,total);if(navigator.vibrate)navigator.vibrate([300,120,300,120,600]);renderChatNotifications()}
-function confirmNewDeliveryAlert(){stopAlertSound();document.getElementById("newDeliveryAlert").classList.remove("active")}
-function deliveryRow(d){return `<tr><td><b>${escapeHtml(d.ID)}</b></td><td>${dateBR(d.CriadoEm)}</td><td><b>${escapeHtml(d.NomeSolicitante)}</b><br><span class="muted">${escapeHtml(d.TipoCliente)} • ${escapeHtml(d.CodigoCliente)}</span><br>${waLink(d.WhatsAppSolicitante)}</td><td>${escapeHtml(d.BairroColeta)} → ${escapeHtml(d.BairroDestino)}<br><span class="muted">${escapeHtml(d.EnderecoColeta)} / ${escapeHtml(d.EnderecoDestino)}</span></td><td>${escapeHtml(d.NomeEntregador||"-")}<br><span class="muted">Placa: ${escapeHtml(d.PlacaMoto||"-")}</span></td><td>${statusBadge(d.Status)}</td><td>${paymentBadge(d.StatusPagamento)}</td><td><b class="money">${money(num(d.Valor))}</b></td><td>${dateBR(d.AtualizadoEm||"")}</td></tr>`}
-function openDeliveriesModal(){renderDeliveriesModal();document.getElementById("deliveriesModal").classList.add("active")}
-function closeDeliveriesModal(){document.getElementById("deliveriesModal").classList.remove("active")}
-function renderDeliveriesModal(){document.getElementById("deliveriesModalTable").innerHTML=(currentDeliveryExport||[]).map(deliveryRow).join("")||'<tr><td colspan="9" class="muted">Nenhuma entrega encontrada.</td></tr>'}
-function renderDeliveries(){const q=lower(document.getElementById("deliverySearch").value);const st=norm(document.getElementById("deliveryStatusFilter").value);const pay=norm(document.getElementById("deliveryPaymentFilter").value);const dateMode=norm(document.getElementById("deliveryDateFilter").value);const selected=document.getElementById("salesDate").value;let list=db.entregas.filter(d=>{const text=lower(Object.values(d).join(" "));const dateOk=dateMode!=="selected"||!selected||dateISO(d.CriadoEm||d.AtualizadoEm)===selected;return(!q||text.includes(q))&&(!st||norm(d.Status)===st)&&(!pay||norm(d.StatusPagamento)===pay)&&dateOk}).slice().reverse();currentDeliveryExport=list;const preview=list.slice(0,4);document.getElementById("deliveriesTable").innerHTML=preview.map(deliveryRow).join("")||'<tr><td colspan="9" class="muted">Nenhuma entrega encontrada.</td></tr>';if(document.getElementById("deliveriesModal").classList.contains("active"))renderDeliveriesModal()}
-function userRow(u){
-  const resumo=resumoCorridasCliente(u);
-  const pendente=resumo.valorPendente;
-  return `<tr>
-    <td>${escapeHtml(u.ID)}</td>
-    <td><b>${escapeHtml(u.Nome)}</b><br><span class="muted">${dateBR(u.CriadoEm)}</span></td>
-    <td>${waLink(u.WhatsApp)}</td>
-    <td>${escapeHtml(u.Email)}</td>
-    <td>${escapeHtml(u.CPF)}</td>
-    <td><b>${escapeHtml(u.CodigoAcesso)}</b><br><span class="muted">ID: ${escapeHtml(u.CodigoID||"-")}</span></td>
-    <td><b>${resumo.totalCorridas}</b><br><span class="muted">${resumo.quantidadePendente} pendente(s)</span></td>
-    <td><b class="money green">${money(resumo.valorPago)}</b></td>
-    <td><b class="money red">${money(pendente)}</b><br><span class="muted">calculado em CORRIDAS</span></td>
-    <td>${acoesCobranca("usuario",u.CodigoAcesso,u.Nome,u.WhatsApp,pendente,u.ID)}</td>
-  </tr>`;
+function renderAll(){
+ const d=state.data,m=d.metrics;if(allDataModal.classList.contains("on"))renderAllModal();
+ mSales.textContent=money.format(m.salesToday);mPending.textContent=money.format(m.pendingTotal);mUsers.textContent=m.users;mDrivers.textContent=m.drivers;
+ mOpen.textContent=m.openTrips;mDriverBalance.textContent=money.format(m.driverBalances);mWithdrawals.textContent=money.format(m.requestedWithdrawals);mTrips.textContent=m.trips;
+ overviewTrips.innerHTML=d.trips.filter(t=>parseDateBR(t.createdAt)===todayISO()).slice(0,4).map(t=>`<div class="trip-row" style="padding:10px 0;border-bottom:1px solid var(--line)"><strong>${t.code}</strong><div style="font-size:.68rem;color:var(--muted);margin-top:4px">${t.requester} • ${t.origin} → ${t.destination}</div><div style="display:flex;justify-content:space-between;margin-top:6px"><span class="badge blue">${t.status}</span><strong>${money.format(t.value)}</strong></div></div>`).join("")||'<div class="empty">Nenhuma corrida.</div>';
+ const pend=d.users.filter(u=>u.invoiceBalance>0).slice(0,4);overviewPending.innerHTML=pend.map(u=>`<div style="padding:10px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px"><div><strong>${u.name}</strong><div style="font-size:.67rem;color:var(--muted)">${u.whatsapp}</div></div><strong>${money.format(u.invoiceBalance)}</strong></div>`).join("")||'<div class="empty">Nenhuma pendência.</div>';
+ tripsTable.innerHTML=d.trips.map(t=>`<tr><td><strong>${t.code}</strong></td><td>${t.requester}</td><td>${t.origin} → ${t.destination}</td><td>${t.driver||"Aguardando"}</td><td><span class="badge blue">${t.status}</span><br><span class="badge ${String(t.paymentStatus).toUpperCase()==="PAGO"?"ok":""}" style="margin-top:5px">${t.paymentStatus||"PENDENTE"}</span></td><td>${money.format(t.value)}</td><td>${t.createdAt}</td></tr>`).join("");
+ usersTable.innerHTML=d.users.map(u=>`<tr><td><strong>${u.name}</strong><br>${u.email}</td><td>${u.whatsapp}</td><td>${u.city}</td><td>${u.travelCode}</td><td>${money.format(u.invoiceBalance)}</td><td>${u.createdAt}</td></tr>`).join("");
+ driversTable.innerHTML=d.drivers.map(x=>`<tr><td><strong>${x.name}</strong><br>${x.email}</td><td>${x.whatsapp}</td><td>${x.plate}</td><td>${money.format(x.balance)}</td><td>${x.autoDiscount?"Ativo":"Inativo"}</td><td>${x.createdAt}</td></tr>`).join("");
+ pendingTable.innerHTML=d.users.filter(u=>u.invoiceBalance>0).map(u=>`<tr><td><strong>${u.name}</strong><br>${u.email}</td><td>${u.whatsapp}</td><td><strong>${money.format(u.invoiceBalance)}</strong></td><td><div class="actions"><button class="btn secondary mini" onclick="chargeUser('${u.id}')"><i class="fa-brands fa-whatsapp"></i> Cobrar</button><button class="btn secondary mini" onclick="openDailySummary('${u.id}')"><i class="fa-solid fa-calendar-day"></i> Resumo do dia</button><button class="btn success mini" onclick="markPaid('${u.id}')"><i class="fa-solid fa-check"></i> Marcar pago</button></div></td></tr>`).join("")||'<tr><td colspan="4" class="empty">Nenhuma pendência.</td></tr>';
+ withdrawalsTable.innerHTML=d.withdrawals.filter(w=>String(w.status).toUpperCase()==="SOLICITADO").map(w=>`<tr><td><strong>${w.driverName}</strong><br>${w.email}</td><td><strong>${money.format(w.value)}</strong></td><td>${w.pixKey}</td><td><span class="badge ${w.status==="PAGO"?"ok":""}">${w.status}</span></td><td>${w.createdAt}</td><td>${w.status==="PAGO"?w.paidAt:`<button class="btn success mini" onclick="completeWithdrawal('${w.id}')"><i class="fa-solid fa-check"></i> Pagamento realizado</button>`}</td></tr>`).join("")||'<tr><td colspan="6" class="empty">Nenhuma solicitação.</td></tr>';
 }
-function openUsersModal(){renderUsersModal();document.getElementById("usersModal").classList.add("active")}
-function closeUsersModal(){document.getElementById("usersModal").classList.remove("active")}
-function renderUsersModal(){document.getElementById("usersModalTable").innerHTML=(currentUsersList||[]).map(userRow).join("")||'<tr><td colspan="10" class="muted">Nenhum usuário encontrado.</td></tr>'}
-function renderUsers(){const q=lower(document.getElementById("userSearch").value);const list=db.usuarios.filter(u=>!q||lower(Object.values(u).join(" ")).includes(q)).slice().reverse();currentUsersList=list;document.getElementById("usersTable").innerHTML=list.slice(0,4).map(userRow).join("")||'<tr><td colspan="10" class="muted">Nenhum usuário encontrado.</td></tr>';if(document.getElementById("usersModal").classList.contains("active"))renderUsersModal()}
-function companyRow(e){
-  const resumo=resumoCorridasCliente(e);
-  const pendente=resumo.valorPendente;
-  return `<tr>
-    <td>${escapeHtml(e.ID)}</td>
-    <td><b>${escapeHtml(e.Responsavel)}</b><br><span class="muted">${dateBR(e.CriadoEm)}</span></td>
-    <td>${waLink(e.WhatsApp)}</td>
-    <td>${escapeHtml(e.Email)}</td>
-    <td>${escapeHtml(e.CPF_CNPJ)}</td>
-    <td>${escapeHtml(e.Endereco||[e.Rua,e.Numero,e.Referencia,e.Cidade].filter(Boolean).join(", "))}</td>
-    <td><b>${escapeHtml(e.CodigoAcesso)}</b><br><span class="muted">ID: ${escapeHtml(e.CodigoID||"-")}</span></td>
-    <td><b class="money red">${money(pendente)}</b><br><span class="muted">${resumo.quantidadePendente} corrida(s)</span></td>
-    <td><b class="money green">${money(resumo.valorPago)}</b></td>
-    <td><b class="money red">${money(pendente)}</b><br><span class="muted">calculado em CORRIDAS</span></td>
-    <td>${priorityBadge(e.Prioridade)}</td>
-    <td>${acoesCobranca("empresa",e.CodigoAcesso,e.Responsavel,e.WhatsApp,pendente,e.ID)}</td>
-  </tr>`;
+function wa(number,message){
+ let n=String(number||"").replace(/\D/g,"");
+ if(!n)return toastMsg("WhatsApp não informado.");
+ if(!n.startsWith("55"))n="55"+n;
+ window.open(`https://wa.me/${n}?text=${encodeURIComponent(message)}`,"_blank");
 }
-function openCompaniesModal(){renderCompaniesModal();document.getElementById("companiesModal").classList.add("active")}
-function closeCompaniesModal(){document.getElementById("companiesModal").classList.remove("active")}
-function renderCompaniesModal(){document.getElementById("companiesModalTable").innerHTML=(currentCompaniesList||[]).map(companyRow).join("")||'<tr><td colspan="12" class="muted">Nenhuma empresa encontrada.</td></tr>'}
-function renderCompanies(){const q=lower(document.getElementById("companySearch").value);const list=db.empresas.filter(e=>!q||lower(Object.values(e).join(" ")).includes(q)).slice().reverse();currentCompaniesList=list;document.getElementById("companiesTable").innerHTML=list.slice(0,4).map(companyRow).join("")||'<tr><td colspan="12" class="muted">Nenhuma empresa encontrada.</td></tr>';if(document.getElementById("companiesModal").classList.contains("active"))renderCompaniesModal()}
-function priorityBadge(v){const s=norm(v)||"Não";const active=["sim","ativo","alta","prioridade"].includes(lower(s));return active?`<span class="badge purple">${escapeHtml(s)}</span>`:`<span class="badge gray">${escapeHtml(s)}</span>`}
-
-function driverDeliveries(driver){const codigo=norm(driver.CodigoAcesso);const nome=lower(driver.Nome);const placa=lower(driver.PlacaMoto);return db.entregas.filter(e=>{const cods=[e.CodigoEntregador,e.CodigoMotorista,e.EntregadorCodigo,e.CodigoAcessoEntregador].map(norm).filter(Boolean);const nomes=[e.NomeEntregador,e.Entregador,e.Motorista].map(lower).filter(Boolean);const placas=[e.PlacaMoto,e.PlacaEntregador].map(lower).filter(Boolean);return(codigo&&cods.includes(codigo))||(nome&&nomes.includes(nome))||(placa&&placas.includes(placa))})}
-function driverSummaryMonthDefault(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`}
-function monthLabel(v){if(!v)return"";const[a,b]=v.split("-");return `${b}/${a}`}
-function openDriverSummaryModal(id){const driver=db.entregadores.find(d=>norm(d.ID)===norm(id));if(!driver){alert("Entregador não encontrado.");return}currentDriverSummary=driver;document.getElementById("driverSummaryTitle").innerText=`Resumo do entregador - ${norm(driver.Nome)||"Sem nome"}`;document.getElementById("driverSummaryMonth").value=driverSummaryMonthDefault();document.getElementById("driverSummaryModal").classList.add("active");renderDriverSummaryModal()}
-function closeDriverSummaryModal(){document.getElementById("driverSummaryModal").classList.remove("active")}
-function getDriverMonthSummary(){const driver=currentDriverSummary;if(!driver)return{driver:null,month:"",list:[],total:0,empresa:0,entregador:0};const month=document.getElementById("driverSummaryMonth").value||driverSummaryMonthDefault();const list=driverDeliveries(driver).filter(e=>norm(e.Status)==="Entrega finalizada"&&dateISO(e.CriadoEm||e.AtualizadoEm).slice(0,7)===month).slice().sort((a,b)=>(parseDate(a.CriadoEm||a.AtualizadoEm)||0)-(parseDate(b.CriadoEm||b.AtualizadoEm)||0));const total=list.reduce((s,e)=>s+num(e.Valor),0);const empresa=list.length*1.98;const entregador=total-empresa;return{driver,month,list,total,empresa,entregador}}
-function renderDriverSummaryModal(){const s=getDriverMonthSummary();if(!s.driver)return;document.getElementById("driverSummaryContent").innerHTML=`<div class="driver-summary-grid"><div class="summary-box"><small>Entregas no mês</small><b>${s.list.length}</b></div><div class="summary-box"><small>Valor faturado</small><b class="money">${money(s.total)}</b></div><div class="summary-box"><small>Valor da empresa</small><b class="money red">${money(s.empresa)}</b><p class="muted">R$1,98 por entrega</p></div><div class="summary-box"><small>Valor da fatura</small><b class="money green">${money(s.entregador)}</b></div></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>ID</th><th>Cliente</th><th>Rota</th><th>Status</th><th>Valor</th><th>Empresa</th><th>Fatura</th></tr></thead><tbody>${s.list.map(e=>`<tr><td>${dateBR(e.CriadoEm||e.AtualizadoEm)}</td><td><b>${escapeHtml(e.ID)}</b></td><td>${escapeHtml(e.NomeSolicitante||"")}</td><td>${escapeHtml(e.BairroColeta||"")} → ${escapeHtml(e.BairroDestino||"")}</td><td>${statusBadge(e.Status)}</td><td><b class="money">${money(num(e.Valor))}</b></td><td><b class="money red">${money(1.98)}</b></td><td><b class="money green">${money(num(e.Valor)-1.98)}</b></td></tr>`).join("")||'<tr><td colspan="8" class="muted">Nenhuma entrega encontrada para este mês.</td></tr>'}</tbody></table></div>`}
-function generateDriverInvoice(){const s=getDriverMonthSummary();if(!s.driver)return;const rows=s.list.map(e=>`<tr><td>${dateBR(e.CriadoEm||e.AtualizadoEm)}</td><td>${escapeHtml(e.ID)}</td><td>${escapeHtml(e.NomeSolicitante||"")}</td><td>${escapeHtml(e.BairroColeta||"")} → ${escapeHtml(e.BairroDestino||"")}</td><td>${money(num(e.Valor))}</td><td>${money(1.98)}</td><td>${money(num(e.Valor)-1.98)}</td></tr>`).join("")||'<tr><td colspan="7">Nenhuma entrega encontrada.</td></tr>';const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Fatura - ${escapeHtml(s.driver.Nome)}</title><style>body{font-family:Arial,sans-serif;color:#0f172a;padding:28px}h1{margin:0 0 8px}p{margin:5px 0;color:#475569}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}.card{border:1px solid #e5edf8;border-radius:14px;padding:12px}.card small{display:block;color:#64748b;font-weight:bold}.card b{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{border-bottom:1px solid #e5edf8;padding:10px;text-align:left;font-size:13px}th{background:#f8fbff}.total{margin-top:18px;text-align:right;font-size:22px;font-weight:bold}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Imprimir / Salvar PDF</button><h1>Fatura do entregador</h1><p><b>Entregador:</b> ${escapeHtml(s.driver.Nome||"")}</p><p><b>Mês:</b> ${monthLabel(s.month)}</p><p><b>Gerada em:</b> ${new Date().toLocaleString("pt-BR")}</p><div class="cards"><div class="card"><small>Entregas</small><b>${s.list.length}</b></div><div class="card"><small>Valor faturado</small><b>${money(s.total)}</b></div><div class="card"><small>Valor da empresa</small><b>${money(s.empresa)}</b></div><div class="card"><small>Valor da fatura</small><b>${money(s.entregador)}</b></div></div><table><thead><tr><th>Data</th><th>ID</th><th>Cliente</th><th>Rota</th><th>Valor</th><th>Empresa</th><th>Fatura</th></tr></thead><tbody>${rows}</tbody></table><div class="total">Valor da fatura: ${money(s.entregador)}</div></body></html>`;const w=window.open("","_blank");w.document.write(html);w.document.close()}
-
-function driverRow(d){const f=driverFinancial(d);return `<tr><td>${escapeHtml(d.ID)}</td><td><b>${escapeHtml(d.Nome)}</b><br><span class="muted">${dateBR(d.CriadoEm)}</span></td><td>${waLink(d.WhatsApp)}</td><td>${escapeHtml(d.Email)}</td><td>${escapeHtml(d.CPF)}</td><td>${escapeHtml(d.PlacaMoto)}</td><td><b>${escapeHtml(d.CodigoAcesso)}</b></td><td>${lower(d.Ativo)==="ativo"?'<span class="badge green">Ativo</span>':'<span class="badge red">Inativo</span>'}</td><td><b class="money">${money(f.total)}</b><br><span class="muted">${f.entregas} entregas</span></td><td><b class="money red">${money(f.taxa)}</b><br><span class="muted">R$1,98 por entrega</span></td><td><b class="money green">${money(f.saldo)}</b></td><td><b>${num(d.Curtidas)}</b></td><td><button class="mini-btn blue" onclick="openDriverSummaryModal('${escapeHtml(String(d.ID)).replace(/'/g,"&#039;")}')"><i class="fa-solid fa-file-invoice-dollar"></i> Resumo</button></td></tr>`}
-function openDriversModal(){renderDriversModal();document.getElementById("driversModal").classList.add("active")}
-function closeDriversModal(){document.getElementById("driversModal").classList.remove("active")}
-function renderDriversModal(){document.getElementById("driversModalTable").innerHTML=(currentDriversList||[]).map(driverRow).join("")||'<tr><td colspan="13" class="muted">Nenhum entregador encontrado.</td></tr>'}
-function renderDrivers(){const q=lower(document.getElementById("driverSearch").value);const st=lower(document.getElementById("driverStatusFilter").value);const list=db.entregadores.filter(d=>{const active=lower(d.Ativo)==="ativo"?"ativo":"inativo";return(!q||lower(Object.values(d).join(" ")).includes(q))&&(!st||active===st)}).slice().reverse();currentDriversList=list;document.getElementById("driversTable").innerHTML=list.slice(0,4).map(driverRow).join("")||'<tr><td colspan="13" class="muted">Nenhum entregador encontrado.</td></tr>';if(document.getElementById("driversModal").classList.contains("active"))renderDriversModal()}
-function renderMessages(){const q=lower(document.getElementById("messageSearch").value);const list=(db.mensagens||[]).filter(m=>!q||lower(Object.values(m).join(" ")).includes(q)).slice().reverse();document.getElementById("messagesTable").innerHTML=list.map(m=>`<tr><td>${escapeHtml(m.ID)}</td><td>${dateBR(m.CriadoEm)}</td><td><b>${escapeHtml(m.EntregaID)}</b></td><td>${escapeHtml(m.CodigoCliente)}</td><td>${escapeHtml(m.CodigoEntregador)}</td><td>${escapeHtml(m.RemetenteTipo)}</td><td>${escapeHtml(m.Mensagem)}</td><td>${norm(m.LidaCliente).toLowerCase()==="sim"?'<span class="badge green">Sim</span>':'<span class="badge yellow">Não</span>'}</td><td>${norm(m.LidaEntregador).toLowerCase()==="sim"?'<span class="badge green">Sim</span>':'<span class="badge yellow">Não</span>'}</td></tr>`).join("")||'<tr><td colspan="9" class="muted">Nenhuma mensagem encontrada.</td></tr>'}
-document.addEventListener("click",unlockAlertAudio,{once:true});
-function exportCSV(){const rows=currentDeliveryExport||[];if(!rows.length){alert("Nenhuma entrega filtrada para exportar.");return}const headers=Object.keys(rows[0]);const csv=[headers.join(","),...rows.map(r=>headers.map(h=>`"${String(r[h]??"").replace(/"/g,'""')}"`).join(","))].join("\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="pegaleva_entregas_filtradas.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
-
-function toggleAdminTools(){document.getElementById("adminToolsFloat").classList.toggle("active")}
-function openCouponTool(){document.getElementById("couponToolModal").classList.add("active")}
-function closeCouponTool(){document.getElementById("couponToolModal").classList.remove("active")}
-function openAnnouncementTool(){document.getElementById("announcementToolModal").classList.add("active")}
-function closeAnnouncementTool(){document.getElementById("announcementToolModal").classList.remove("active")}
-async function sendCouponTool(){
-  const cupom=norm(document.getElementById("toolCouponName").value).toUpperCase();
-  const percentual=num(document.getElementById("toolCouponPercent").value);
-  if(!cupom||!percentual)return showStatus("Preencha o nome do cupom e o percentual.","red");
-  showLoader("Cadastrando cupom...");
-  try{
-    await apiPost({action:"adminCreateCoupon",cupom,percentual});
-    document.getElementById("toolCouponName").value="";
-    document.getElementById("toolCouponPercent").value="";
-    closeCouponTool();
-    showStatus("Cupom cadastrado com sucesso na aba PRICE.","green");
-  }catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}
+function firstName(value){
+ return String(value||"").trim().split(/\s+/)[0]||"cliente";
 }
-async function sendAnnouncementTool(){
-  const titulo=norm(document.getElementById("toolAnnouncementTitle").value)||"Comunicado PegaLeva";
-  const mensagem=norm(document.getElementById("toolAnnouncementMsg").value);
-  if(!mensagem)return showStatus("Digite o comunicado.","red");
-  showLoader("Enviando comunicado...");
-  try{
-    await apiPost({action:"adminSendAnnouncement",titulo,mensagem});
-    document.getElementById("toolAnnouncementTitle").value="";
-    document.getElementById("toolAnnouncementMsg").value="";
-    closeAnnouncementTool();
-    showStatus("Comunicado enviado para usuários e empresas por 24H.","green");
-  }catch(err){showStatus(err.message||String(err),"red")}finally{hideLoader()}
+function pendingTripsForUser(user){
+ const apiTrips=Array.isArray(user.pendingTrips)?user.pendingTrips:[];
+ if(apiTrips.length)return apiTrips;
+ return (state.data?.trips||[]).filter(t=>
+  String(t.userId)===String(user.id)&&
+  String(t.paymentStatus||"").toUpperCase()!=="PAGO"
+ );
 }
+function chargeUser(id){
+ const u=state.data.users.find(x=>x.id===id);
+ if(!u)return toastMsg("Cliente não encontrado.");
+
+ const pending=pendingTripsForUser(u);
+ const lines=pending.map((t,index)=>{
+  const route=t.origin&&t.destination?` • ${t.origin} → ${t.destination}`:"";
+  return `${index+1}. ${t.code}${route} • ${money.format(Number(t.value||0))}`;
+ });
+
+ const summary=lines.length
+  ?lines.join("\n")
+  :"As entregas pendentes estão registradas em sua fatura.";
+
+ const message=[
+  `Olá, ${firstName(u.name)}! Tudo bem? 😊`,
+  "",
+  "Segue o resumo de pagamento pendente das suas últimas entregas realizadas com a Pega&Leva:",
+  "",
+  summary,
+  "",
+  `*Valor total pendente: ${money.format(Number(u.invoiceBalance||0))}*`,
+  "",
+  "Quando realizar o pagamento, pode enviar o comprovante por aqui para conferirmos. Muito obrigado pela parceria! 💙🏍️"
+ ].join("\n");
+
+ wa(u.whatsapp,message);
+}
+async function markPaid(id){
+ const u=state.data.users.find(x=>x.id===id);
+ if(!u)return toastMsg("Cliente não encontrado.");
+ const pending=pendingTripsForUser(u);
+ const count=pending.length;
+ const detail=count?` Isso marcará ${count} ${count===1?"corrida":"corridas"} como paga(s).`:"";
+ if(!confirm(`Confirmar o pagamento de ${money.format(Number(u.invoiceBalance||0))} de ${u.name}?${detail}`))return;
+
+ try{
+  const j=await withLoading(
+   "Baixando pagamento",
+   "Marcando as corridas pendentes como pagas e zerando o saldo do cliente.",
+   ()=>api("adminMarkInvoicePaid",{userId:id})
+  );
+  state.revision="";
+  await loadDashboard();
+  toastMsg(`${j.updatedTrips||count||0} corrida(s) marcada(s) como paga(s).`);
+ }catch(x){
+  toastMsg(x.message);
+ }
+}
+async function completeWithdrawal(id){
+ const w=state.data.withdrawals.find(x=>x.id===id);
+ if(!w||!confirm(`Confirmar pagamento de ${money.format(w.value)} para ${w.driverName}?`))return;
+ const observation=prompt("Observação ou comprovante (opcional):","")||"";
+ try{
+  await withLoading("Confirmando pagamento do saque","Descontando o saldo, vinculando as corridas e removendo a solicitação.",()=>api("adminCompleteWithdrawal",{withdrawalId:id,observation}));
+  state.data.withdrawals=state.data.withdrawals.filter(x=>x.id!==id);
+  renderAll();
+  state.revision="";
+  await loadDashboard();
+  toastMsg("Saque pago, saldo atualizado e solicitação removida.")
+ }catch(x){toastMsg(x.message)}
+}
+
+userForm.onsubmit=async e=>{
+ e.preventDefault();
+ const stopButton=loadingButton(e.submitter||userForm.querySelector("button"),"Cadastrando...");
+ try{
+  await withLoading("Cadastrando usuário","Salvando os dados do novo cliente.",()=>api("adminRegisterUser",{user:{name:uName.value,email:uEmail.value,password:uPassword.value,whatsapp:uWhatsapp.value,document:uDocument.value,street:uStreet.value,number:uNumber.value,reference:uReference.value,city:uCity.value}}));
+  userForm.reset();state.revision="";await loadDashboard();toastMsg("Usuário cadastrado.")
+ }catch(x){toastMsg(x.message)}
+ finally{stopButton()}
+};
+driverForm.onsubmit=async e=>{
+ e.preventDefault();
+ const stopButton=loadingButton(e.submitter||driverForm.querySelector("button"),"Cadastrando...");
+ try{
+  await withLoading("Cadastrando entregador","Criando o acesso e salvando os dados do entregador.",()=>api("adminRegisterDriver",{driver:{name:dName.value,email:dEmail.value,password:dPassword.value,whatsapp:dWhatsapp.value,cpf:dCpf.value,plate:dPlate.value,autoDiscount:dDiscount.value==="true"}}));
+  driverForm.reset();state.revision="";await loadDashboard();toastMsg("Entregador cadastrado.")
+ }catch(x){toastMsg(x.message)}
+ finally{stopButton()}
+};
+
+document.querySelectorAll(".menu button[data-panel]").forEach(b=>b.onclick=()=>{
+ showLoading("Carregando área",`Preparando ${b.textContent.trim().toLowerCase()}.`);
+ setTimeout(()=>{
+  document.querySelectorAll(".menu button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  $(b.dataset.panel).classList.add("active");
+  pageTitle.textContent=b.textContent.trim();
+  sidebar.classList.remove("on");
+  hideLoading();
+ },320);
+});
+document.querySelectorAll("[data-search]").forEach(i=>i.oninput=()=>{
+ const q=i.value.toLowerCase();
+ const old=i.placeholder;
+ i.placeholder="Carregando resultados...";
+ setTimeout(()=>{
+  document.querySelectorAll(`#${i.dataset.search} tr`).forEach(r=>{
+   r.style.display=r.textContent.toLowerCase().includes(q)?"":"none";
+  });
+  i.placeholder=old;
+ },180);
+});
+
+
+closeDailySummary.onclick=()=>dailySummaryModal.classList.remove("on");
+dailySummaryModal.onclick=e=>{if(e.target===dailySummaryModal)dailySummaryModal.classList.remove("on")};
+generateDailySummary.onclick=generateSelectedDailySummary;
+copyDailySummary.onclick=async()=>{
+ if(!state.dailySummary)return;
+ const message=buildDailySummaryMessage(state.dailySummary);
+ try{
+  await navigator.clipboard.writeText(message);
+  toastMsg("Resumo copiado.");
+ }catch(e){
+  toastMsg("Não foi possível copiar automaticamente.");
+ }
+};
+sendDailySummaryWhatsapp.onclick=()=>{
+ if(!state.dailySummary)return;
+ wa(state.dailySummary.user.whatsapp,buildDailySummaryMessage(state.dailySummary));
+};
+
+closeAllData.onclick=()=>allDataModal.classList.remove("on");
+allDataModal.onclick=e=>{if(e.target===allDataModal)allDataModal.classList.remove("on")};
+allSearch.oninput=()=>{showLoading("Filtrando resultados","Aplicando busca nos registros.");setTimeout(()=>{renderAllModal();hideLoading()},220)};
+allCompany.onchange=()=>{showLoading("Filtrando por empresa","Atualizando os registros da empresa selecionada.");setTimeout(()=>{renderAllModal();hideLoading()},220)};
+allStatus.onchange=()=>{showLoading("Filtrando por status","Atualizando os registros pelo status selecionado.");setTimeout(()=>{renderAllModal();hideLoading()},220)};
+allPeriod.onchange=()=>{
+ allDate.classList.toggle("hide",allPeriod.value!=="CUSTOM");
+ showLoading("Filtrando por período","Atualizando os registros pelo período selecionado.");
+ setTimeout(()=>{renderAllModal();hideLoading()},220)
+};
+allDate.onchange=()=>{showLoading("Filtrando por data","Buscando registros da data selecionada.");setTimeout(()=>{renderAllModal();hideLoading()},220)};
+
+mobileMenu.onclick=()=>sidebar.classList.toggle("on");
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.token)loadDashboard(true)});
+window.addEventListener("online",()=>{if(state.token)loadDashboard(true)});
+if(state.token)showApp();

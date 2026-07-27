@@ -1,68 +1,175 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PegaLeva Admin Dashboard</title>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/><link href="style.css" rel="stylesheet"/><link href="https://i.ibb.co/hFqBGLYp/logopegaleva.jpg" rel="icon" type="image/jpeg"/>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pega&Leva Gestão</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="admin-tools-float" id="adminToolsFloat">
-<div class="admin-tools-panel">
-<button onclick="openCouponTool()"><i class="fa-solid fa-ticket"></i> Novo cupom</button>
-<button onclick="openAnnouncementTool()"><i class="fa-solid fa-bullhorn"></i> Comunicado</button>
-</div>
-<button class="admin-tools-tab" onclick="toggleAdminTools()">Ferramentas</button>
-</div>
-<div class="modal-backdrop" id="couponToolModal">
-<div class="modal-card" style="width:min(100%,430px)">
-<div class="modal-head"><h3><i class="fa-solid fa-ticket"></i> Novo cupom</h3><button onclick="closeCouponTool()">Fechar</button></div>
-<div class="modal-body">
-<div class="tools-form">
-<label>Nome do cupom</label><input id="toolCouponName" placeholder="Ex: PEG10"/>
-<label>Percentual de desconto</label><input id="toolCouponPercent" max="100" min="1" placeholder="Ex: 10" type="number"/>
-<button class="btn green" onclick="sendCouponTool()"><i class="fa-solid fa-paper-plane"></i> Enviar cupom</button>
-</div>
-</div>
-</div>
-</div>
-<div class="modal-backdrop" id="announcementToolModal">
-<div class="modal-card" style="width:min(100%,520px)">
-<div class="modal-head"><h3><i class="fa-solid fa-bullhorn"></i> Enviar comunicado</h3><button onclick="closeAnnouncementTool()">Fechar</button></div>
-<div class="modal-body">
-<div class="tools-form">
-<label>Título</label><input id="toolAnnouncementTitle" placeholder="Comunicado PegaLeva"/>
-<label>Comunicado</label><textarea id="toolAnnouncementMsg" placeholder="Digite seu comunicado..."></textarea>
-<button class="btn green" onclick="sendAnnouncementTool()"><i class="fa-solid fa-paper-plane"></i> Enviar comunicado</button>
-</div>
-</div>
-</div>
-</div>
-<div class="loader" id="loader"><div><div class="spinner"></div><h2 id="loaderText">Carregando dashboard...</h2></div></div>
-<section class="login-screen" id="loginScreen"><div class="login-card"><img alt="PegaLeva" src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg"/><h1>Painel Administrativo</h1><p>Entre com seu código de acesso administrativo para visualizar dados completos do negócio.</p><input id="adminCode" placeholder="Código de acesso"/><button class="btn" onclick="loginAdmin()"><i class="fa-solid fa-lock-open"></i> Entrar no dashboard</button><p style="font-size:12px;margin:14px 0 0;opacity:.78"></p></div></section>
-<section class="app" id="appScreen"><div class="topbar"><div class="head"><div class="brand"><img alt="PegaLeva" src="https://i.ibb.co/v40mdWxK/logopegaleva.jpg"/><div><strong>Dashboard PegaLeva</strong><span id="lastUpdate">Painel administrativo conectado à planilha</span></div></div><div class="top-actions"><button onclick="toggleSideChat(true)"><i class="fa-solid fa-truck-fast"></i> Entregas</button><button onclick="exportCSV()"><i class="fa-solid fa-file-csv"></i> Exportar entregas filtradas</button><button onclick="logoutAdmin()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button></div></div></div>
-<div class="wrap"><div class="status-box" id="statusBox"></div><div class="bank-card"><div class="bank-row"><div><small>Faturamento do dia em entregas</small><h1 id="todayRevenue">R$0,00</h1><p id="todayInfo">Total calculado pelas entregas da data selecionada.</p></div><div><small>Vendas/entregas do dia</small><h3 id="todaySales">0</h3><p>Quantidade de entregas criadas na data filtrada.</p></div><div class="date-filter"><small>Filtrar vendas por data</small><input id="salesDate" onchange="renderAll()" type="date"/><button class="btn light" onclick="setToday()">Ver hoje</button></div></div></div>
-<div class="grid-kpi"><div class="kpi green"><div class="icon"><i class="fa-solid fa-sack-dollar"></i></div><small>Faturamento total</small><h2 id="kpiTotalRevenue">R$0,00</h2><p>Baseado nas entregas registradas.</p></div><div class="kpi purple"><div class="icon"><i class="fa-solid fa-coins"></i></div><small>Taxa sistema entregadores</small><h2 id="kpiDriverFees">R$0,00</h2><p>R$1,98 por entrega finalizada, paga ou pendente.</p></div><div class="kpi green"><div class="icon"><i class="fa-solid fa-wallet"></i></div><small>Saldo líquido entregadores</small><h2 id="kpiDriverNet">R$0,00</h2><p>Valor a transferir já descontado da taxa.</p></div><div class="kpi red"><div class="icon"><i class="fa-solid fa-clock"></i></div><small>Valores pendentes</small><h2 id="kpiPending">R$0,00</h2><p>Pagamentos pendentes/aguardando.</p></div><div class="kpi"><div class="icon"><i class="fa-solid fa-truck-fast"></i></div><small>Total de entregas</small><h2 id="kpiDeliveries">0</h2><p>Todas as entregas da planilha.</p></div><div class="kpi yellow"><div class="icon"><i class="fa-solid fa-person-biking"></i></div><small>Entregas em andamento</small><h2 id="kpiRunning">0</h2><p>Não finalizadas e não canceladas.</p></div><div class="kpi green"><div class="icon"><i class="fa-solid fa-circle-check"></i></div><small>Entregas finalizadas</small><h2 id="kpiDone">0</h2><p>Entregas encerradas com sucesso.</p></div><div class="kpi purple"><div class="icon"><i class="fa-solid fa-users"></i></div><small>Usuários cadastrados</small><h2 id="kpiUsers">0</h2><p>Clientes pessoa física.</p></div><div class="kpi"><div class="icon"><i class="fa-solid fa-building"></i></div><small>Empresas cadastradas</small><h2 id="kpiCompanies">0</h2><p>Clientes empresariais.</p></div><div class="kpi green"><div class="icon"><i class="fa-solid fa-motorcycle"></i></div><small>Entregadores ativos</small><h2 id="kpiActiveDrivers">0</h2><p>Entregadores com status Ativo.</p></div></div>
-<div class="layout"><div class="card"><div class="card-head"><h2>Resumo financeiro</h2><span class="badge green">Visão geral</span></div><div class="mini-list" id="financeSummary"></div></div><div class="card"><div class="card-head"><h2>Entregas por status</h2><span class="badge">Status</span></div><div class="mini-list" id="statusSummary"></div></div>
-<div class="card full"><div class="card-head"><div><h2>Entregas / Vendas</h2><p class="muted">Mostrando as 4 últimas. Use “Ver todas” para abrir a lista completa em modal.</p></div><div class="filters"><button class="btn light" onclick="openDeliveriesModal()" style="width:auto;margin:0"><i class="fa-solid fa-up-right-from-square"></i> Ver todas</button><input id="deliverySearch" oninput="renderAll()" placeholder="Buscar entrega..."/><select id="deliveryStatusFilter" onchange="renderAll()"><option value="">Todos os status</option></select><select id="deliveryPaymentFilter" onchange="renderAll()"><option value="">Todos pagamentos</option><option value="Pago">Pago</option><option value="Pendente">Pendente</option><option value="Aguardando confirmação">Aguardando confirmação</option></select><select id="deliveryDateFilter" onchange="renderAll()"><option value="">Todas as datas</option><option value="selected">Apenas data selecionada</option></select></div></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Data</th><th>Cliente</th><th>Rota</th><th>Entregador</th><th>Status</th><th>Pagamento</th><th>Valor</th><th>Atualizado</th></tr></thead><tbody id="deliveriesTable"></tbody></table></div></div>
-<div class="card full"><div class="card-head"><div><h2>Cadastros rápidos</h2><p class="muted">Cadastre empresas e entregadores direto na planilha pelas ações do painel.</p></div><span class="badge green">Novo cadastro</span></div><div class="layout"><div class="card" style="box-shadow:none"><div class="card-head"><h3>Cadastrar entregador</h3></div><div class="form-grid"><input id="driverNome" placeholder="Nome"/><input id="driverWhatsApp" placeholder="WhatsApp"/><input id="driverCPF" placeholder="CPF"/><input id="driverPlaca" placeholder="Placa Moto"/><input id="driverCodigo" placeholder="CodigoAcesso"/><input id="driverEmail" placeholder="Email"/></div><div class="form-actions"><button class="btn green" onclick="cadastrarEntregador()" style="width:auto;margin:0"><i class="fa-solid fa-motorcycle"></i> Cadastrar entregador</button></div></div><div class="card" style="box-shadow:none"><div class="card-head"><h3>Cadastrar empresa</h3></div><div class="form-grid"><input id="empresaResponsavel" placeholder="Responsável"/><input id="empresaWhatsApp" placeholder="WhatsApp"/><input id="empresaCpfCnpj" placeholder="CPF ou CNPJ"/><input id="empresaCodigo" placeholder="CodigoAcesso"/><input id="empresaEmail" placeholder="Email"/><select id="empresaCidade"><option value="Uruçuí">Uruçuí</option><option value="Benedito Leite">Benedito Leite</option></select><input class="wide" id="empresaRua" placeholder="Rua"/><input id="empresaNumero" placeholder="Número"/><input class="full-line" id="empresaReferencia" placeholder="Referência"/></div><div class="form-actions"><button class="btn green" onclick="cadastrarEmpresa()" style="width:auto;margin:0"><i class="fa-solid fa-building"></i> Cadastrar empresa</button></div></div></div></div>
-<div class="card full"><div class="card-head"><div><h2>Usuários cadastrados</h2><p class="muted">Mostrando os 4 últimos. Use “Ver todas” para abrir a lista completa em modal.</p></div><div class="filters"><button class="btn light" onclick="openUsersModal()" style="width:auto;margin:0"><i class="fa-solid fa-up-right-from-square"></i> Ver todas</button><input id="userSearch" oninput="renderAll()" placeholder="Buscar usuário..."/></div></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Nome</th><th>WhatsApp</th><th>Email</th><th>CPF</th><th>Código</th><th>Entregas</th><th>Pago</th><th>Pendente</th><th>Ações</th></tr></thead><tbody id="usersTable"></tbody></table></div></div>
-<div class="card full"><div class="card-head"><div><h2>Empresas cadastradas</h2><p class="muted">Mostrando as 4 últimas. Use “Ver todas” para abrir a lista completa em modal.</p></div><div class="filters"><button class="btn light" onclick="openCompaniesModal()" style="width:auto;margin:0"><i class="fa-solid fa-up-right-from-square"></i> Ver todas</button><input id="companySearch" oninput="renderAll()" placeholder="Buscar empresa..."/></div></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Responsável</th><th>WhatsApp</th><th>Email</th><th>CPF/CNPJ</th><th>Endereço</th><th>Código</th><th>Saldo devedor</th><th>Pago</th><th>Pendente</th><th>Prioridade</th><th>Ações</th></tr></thead><tbody id="companiesTable"></tbody></table></div></div>
-<div class="card full"><div class="card-head"><div><h2>Entregadores</h2><p class="muted">Mostrando os 4 últimos. Use “Ver todas” para abrir a lista completa em modal.</p></div><div class="filters"><button class="btn light" onclick="openDriversModal()" style="width:auto;margin:0"><i class="fa-solid fa-up-right-from-square"></i> Ver todas</button><input id="driverSearch" oninput="renderAll()" placeholder="Buscar entregador..."/><select id="driverStatusFilter" onchange="renderAll()"><option value="">Todos</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option></select></div></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Nome</th><th>WhatsApp</th><th>Email</th><th>CPF</th><th>Placa</th><th>Código</th><th>Status</th><th>Bruto finalizado</th><th>Taxa sistema</th><th>Saldo líquido</th><th>Curtidas</th><th>Ações</th></tr></thead><tbody id="driversTable"></tbody></table></div></div>
-<div class="card full"><div class="card-head"><h2>Mensagens</h2><div class="filters"><input id="messageSearch" oninput="renderAll()" placeholder="Buscar mensagem..."/></div></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Data</th><th>Entrega</th><th>Cliente</th><th>Entregador</th><th>Remetente</th><th>Mensagem</th><th>Lida Cliente</th><th>Lida Entregador</th></tr></thead><tbody id="messagesTable"></tbody></table></div></div>
-</div></div></section>
-<button class="chat-float" onclick="toggleSideChat()"><i class="fa-solid fa-truck-fast"></i> Entregas <span class="count" id="chatCount">0</span></button>
-<aside class="side-chat" id="sideChat"><div class="side-chat-head"><div><h3>Entregas</h3><small>Novas solicitações e entregas em andamento</small></div><button onclick="toggleSideChat(false)"><i class="fa-solid fa-xmark"></i></button></div><div class="chat-list" id="chatList"><p class="muted">Nenhuma entrega nova ou em andamento.</p></div></aside>
-<div class="modal-backdrop" id="deliveryDetailsModal"><div class="modal-card" style="width:min(100%,680px)"><div class="modal-head"><div><h3><i class="fa-solid fa-route"></i> Dados da entrega</h3><p class="muted">Informações completas da solicitação e da rota.</p></div><button onclick="closeDeliveryDetailsModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div><div class="modal-body"><div class="delivery-detail-grid" id="deliveryDetailsModalBody"></div><div class="form-actions"><button class="btn light" onclick="closeDeliveryDetailsModal()" style="width:auto;margin:0"><i class="fa-solid fa-xmark"></i> Fechar</button><button class="btn green" onclick="copyCurrentDeliveryRoute()" style="width:auto;margin:0"><i class="fa-solid fa-copy"></i> Copiar rota</button></div></div></div></div>
-<div class="modal-backdrop" id="debtPaymentModal"><div class="modal-card" style="width:min(100%,500px)"><div class="modal-head"><div><h3>Atualizar devedor</h3><p class="muted">Marque o valor pendente como pago e zere o débito do cadastro.</p></div><button onclick="closeDebtPaymentModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div><div class="modal-body"><div class="mini-list" id="debtPaymentModalBody"></div><div class="form-actions"><button class="btn light" onclick="closeDebtPaymentModal()" style="width:auto;margin:0"><i class="fa-solid fa-xmark"></i> Cancelar</button><button class="btn green" onclick="confirmDebtPayment()" style="width:auto;margin:0"><i class="fa-solid fa-check"></i> Confirmar como pago</button></div></div></div></div>
-<div class="modal-backdrop" id="driverSummaryModal"><div class="modal-card"><div class="modal-head"><div><h3 id="driverSummaryTitle">Resumo do entregador</h3><p class="muted">Selecione o mês para calcular entregas, faturamento e valor da empresa.</p></div><button onclick="closeDriverSummaryModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div><div class="modal-body"><div class="filters" style="margin-bottom:12px"><input id="driverSummaryMonth" onchange="renderDriverSummaryModal()" type="month"/><button class="btn green" onclick="generateDriverInvoice()" style="width:auto;margin:0"><i class="fa-solid fa-file-invoice-dollar"></i> Gerar fatura</button></div><div id="driverSummaryContent"></div></div></div></div>
-<div class="modal-backdrop" id="deliveriesModal"><div class="modal-card"><div class="modal-head"><div><h3>Todas as entregas filtradas</h3><p class="muted">Lista completa conforme os filtros atuais.</p></div><button onclick="closeDeliveriesModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div><div class="modal-body"><div class="table-wrap"><table><thead><tr><th>ID</th><th>Data</th><th>Cliente</th><th>Rota</th><th>Entregador</th><th>Status</th><th>Pagamento</th><th>Valor</th><th>Atualizado</th></tr></thead><tbody id="deliveriesModalTable"></tbody></table></div></div></div></div>
-<div class="modal-backdrop" id="usersModal"><div class="modal-card"><div class="modal-head"><div><h3>Todos os usuários filtrados</h3><p class="muted">Lista completa conforme a busca atual.</p></div><button onclick="closeUsersModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div><div class="modal-body"><div class="table-wrap"><table><thead><tr><th>ID</th><th>Nome</th><th>WhatsApp</th><th>Email</th><th>CPF</th><th>Código</th><th>Entregas</th><th>Pago</th><th>Pendente</th><th>Ações</th></tr></thead><tbody id="usersModalTable"></tbody></table></div></div></div></div>
-<div class="modal-backdrop" id="companiesModal"><div class="modal-card"><div class="modal-head"><div><h3>Todas as empresas filtradas</h3><p class="muted">Lista completa conforme a busca atual.</p></div><button onclick="closeCompaniesModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div><div class="modal-body"><div class="table-wrap"><table><thead><tr><th>ID</th><th>Responsável</th><th>WhatsApp</th><th>Email</th><th>CPF/CNPJ</th><th>Endereço</th><th>Código</th><th>Saldo devedor</th><th>Pago</th><th>Pendente</th><th>Prioridade</th><th>Ações</th></tr></thead><tbody id="companiesModalTable"></tbody></table></div></div></div></div>
-<div class="modal-backdrop" id="driversModal"><div class="modal-card"><div class="modal-head"><div><h3>Todos os entregadores filtrados</h3><p class="muted">Lista completa conforme a busca e filtro atuais.</p></div><button onclick="closeDriversModal()"><i class="fa-solid fa-xmark"></i> Fechar</button></div><div class="modal-body"><div class="table-wrap"><table><thead><tr><th>ID</th><th>Nome</th><th>WhatsApp</th><th>Email</th><th>CPF</th><th>Placa</th><th>Código</th><th>Status</th><th>Bruto finalizado</th><th>Taxa sistema</th><th>Saldo líquido</th><th>Curtidas</th><th>Ações</th></tr></thead><tbody id="driversModalTable"></tbody></table></div></div></div></div>
-<div class="alert-modal" id="newDeliveryAlert"><div class="alert-card"><div class="alert-icon"><i class="fa-solid fa-bell"></i></div><h2>NOVA ENTREGA</h2><p id="newDeliveryAlertText">Uma nova entrega apareceu no dashboard.</p><button class="btn red" onclick="confirmNewDeliveryAlert()"><i class="fa-solid fa-check"></i> OK, vi a entrega</button></div></div>
+<section id="loginView" class="login">
+ <div class="login-card">
+  <img src="https://i.ibb.co/3YCDGsVD/PEGA-E-LEVA-MKT-1.png" alt="Pega&Leva">
+  <h1>Gestão do aplicativo</h1>
+  <p>Acesso restrito ao administrador.</p>
+  <form id="loginForm">
+   <div class="field"><label>Senha administrativa</label><div class="password-wrap"><input id="adminPassword" type="password" placeholder="Digite a senha" required autocomplete="current-password"><button id="toggleAdminPassword" class="password-toggle" type="button" aria-label="Mostrar senha" title="Mostrar senha"><i class="fa-solid fa-eye"></i></button></div></div>
+   <button class="btn primary full"><i class="fa-solid fa-shield-halved"></i> Entrar no dashboard</button>
+  </form>
+ </div>
+</section>
 
-<script src="script.js"></script></body>
+<section id="appView" class="app hide">
+ <aside id="sidebar" class="sidebar">
+  <div class="brand"><img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png"><p>CENTRAL DE GESTÃO</p></div>
+  <nav class="menu">
+   <button class="active" data-panel="overview"><i class="fa-solid fa-chart-pie"></i> Visão geral</button>
+   <button data-panel="trips"><i class="fa-solid fa-motorcycle"></i> Corridas</button>
+   <button data-panel="users"><i class="fa-solid fa-users"></i> Usuários</button>
+   <button data-panel="drivers"><i class="fa-solid fa-helmet-safety"></i> Entregadores</button>
+   <button data-panel="pending"><i class="fa-solid fa-money-bill-wave"></i> Pendências</button>
+   <button data-panel="finance"><i class="fa-solid fa-building-columns"></i> Financeiro</button>
+   <button data-panel="register"><i class="fa-solid fa-user-plus"></i> Cadastros</button>
+  </nav>
+  <div class="sidebar-bottom"><button id="logoutBtn" class="btn full" style="background:#ffffff18;color:#fff"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</button></div>
+ </aside>
+ <main class="content">
+  <header class="top">
+   <div style="display:flex;gap:10px"><button id="mobileMenu" class="mobile-menu"><i class="fa-solid fa-bars"></i></button><div><h1 id="pageTitle">Visão geral</h1><p>Dados conectados diretamente à planilha Pega&Leva.</p></div></div>
+   <div class="live" id="liveStatus">Atualização automática</div>
+  </header>
+
+  <section id="overview" class="panel active">
+   <div class="metrics">
+    <div class="metric"><div class="metric-top"><small>Vendas de hoje</small><span class="metric-icon"><i class="fa-solid fa-chart-line"></i></span></div><strong id="mSales">R$ 0,00</strong></div>
+    <div class="metric"><div class="metric-top"><small>Valores pendentes</small><span class="metric-icon"><i class="fa-solid fa-clock"></i></span></div><strong id="mPending">R$ 0,00</strong></div>
+    <div class="metric"><div class="metric-top"><small>Usuários cadastrados</small><span class="metric-icon"><i class="fa-solid fa-users"></i></span></div><strong id="mUsers">0</strong></div>
+    <div class="metric"><div class="metric-top"><small>Entregadores</small><span class="metric-icon"><i class="fa-solid fa-motorcycle"></i></span></div><strong id="mDrivers">0</strong></div>
+    <div class="metric"><div class="metric-top"><small>Corridas abertas</small><span class="metric-icon"><i class="fa-solid fa-route"></i></span></div><strong id="mOpen">0</strong></div>
+    <div class="metric"><div class="metric-top"><small>Saldo dos entregadores</small><span class="metric-icon"><i class="fa-solid fa-wallet"></i></span></div><strong id="mDriverBalance">R$ 0,00</strong></div>
+    <div class="metric"><div class="metric-top"><small>Saques solicitados</small><span class="metric-icon"><i class="fa-solid fa-money-bill-transfer"></i></span></div><strong id="mWithdrawals">R$ 0,00</strong></div>
+    <div class="metric"><div class="metric-top"><small>Total de corridas</small><span class="metric-icon"><i class="fa-solid fa-box"></i></span></div><strong id="mTrips">0</strong></div>
+   </div>
+   <div class="grid">
+    <div class="card"><div class="card-head"><h3>Vendas de hoje</h3><span class="badge blue">4 recentes</span></div><div id="overviewTrips"></div><div class="list-footer"><button class="view-all" onclick="openAllModal('sales')"><i class="fa-solid fa-up-right-from-square"></i> Ver todas</button></div></div>
+    <div class="card"><div class="card-head"><h3>Maiores pendências</h3><span class="badge">4 principais</span></div><div id="overviewPending"></div><div class="list-footer"><button class="view-all" onclick="openAllModal('pending')"><i class="fa-solid fa-up-right-from-square"></i> Ver todas</button></div></div>
+   </div>
+  </section>
+
+  <section id="trips" class="panel"><div class="card"><div class="card-head"><h3>Corridas do aplicativo</h3><div class="actions"><button class="view-all" onclick="openAllModal('sales')"><i class="fa-solid fa-filter"></i> Ver todas e filtrar</button><input class="search" data-search="tripsTable" placeholder="Buscar corrida..."></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Código</th><th>Solicitante</th><th>Rota</th><th>Entregador</th><th>Status</th><th>Valor</th><th>Data</th></tr></thead><tbody id="tripsTable"></tbody></table></div></div></section>
+  <section id="users" class="panel"><div class="card"><div class="card-head"><h3>Usuários cadastrados</h3><input class="search" data-search="usersTable" placeholder="Buscar usuário..."></div><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>Contato</th><th>Cidade</th><th>Código</th><th>Débito</th><th>Cadastro</th></tr></thead><tbody id="usersTable"></tbody></table></div></div></section>
+  <section id="drivers" class="panel"><div class="card"><div class="card-head"><h3>Entregadores cadastrados</h3><input class="search" data-search="driversTable" placeholder="Buscar entregador..."></div><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>Contato</th><th>Placa</th><th>Saldo</th><th>Desconto</th><th>Cadastro</th></tr></thead><tbody id="driversTable"></tbody></table></div></div></section>
+  <section id="pending" class="panel"><div class="card"><div class="card-head"><h3>Pendências de clientes</h3><div class="actions"><span class="badge">Cobrar ou baixar</span><button class="view-all" onclick="openDailySummary()"><i class="fa-solid fa-calendar-day"></i> Resumo por dia</button><button class="view-all" onclick="openAllModal('pending')"><i class="fa-solid fa-filter"></i> Ver todas e filtrar</button></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Cliente</th><th>WhatsApp</th><th>Valor pendente</th><th>Ações</th></tr></thead><tbody id="pendingTable"></tbody></table></div></div></section>
+  <section id="finance" class="panel"><div class="card"><div class="card-head"><h3>Solicitações de saque</h3><span class="badge blue">Financeiro</span></div><div class="table-wrap"><table class="table"><thead><tr><th>Entregador</th><th>Valor</th><th>Chave Pix</th><th>Status</th><th>Solicitado</th><th>Ação</th></tr></thead><tbody id="withdrawalsTable"></tbody></table></div></div></section>
+
+  <section id="register" class="panel">
+   <div class="grid">
+    <form id="userForm" class="card"><div class="card-head"><h3>Cadastrar usuário</h3><span class="badge blue">Cliente</span></div>
+     <div class="form-grid">
+      <div class="field"><label>Nome</label><input id="uName" required></div><div class="field"><label>E-mail</label><input id="uEmail" type="email" required></div>
+      <div class="field"><label>Senha</label><input id="uPassword" required></div><div class="field"><label>WhatsApp</label><input id="uWhatsapp" required></div>
+      <div class="field"><label>CPF/CNPJ</label><input id="uDocument" required></div><div class="field"><label>Cidade</label><select id="uCity"><option>Uruçuí</option><option>Benedito Leite</option></select></div>
+      <div class="field wide"><label>Rua</label><input id="uStreet" required></div><div class="field"><label>Número</label><input id="uNumber" required></div><div class="field"><label>Referência</label><input id="uReference" required></div>
+     </div><button class="btn primary full"><i class="fa-solid fa-user-plus"></i> Cadastrar usuário</button>
+    </form>
+    <form id="driverForm" class="card"><div class="card-head"><h3>Cadastrar entregador</h3><span class="badge ok">Entregador</span></div>
+     <div class="form-grid">
+      <div class="field"><label>Nome</label><input id="dName" required></div><div class="field"><label>E-mail</label><input id="dEmail" type="email" required></div>
+      <div class="field"><label>Senha</label><input id="dPassword" required></div><div class="field"><label>WhatsApp</label><input id="dWhatsapp" required></div>
+      <div class="field"><label>CPF</label><input id="dCpf" required></div><div class="field"><label>Placa da moto</label><input id="dPlate" required></div>
+      <div class="field wide"><label>Desconto automático</label><select id="dDiscount"><option value="true">Ativo</option><option value="false">Inativo</option></select></div>
+     </div><button class="btn primary full"><i class="fa-solid fa-motorcycle"></i> Cadastrar entregador</button>
+    </form>
+   </div>
+  </section>
+ </main>
+</section>
+
+
+
+<div class="data-modal" id="dailySummaryModal">
+ <div class="data-modal-box" style="max-width:900px">
+  <div class="data-modal-head">
+   <div>
+    <h3>Resumo diário da empresa</h3>
+    <p style="margin:4px 0 0;color:var(--muted);font-size:.7rem">Selecione a empresa e a data para consultar todas as viagens daquele dia.</p>
+   </div>
+   <button class="data-modal-close" id="closeDailySummary"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div style="padding:16px 18px;overflow:auto">
+   <div class="daily-summary-grid">
+    <div>
+     <div class="form-grid">
+      <div class="field">
+       <label>Empresa ou usuário</label>
+       <select id="dailySummaryUser"></select>
+      </div>
+      <div class="field">
+       <label>Data das viagens</label>
+       <input id="dailySummaryDate" type="date">
+      </div>
+     </div>
+     <button class="btn primary full" id="generateDailySummary">
+      <i class="fa-solid fa-file-lines"></i> Gerar resumo do dia
+     </button>
+     <div id="dailySummaryStats" class="daily-summary-stats hide">
+      <div class="daily-summary-stat"><small>VIAGENS</small><strong id="dailySummaryCount">0</strong></div>
+      <div class="daily-summary-stat"><small>TOTAL DO DIA</small><strong id="dailySummaryTotal">R$ 0,00</strong></div>
+      <div class="daily-summary-stat"><small>PENDENTE</small><strong id="dailySummaryPending">R$ 0,00</strong></div>
+     </div>
+    </div>
+    <div>
+     <div id="dailySummaryPreview" class="daily-summary-preview">Selecione uma empresa e uma data para gerar o resumo.</div>
+     <div class="actions" style="margin-top:10px">
+      <button class="btn secondary" id="copyDailySummary" disabled><i class="fa-regular fa-copy"></i> Copiar</button>
+      <button class="btn success" id="sendDailySummaryWhatsapp" disabled><i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp</button>
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="data-modal" id="allDataModal">
+ <div class="data-modal-box">
+  <div class="data-modal-head">
+   <div><h3 id="allDataTitle">Ver todas</h3><p id="allDataSubtitle" style="margin:4px 0 0;color:var(--muted);font-size:.7rem"></p></div>
+   <button class="data-modal-close" id="closeAllData"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="filter-bar">
+   <input id="allSearch" placeholder="Buscar empresa, código ou entregador">
+   <select id="allPeriod">
+    <option value="TODAY">Hoje</option>
+    <option value="ALL">Todas as datas</option>
+    <option value="CUSTOM">Escolher data</option>
+   </select>
+   <input id="allDate" type="date" class="hide">
+   <select id="allCompany"><option value="">Todas as empresas</option></select>
+   <select id="allStatus"><option value="">Todos os status</option></select>
+  </div>
+  <div class="modal-summary"><span id="allCount">0 registros</span><span id="allTotal">Total: R$ 0,00</span></div>
+  <div class="modal-table-wrap">
+   <table class="table">
+    <thead id="allTableHead"></thead>
+    <tbody id="allTableBody"></tbody>
+   </table>
+  </div>
+ </div>
+</div>
+
+<div class="global-loading" id="globalLoading">
+ <div class="global-loading-box">
+  <div class="loading-road"><i class="fa-solid fa-motorcycle loading-bike"></i></div>
+  <h3 id="loadingTitle">Carregando...</h3>
+  <p id="loadingText">Aguarde enquanto buscamos as informações.</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+ </div>
+</div>
+
+<div id="newTripAlert" class="alert"><i class="fa-solid fa-motorcycle"></i><div><strong>Nova corrida recebida!</strong><span id="newTripText"></span></div></div>
+<div id="toast" class="toast"></div>
+<script src="script.js"></script>
+</body>
 </html>
