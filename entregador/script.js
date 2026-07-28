@@ -70,21 +70,74 @@ function escapeCardText(value){
     .replace(/"/g,"&quot;")
     .replace(/'/g,"&#039;");
 }
-function tripPeopleInfo(t){
-  const sender=String(
-    t.requesterName||
-    t.companyName||
-    t.company||
-    t.userName||
-    t.senderName||
-    "Solicitante não informado"
-  ).trim();
+function firstTripValue(t,keys,fallback=""){
+  for(const key of keys){
+    const parts=String(key).split(".");
+    let value=t;
 
-  const receiver=String(
-    t.receiverName||
-    t.recipientName||
-    "Recebedor não informado"
-  ).trim();
+    for(const part of parts){
+      if(value==null)break;
+      value=value[part];
+    }
+
+    if(value!==undefined&&value!==null&&String(value).trim()!==""){
+      return value;
+    }
+  }
+
+  return fallback;
+}
+function normalizedTrip(t){
+  return {
+    code:firstTripValue(t,["code","codigo","tripCode","pedidoCodigo"],"Sem código"),
+    value:Number(firstTripValue(t,["value","valor","price","preco","deliveryValue","valorCorrida"],0))||0,
+
+    sender:firstTripValue(t,[
+      "requesterName","companyName","company","userName","senderName",
+      "solicitanteNome","nomeSolicitante","empresaNome","nomeEmpresa",
+      "requester.name","company.name","sender.name"
+    ],"Solicitante não informado"),
+
+    receiver:firstTripValue(t,[
+      "receiverName","recipientName","recebedorNome","nomeRecebedor",
+      "clientName","customerName","receiver.name","recipient.name"
+    ],"Recebedor não informado"),
+
+    origin:firstTripValue(t,[
+      "origin","origem","pickupAddress","enderecoOrigem",
+      "origin.address","pickup.address"
+    ],"Local de retirada não informado"),
+
+    originNeighborhood:firstTripValue(t,[
+      "originNeighborhood","bairroOrigem","pickupNeighborhood",
+      "origin.neighborhood","pickup.neighborhood"
+    ],"Bairro de retirada não informado"),
+
+    destination:firstTripValue(t,[
+      "destination","destino","deliveryAddress","enderecoDestino",
+      "destination.address","delivery.address"
+    ],"Local de entrega não informado"),
+
+    destinationNeighborhood:firstTripValue(t,[
+      "destinationNeighborhood","bairroDestino","deliveryNeighborhood",
+      "destination.neighborhood","delivery.neighborhood"
+    ],"Bairro de entrega não informado"),
+
+    contentType:firstTripValue(t,[
+      "contentType","tipoConteudo","conteudo","itemType"
+    ],"Conteúdo não informado"),
+
+    returnTrip:firstTripValue(t,[
+      "returnTrip","retorno","temRetorno"
+    ],"Não informado"),
+
+    estimatedMinutes:firstTripValue(t,[
+      "estimatedMinutes","tempoEstimado","estimatedTime","minutes"
+    ],"—")
+  };
+}
+function tripPeopleInfo(t){
+  const data=normalizedTrip(t);
 
   return `
   <div style="margin:12px 0 14px;padding:12px;border-radius:13px;background:#f8fafc;border:1px solid #e2e8f0">
@@ -94,7 +147,7 @@ function tripPeopleInfo(t){
       </span>
       <div style="min-width:0">
         <small style="display:block;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Quem está enviando</small>
-        <strong style="display:block;margin-top:2px;color:#172033;overflow-wrap:anywhere">${escapeCardText(sender)}</strong>
+        <strong style="display:block;margin-top:2px;color:#172033;overflow-wrap:anywhere">${escapeCardText(data.sender)}</strong>
       </div>
     </div>
 
@@ -106,7 +159,7 @@ function tripPeopleInfo(t){
       </span>
       <div style="min-width:0">
         <small style="display:block;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Quem vai receber</small>
-        <strong style="display:block;margin-top:2px;color:#172033;overflow-wrap:anywhere">${escapeCardText(receiver)}</strong>
+        <strong style="display:block;margin-top:2px;color:#172033;overflow-wrap:anywhere">${escapeCardText(data.receiver)}</strong>
       </div>
     </div>
   </div>`;
@@ -345,32 +398,59 @@ function playNewTripSound(){
 }
 
 function renderAvailableTrips(){
-  const available=[...state.availableTrips].sort((a,b)=>Number(a.createdMs||0)-Number(b.createdMs||0));
+  const available=[...state.availableTrips].sort(
+    (a,b)=>Number(a.createdMs||a.createdAtMs||0)-Number(b.createdMs||b.createdAtMs||0)
+  );
+
   if(state.lastAvailableCount!==0 && available.length>state.lastAvailableCount){
     playNewTripSound();
   }
+
   state.lastAvailableCount=available.length;
   requestBadge.textContent=available.length>99?"99+":String(available.length);
   requestBadge.classList.toggle("hide",available.length===0);
-  requestsList.innerHTML=available.length?available.map(t=>`
+
+  requestsList.innerHTML=available.length?available.map(t=>{
+    const data=normalizedTrip(t);
+
+    return `
     <article class="request-card">
       <div class="trip-top">
-        <div><div class="trip-code">${t.code}</div><span class="request-new">Nova solicitação</span></div>
-        <div class="trip-price">${money.format(t.value)}</div>
+        <div>
+          <div class="trip-code">${escapeCardText(data.code)}</div>
+          <span class="request-new">Nova solicitação</span>
+        </div>
+        <div class="trip-price">${money.format(data.value)}</div>
       </div>
+
       ${tripPeopleInfo(t)}
+
       <div class="route">
-        <div class="route-line"><div class="dot"><i class="fa-solid fa-circle"></i></div><div class="dot" style="margin-top:30px"><i class="fa-solid fa-flag-checkered"></i></div></div>
-        <div><strong>${t.originNeighborhood}</strong><span>${t.origin}</span><strong style="margin-top:18px">${t.destinationNeighborhood}</strong><span>${t.destination}</span></div>
+        <div class="route-line">
+          <div class="dot"><i class="fa-solid fa-circle"></i></div>
+          <div class="dot" style="margin-top:30px"><i class="fa-solid fa-flag-checkered"></i></div>
+        </div>
+
+        <div>
+          <strong>${escapeCardText(data.originNeighborhood)}</strong>
+          <span>${escapeCardText(data.origin)}</span>
+
+          <strong style="margin-top:18px">${escapeCardText(data.destinationNeighborhood)}</strong>
+          <span>${escapeCardText(data.destination)}</span>
+        </div>
       </div>
+
       <div class="meta">
-        <span>${t.contentType}</span>
-        <span>Retorno: ${t.returnTrip}</span>
-        <span>${t.estimatedMinutes} min</span>
+        <span>${escapeCardText(data.contentType)}</span>
+        <span>Retorno: ${escapeCardText(data.returnTrip)}</span>
+        <span>Tempo estimado: ${escapeCardText(data.estimatedMinutes)} min</span>
       </div>
-      <button class="btn primary full" onclick="acceptAvailableTrip('${t.code}')"><i class="fa-solid fa-check"></i> Aceitar corrida</button>
-    </article>
-  `).join(""):`<div class="empty">Nenhuma nova solicitação disponível neste momento.</div>`;
+
+      <button class="btn primary full" onclick="acceptAvailableTrip('${escapeCardText(data.code)}')">
+        <i class="fa-solid fa-check"></i> Aceitar corrida
+      </button>
+    </article>`;
+  }).join(""):`<div class="empty">Nenhuma nova solicitação disponível neste momento.</div>`;
 }
 async function acceptAvailableTrip(code){
   try{
