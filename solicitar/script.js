@@ -618,6 +618,46 @@ confirmInvoicePayment.onclick=()=>{
   const msg=`Olá, sou ${state.user.name}, código ${state.user.travelCode}, e informo que realizei o pagamento das viagens pendentes no valor de ${value}. Segue a confirmação para conferência.`;
   window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`,"_blank");
 };
-profileBtn.onclick=()=>openL("profileSheet");document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeL(b.dataset.close));document.querySelectorAll(".sheet,.modal").forEach(x=>x.onclick=e=>{if(e.target===x)closeL(x.id)});floatingTrips.style.display="none";
+profileBtn.onclick=()=>{
+  const profileSheetBox=document.querySelector("#profileSheet .sheet-box");
+
+  if(profileSheetBox && !document.getElementById("deleteAccountBtn")){
+    const deleteAccountArea=document.createElement("div");
+
+    deleteAccountArea.style.marginTop="18px";
+    deleteAccountArea.style.paddingTop="16px";
+    deleteAccountArea.style.borderTop="1px solid #e2e8f0";
+
+    deleteAccountArea.innerHTML=`
+      <button
+        id="deleteAccountBtn"
+        type="button"
+        class="btn full"
+        style="background:#dc2626;color:#fff"
+      >
+        <i class="fa-solid fa-trash"></i>
+        Excluir minha conta
+      </button>
+
+      <small
+        style="display:block;margin-top:8px;color:#64748b;text-align:center;line-height:1.45"
+      >
+        Solicite a exclusão definitiva da sua conta e dos seus dados pessoais.
+      </small>
+    `;
+
+    profileSheetBox.appendChild(deleteAccountArea);
+
+    document.getElementById("deleteAccountBtn").onclick=()=>{
+      window.open(
+        "https://pegaelevadelivery.com.br/exclusao-de-conta/",
+        "_blank",
+        "noopener,noreferrer"
+      );
+    };
+  }
+
+  openL("profileSheet");
+};document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeL(b.dataset.close));document.querySelectorAll(".sheet,.modal").forEach(x=>x.onclick=e=>{if(e.target===x)closeL(x.id)});floatingTrips.style.display="none";
 const saved=JSON.parse(sessionStorage.getItem("pl_session")||"null");
 if(saved?.user&&saved?.token)openApp(saved.user,saved.token);
