@@ -300,3 +300,46 @@
 .product-info-item strong{display:block;font-size:.78rem}
 .product-info-item span{display:block;color:var(--muted);font-size:.7rem;line-height:1.45;margin-top:3px}
 
+/* AJUSTES SOLICITADOS: CENTRALIZAÇÃO, ÍCONES DOS CAMPOS E CARD DE ENTREGA */
+.auth{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.auth-card{
+  width:min(calc(100% - 40px),430px);
+  margin:auto;
+}
+.input-icon-wrap input{
+  padding-left:44px!important;
+}
+.input-icon-wrap.has-toggle input{
+  padding-left:44px!important;
+  padding-right:48px!important;
+}
+.input-icon-wrap>i{
+  left:15px;
+  top:50%;
+  transform:translateY(-50%);
+}
+.request{
+  position:sticky;
+  left:auto;
+  bottom:0;
+  transform:none;
+  margin:14px auto 0;
+}
+.app{
+  padding-bottom:0;
+}
+@media(max-width:520px){
+  .auth{padding:16px}
+  .auth-card{width:100%;margin:auto}
+  .request{width:100%;margin-top:14px}
+  .app{padding-bottom:0}
+}
+@media(min-width:760px){
+  .request{bottom:0}
+  .app{padding-bottom:0}
+}
