@@ -184,22 +184,12 @@ function saveQuickDriverAccount(driver,emailValue,passwordValue){
   };
 
   localStorage.setItem(QUICK_DRIVER_LOGIN_KEY,JSON.stringify(account));
-  const settingsNav=document.getElementById("settingsNav");
-if(settingsNav){
-  settingsNav.onclick=()=>openL("settingsModal");
-}
-
-renderQuickDriverAccount();
+  renderQuickDriverAccount();
 }
 
 function removeQuickDriverAccount(){
   localStorage.removeItem(QUICK_DRIVER_LOGIN_KEY);
-  const settingsNav=document.getElementById("settingsNav");
-if(settingsNav){
-  settingsNav.onclick=()=>openL("settingsModal");
-}
-
-renderQuickDriverAccount();
+  renderQuickDriverAccount();
 }
 
 function renderQuickDriverAccount(){
@@ -674,12 +664,7 @@ historyNav.onclick=()=>openL("historySheet");refreshBtn.onclick=()=>dashboard(tr
 
   password.value="";
   show("loginView");
-  const settingsNav=document.getElementById("settingsNav");
-if(settingsNav){
-  settingsNav.onclick=()=>openL("settingsModal");
-}
-
-renderQuickDriverAccount();
+  renderQuickDriverAccount();
 }
 function toggleTripCommands(code){
   const menu=$("tripCommands-"+code);
@@ -741,11 +726,6 @@ uploadPhotoBtn.onclick=async()=>{
 }
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeL(b.dataset.close));
 document.querySelectorAll(".sheet,.modal").forEach(x=>x.onclick=e=>{if(e.target===x)closeL(x.id)});
-const settingsNav=document.getElementById("settingsNav");
-if(settingsNav){
-  settingsNav.onclick=()=>openL("settingsModal");
-}
-
 renderQuickDriverAccount();
 
 $("quickDriverAccount").onclick=async()=>{
@@ -784,21 +764,3 @@ try{
 if(saved?.driver&&saved?.token){
   openApp(saved.driver,saved.token);
 }
-
-<!-- CONFIGURAÇÕES -->
-<div class="modal" id="settingsModal">
-  <div class="modal-box">
-    <div class="sheet-head">
-      <h3>Configurações</h3>
-      <button class="close" data-close="settingsModal">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <button class="btn outline full"
-      onclick="window.location.href='https://pegaelevadelivery.com.br/excluirconta/'">
-      <i class="fa-solid fa-user-xmark"></i>
-      Excluir minha conta
-    </button>
-  </div>
-</div>
