@@ -650,7 +650,7 @@ profileBtn.onclick=()=>{
 
     document.getElementById("deleteAccountBtn").onclick=()=>{
       window.open(
-        "https://pegaelevadelivery.com.br/exclusao-de-conta/",
+        "https://pegaelevadelivery.com.br/excluirconta/",
         "_blank",
         "noopener,noreferrer"
       );
