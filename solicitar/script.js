@@ -275,7 +275,7 @@ function renderAccountPlan(user){
 }
 
 
-function renderFreePlanOffer(user){
+function renderFreePlanOffer(user,catalogLink){
   const section=document.getElementById("businessSection");
   const catalogCard=document.getElementById("catalogOfferCard");
   if(!section||!catalogCard)return;
@@ -340,7 +340,8 @@ function renderFreePlanOffer(user){
 
   const plan=normalizeAccountPlan(user&&user.plan);
   const isCompany=!!(user&&user.isCompany);
-  offer.classList.toggle("hide",!isCompany||plan!=="GRATUITO");
+  const hasCatalog=!!String(catalogLink||"").trim();
+  offer.classList.toggle("hide",!isCompany||plan!=="GRATUITO"||hasCatalog);
 }
 
 function renderBusinessArea(user,config){
@@ -348,11 +349,11 @@ function renderBusinessArea(user,config){
   const catalogLink=String(user&&user.catalogLink||"").trim();
   businessSection.classList.toggle("hide",!isCompany);
   marketingBanner.classList.add("hide");
-  renderFreePlanOffer(user);
+  renderFreePlanOffer(user,catalogLink);
 
   if(isCompany){
     const active=!!catalogLink;
-    catalogOfferCard.classList.toggle("hide",active);
+    catalogOfferCard.classList.add("hide");
     catalogActiveCard.classList.toggle("hide",!active);
     if(active){
       catalogLinkInput.value=catalogLink;
