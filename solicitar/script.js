@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbxPTDveD77WgCbmFBMNFHWOQrpAYKfL4QTMEaax0fZZ1Q2XwgigzX10ZqCrKrOeuhQt/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbxPTDveD77WgCbmFBMNFHWOQrpAYKfL4QTMEaax0fZZ1Q2XwgigzX10ZqCrKrOeuhQt/exec";const ADMIN_WHATSAPP="5589994029572";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
@@ -274,82 +274,11 @@ function renderAccountPlan(user){
   `;
 }
 
-
-function renderFreePlanOffer(user,catalogLink){
-  const section=document.getElementById("businessSection");
-  const catalogCard=document.getElementById("catalogOfferCard");
-  if(!section||!catalogCard)return;
-
-  let offer=document.getElementById("freePlanOfferCard");
-
-  if(!offer){
-    offer=document.createElement("div");
-    offer.id="freePlanOfferCard";
-    offer.style.marginBottom="16px";
-    offer.style.padding="18px";
-    offer.style.borderRadius="18px";
-    offer.style.background="linear-gradient(135deg,#0646c8,#08358f)";
-    offer.style.color="#fff";
-    offer.style.boxShadow="0 12px 30px rgba(6,70,200,.22)";
-
-    offer.innerHTML=`
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
-        <div style="flex:1">
-          <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.15);font-size:12px;font-weight:800;margin-bottom:12px">
-            <i class="fa-solid fa-bolt"></i>
-            OFERTA ESPECIAL
-          </span>
-
-          <h3 style="margin:0 0 8px;font-size:20px;line-height:1.25;color:#fff">
-            Ofereça fretes mais acessíveis e econômicos!
-          </h3>
-
-          <p style="margin:0 0 14px;line-height:1.55;color:rgba(255,255,255,.88)">
-            Assine mensalmente e tenha condições especiais para oferecer fretes mais vantajosos aos seus clientes.
-          </p>
-
-          <div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:16px">
-            <strong style="font-size:28px;line-height:1">R$ 59,90</strong>
-            <span style="font-size:13px;color:rgba(255,255,255,.8)">por mês</span>
-          </div>
-
-          <button id="freePlanOfferMore" type="button" class="btn" style="background:#fff;color:#0646c8;font-weight:800">
-            Ver mais
-            <i class="fa-solid fa-arrow-right"></i>
-          </button>
-        </div>
-
-        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:48px;width:48px;height:48px;border-radius:15px;background:rgba(255,255,255,.16);font-size:21px">
-          <i class="fa-solid fa-tags"></i>
-        </span>
-      </div>
-    `;
-
-    section.insertBefore(offer,catalogCard);
-
-    offer.querySelector("#freePlanOfferMore").onclick=()=>{
-      const link=String(PARTNER_PLAN_URL||"").trim();
-
-      if(!link||link==="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO"){
-        return toast("Configure o link da página do plano no JavaScript.");
-      }
-
-      window.open(link,"_blank","noopener,noreferrer");
-    };
-  }
-
-  const plan=normalizeAccountPlan(user&&user.plan);
-  const isCompany=!!(user&&user.isCompany);
-  const hasCatalog=!!String(catalogLink||"").trim();
-  offer.classList.toggle("hide",!isCompany||plan!=="GRATUITO"||hasCatalog);
-}
-
 function renderBusinessArea(user,config){
   const isCompany=!!(user&&user.isCompany);
   const catalogLink=String(user&&user.catalogLink||"").trim();
   businessSection.classList.toggle("hide",!isCompany);
   marketingBanner.classList.add("hide");
-  renderFreePlanOffer(user,catalogLink);
 
   if(isCompany){
     const active=!!catalogLink;
@@ -368,12 +297,8 @@ function renderBusinessArea(user,config){
     marketingBanner.classList.remove("hide");
   }
 }
-catalogLearnMore.onclick=()=>openL("catalogInfoModal");
-catalogContactBtn.onclick=()=>{
-  const name=String(state.user&&state.user.name||"").trim();
-  const message=`Olá! Sou ${name} e tenho interesse no catálogo com integração de fretes por R$ 49,90 por mês. Gostaria de saber como ativar.`;
-  window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`,"_blank");
-};
+catalogLearnMore.onclick=()=>{};
+catalogContactBtn.onclick=()=>{};
 copyCatalogLink.onclick=async()=>{
   const link=String(catalogLinkInput.value||"").trim();
   if(!link)return toast("Link do catálogo ainda não informado.");
