@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbzsmGCI1tK1tOdUjcpDIvm94NzRBkdxHk7WIC7hRt-cyb0e3ZLcnhc7N6Gcs2Kkzd8O/exec";const ADMIN_WHATSAPP="5589994029572";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbxPTDveD77WgCbmFBMNFHWOQrpAYKfL4QTMEaax0fZZ1Q2XwgigzX10ZqCrKrOeuhQt/exec";const ADMIN_WHATSAPP="5589994029572";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
@@ -206,34 +206,21 @@ function deliveriesAvailableText(user){
 }
 
 function completedDeliveriesText(user){
-  const directValues=[
-    user&&user.completedDeliveries,
-    user&&user.deliveriesCompleted,
-    user&&user.completed,
-    user&&user.totalCompletedDeliveries
-  ];
+  const plan=normalizeAccountPlan(user&&user.plan);
+  const deliveries=Math.max(0,Number(user&&(
+    user.completedDeliveries!==undefined?user.completedDeliveries:user.deliveries
+  )||0));
 
-  for(const value of directValues){
-    if(value!==undefined&&value!==null&&value!==""&&Number.isFinite(Number(value))){
-      return String(Math.max(0,Number(value)));
-    }
+  const rawLimit=user&&user.deliveryLimit;
+  const unlimited=["ILIMITADO","ILIMITADAS","∞",""].includes(
+    String(rawLimit==null?"":rawLimit).trim().toUpperCase()
+  );
+
+  if(plan==="PARCEIRO"&&!unlimited&&Number.isFinite(Number(rawLimit))){
+    return `${deliveries}/${Math.max(0,Number(rawLimit))}`;
   }
 
-  const limit=user&&user.deliveryLimit;
-  const remaining=user&&user.deliveries;
-
-  const unlimitedLimit=["ILIMITADO","ILIMITADAS","∞"].includes(String(limit||"").trim().toUpperCase());
-  const unlimitedRemaining=["ILIMITADO","ILIMITADAS","∞"].includes(String(remaining||"").trim().toUpperCase());
-
-  if(!unlimitedLimit&&!unlimitedRemaining&&Number.isFinite(Number(limit))&&Number.isFinite(Number(remaining))){
-    return String(Math.max(0,Number(limit)-Number(remaining)));
-  }
-
-  const finalizedLoaded=(state.trips||[]).filter(
-    trip=>String(trip&&trip.status||"").toUpperCase()==="FINALIZADA"
-  ).length;
-
-  return String(finalizedLoaded);
+  return String(deliveries);
 }
 
 function renderAccountPlan(user){
@@ -260,7 +247,7 @@ function renderAccountPlan(user){
   const plan=normalizeAccountPlan(user.plan);
   const monthlyFee=money.format(Number(user.monthlyFee||0));
   const completed=completedDeliveriesText(user);
-  const available=deliveriesAvailableText(user);
+
 
   card.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
@@ -282,11 +269,6 @@ function renderAccountPlan(user){
       <div style="padding:12px;border-radius:12px;background:#fff">
         <small style="display:block;color:#64748b;margin-bottom:4px">Entregas realizadas</small>
         <strong>${completed}</strong>
-      </div>
-
-      <div style="grid-column:1/-1;padding:12px;border-radius:12px;background:#fff">
-        <small style="display:block;color:#64748b;margin-bottom:4px">Entregas disponíveis</small>
-        <strong>${available}</strong>
       </div>
     </div>
   `;
