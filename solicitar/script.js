@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbyn3065wcnSaDbtTGkjf78a-E5xvuyTn_grtEbWaS3LO8ziPX_I8BmrCKb3NzE3Mk_Y/exec";const ADMIN_WHATSAPP="5589994029572";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbzG1FW8A_75lbydz7NiJoB1_EjWv56apl6iUk2l4Ox7ZUSZstdjjzx-JMaqoMpUd04L/exec";const ADMIN_WHATSAPP="5589994029572";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
@@ -163,11 +163,97 @@ async function dashboard(silent=false){
     $("invoiceModalBalance").textContent=money.format(j.user.invoiceBalance||0);
     $("invoiceText").textContent=`${j.pendingCount||0} entrega(s) pendente(s).`;
     state.user=j.user||state.user;
+    sessionStorage.setItem("pl_session",JSON.stringify({user:state.user,token:state.token}));
     renderBusinessArea(state.user,j.config||{});
+    renderAccountPlan(state.user);
     if(document.querySelector("#tripsSheet.on"))trips();
   }catch(e){
     if(!silent)toast(e.message)
   }
+}
+
+
+function normalizeAccountPlan(value){
+  const plan=String(value||"GRATUITO").trim().toUpperCase();
+  return ["GRATUITO","PARCEIRO","PREMIUM"].includes(plan)?plan:"GRATUITO";
+}
+
+function deliveriesAvailableText(user){
+  const plan=normalizeAccountPlan(user&&user.plan);
+  const available=user&&user.deliveriesAvailable;
+
+  if(available&&typeof available==="object"){
+    if(available.label)return String(available.label);
+    if(available.unlimited)return "Ilimitadas";
+    if(Number.isFinite(Number(available.value)))return String(Number(available.value));
+  }
+
+  if(available!==undefined&&available!==null&&available!==""){
+    if(typeof available==="number")return String(Math.max(0,available));
+    return String(available);
+  }
+
+  if(plan==="PARCEIRO"){
+    return String(Math.max(0,50-Number(user&&user.deliveries||0)))+" de 50";
+  }
+
+  return "Ilimitadas";
+}
+
+function renderAccountPlan(user){
+  if(!user)return;
+
+  const profileSheetBox=document.querySelector("#profileSheet .sheet-box");
+  if(!profileSheetBox)return;
+
+  let card=document.getElementById("accountPlanCard");
+  if(!card){
+    card=document.createElement("div");
+    card.id="accountPlanCard";
+    card.style.marginTop="16px";
+    card.style.padding="16px";
+    card.style.border="1px solid #dbe7ff";
+    card.style.borderRadius="16px";
+    card.style.background="#f8fbff";
+
+    const deleteArea=document.getElementById("deleteAccountBtn")?.parentElement;
+    if(deleteArea)profileSheetBox.insertBefore(card,deleteArea);
+    else profileSheetBox.appendChild(card);
+  }
+
+  const plan=normalizeAccountPlan(user.plan);
+  const monthlyFee=money.format(Number(user.monthlyFee||0));
+  const deliveries=Number(user.deliveries||0);
+  const available=deliveriesAvailableText(user);
+
+  card.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
+      <div>
+        <small style="display:block;color:#64748b;margin-bottom:4px">Plano contratado</small>
+        <strong style="font-size:18px;color:#0646c8">${plan}</strong>
+      </div>
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:#e8f0ff;color:#0646c8">
+        <i class="fa-solid fa-crown"></i>
+      </span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="padding:12px;border-radius:12px;background:#fff">
+        <small style="display:block;color:#64748b;margin-bottom:4px">Mensalidade</small>
+        <strong>${monthlyFee}</strong>
+      </div>
+
+      <div style="padding:12px;border-radius:12px;background:#fff">
+        <small style="display:block;color:#64748b;margin-bottom:4px">Entregas realizadas</small>
+        <strong>${deliveries}</strong>
+      </div>
+
+      <div style="grid-column:1/-1;padding:12px;border-radius:12px;background:#fff">
+        <small style="display:block;color:#64748b;margin-bottom:4px">Entregas disponíveis</small>
+        <strong>${available}</strong>
+      </div>
+    </div>
+  `;
 }
 
 function renderBusinessArea(user,config){
@@ -212,7 +298,7 @@ copyCatalogLink.onclick=async()=>{
   }
 };
 function openApp(u,token){state.user=u;state.token=token||state.token;state.revision="";state.firstDashboard=true;state.tripStatusMap={};sessionStorage.setItem("pl_session",JSON.stringify({user:u,token:state.token}));const firstName=String(u.name||"").trim().split(/\s+/)[0]||"";
-$("welcomeName").textContent=`Olá, ${firstName}!`;$("welcomeCompany").textContent=`${u.city}`;$("profileName").textContent=u.name;$("profileCompany").textContent=u.company;$("profileAddress").textContent=`${u.street}, ${u.number} • ${u.city}`;show("appView");floatingTrips.style.display="block";renderBusinessArea(u,{});dashboard();startDashboardPolling();
+$("welcomeName").textContent=`Olá, ${firstName}!`;$("welcomeCompany").textContent=`${u.city}`;$("profileName").textContent=u.name;$("profileCompany").textContent=u.company;$("profileAddress").textContent=`${u.street}, ${u.number} • ${u.city}`;show("appView");floatingTrips.style.display="block";renderBusinessArea(u,{});renderAccountPlan(u);dashboard();startDashboardPolling();
   if("Notification" in window && Notification.permission==="default"){
     setTimeout(()=>Notification.requestPermission().catch(()=>{}),1500);
   }
@@ -620,6 +706,7 @@ confirmInvoicePayment.onclick=()=>{
 };
 profileBtn.onclick=()=>{
   const profileSheetBox=document.querySelector("#profileSheet .sheet-box");
+  renderAccountPlan(state.user);
 
   if(profileSheetBox && !document.getElementById("deleteAccountBtn")){
     const deleteAccountArea=document.createElement("div");
