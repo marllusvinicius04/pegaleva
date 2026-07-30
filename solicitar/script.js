@@ -181,23 +181,59 @@ function normalizeAccountPlan(value){
 function deliveriesAvailableText(user){
   const plan=normalizeAccountPlan(user&&user.plan);
   const available=user&&user.deliveriesAvailable;
+  const remaining=user&&user.deliveries;
 
   if(available&&typeof available==="object"){
     if(available.label)return String(available.label);
     if(available.unlimited)return "Ilimitadas";
-    if(Number.isFinite(Number(available.value)))return String(Number(available.value));
+    if(Number.isFinite(Number(available.value)))return String(Math.max(0,Number(available.value)));
   }
 
   if(available!==undefined&&available!==null&&available!==""){
-    if(typeof available==="number")return String(Math.max(0,available));
+    const text=String(available).trim().toUpperCase();
+    if(["ILIMITADO","ILIMITADAS","∞"].includes(text))return "Ilimitadas";
+    if(Number.isFinite(Number(available)))return String(Math.max(0,Number(available)));
     return String(available);
   }
 
-  if(plan==="PARCEIRO"){
-    return String(Math.max(0,50-Number(user&&user.deliveries||0)))+" de 50";
+  if(remaining!==undefined&&remaining!==null&&remaining!==""){
+    const text=String(remaining).trim().toUpperCase();
+    if(["ILIMITADO","ILIMITADAS","∞"].includes(text))return "Ilimitadas";
+    if(Number.isFinite(Number(remaining)))return String(Math.max(0,Number(remaining)));
   }
 
-  return "Ilimitadas";
+  return plan==="GRATUITO"?"Ilimitadas":"0";
+}
+
+function completedDeliveriesText(user){
+  const directValues=[
+    user&&user.completedDeliveries,
+    user&&user.deliveriesCompleted,
+    user&&user.completed,
+    user&&user.totalCompletedDeliveries
+  ];
+
+  for(const value of directValues){
+    if(value!==undefined&&value!==null&&value!==""&&Number.isFinite(Number(value))){
+      return String(Math.max(0,Number(value)));
+    }
+  }
+
+  const limit=user&&user.deliveryLimit;
+  const remaining=user&&user.deliveries;
+
+  const unlimitedLimit=["ILIMITADO","ILIMITADAS","∞"].includes(String(limit||"").trim().toUpperCase());
+  const unlimitedRemaining=["ILIMITADO","ILIMITADAS","∞"].includes(String(remaining||"").trim().toUpperCase());
+
+  if(!unlimitedLimit&&!unlimitedRemaining&&Number.isFinite(Number(limit))&&Number.isFinite(Number(remaining))){
+    return String(Math.max(0,Number(limit)-Number(remaining)));
+  }
+
+  const finalizedLoaded=(state.trips||[]).filter(
+    trip=>String(trip&&trip.status||"").toUpperCase()==="FINALIZADA"
+  ).length;
+
+  return String(finalizedLoaded);
 }
 
 function renderAccountPlan(user){
@@ -223,7 +259,7 @@ function renderAccountPlan(user){
 
   const plan=normalizeAccountPlan(user.plan);
   const monthlyFee=money.format(Number(user.monthlyFee||0));
-  const deliveries=Number(user.deliveries||0);
+  const completed=completedDeliveriesText(user);
   const available=deliveriesAvailableText(user);
 
   card.innerHTML=`
@@ -245,7 +281,7 @@ function renderAccountPlan(user){
 
       <div style="padding:12px;border-radius:12px;background:#fff">
         <small style="display:block;color:#64748b;margin-bottom:4px">Entregas realizadas</small>
-        <strong>${deliveries}</strong>
+        <strong>${completed}</strong>
       </div>
 
       <div style="grid-column:1/-1;padding:12px;border-radius:12px;background:#fff">
@@ -670,7 +706,9 @@ async function cancelUserTrip(code){
   try{
     const j=await api("cancelUserTrip",{code});
     toast(`Entrega cancelada. ${money.format(j.refundedValue||0)} removidos da fatura.`);
+    state.revision="";
     await dashboard();
+    renderAccountPlan(state.user);
     trips();
   }catch(e){
     toast(e.message);
