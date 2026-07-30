@@ -281,13 +281,8 @@ function renderBusinessArea(user,config){
   marketingBanner.classList.add("hide");
 
   if(isCompany){
-    const active=!!catalogLink;
     catalogOfferCard.classList.add("hide");
-    catalogActiveCard.classList.toggle("hide",!active);
-    if(active){
-      catalogLinkInput.value=catalogLink;
-      openCatalogLink.href=catalogLink;
-    }
+    catalogActiveCard.classList.add("hide");
     return;
   }
 
