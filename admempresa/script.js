@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbyn3065wcnSaDbtTGkjf78a-E5xvuyTn_grtEbWaS3LO8ziPX_I8BmrCKb3NzE3Mk_Y/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbydk3AEpDY4YBbNOQ_jyl8PoyJG3oXNl5kkeTr03GlsZGmxZKJD4sgHdwgnxhqhXgzf/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 const state={token:"",company:null,categories:[],products:[],logoData:"",productImageData:"",refreshTimer:null,busy:false};
