@@ -1,6 +1,6 @@
 
 const API_URL="https://script.google.com/macros/s/AKfycbyn3065wcnSaDbtTGkjf78a-E5xvuyTn_grtEbWaS3LO8ziPX_I8BmrCKb3NzE3Mk_Y/exec";
-const COMPANY_ID=""; // TROQUE APENAS ESTE CÓDIGO PELO ID DA EMPRESA
+const COMPANY_ID="N3W8ZT"; // TROQUE APENAS ESTE CÓDIGO PELO ID DA EMPRESA
 const AUTO_REFRESH_MS=5000;
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
