@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Catálogo da Empresa</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="loading" id="loading"><div><div class="spinner"></div><p style="color:var(--p);font-weight:900">Carregando catálogo...</p></div></div>
+<header class="top"><div class="topin"><div><div class="brand-mini">Catálogo online</div><div style="font-size:.61rem;color:var(--muted);margin-top:2px">ID: <span id="companyIdLabel"></span></div></div><button class="cart-btn" id="cartBtn"><i class="fa-solid fa-bag-shopping"></i><span class="cart-count" id="cartCount">0</span></button></div></header>
+<main>
+<section class="company-hero">
+ <div id="companyLogoWrap"></div>
+ <h1 id="companyName">Empresa</h1>
+ <p id="companyHours">Horário de funcionamento</p>
+ <span class="open-badge" id="companyStatus"><i class="fa-solid fa-circle"></i> Aberto agora</span>
+</section>
+<div class="section-head"><h2>Meus produtos</h2><span id="productCount">0 produtos</span></div>
+<select id="categoryFilter" class="filter"><option value="">Escolher categoria</option></select>
+<section id="products" class="products"></section>
+<div class="footer">Integrado com <strong>Pega&amp;Leva</strong></div>
+</main>
+
+<div class="modal" id="cartModal"><div class="sheet">
+ <div class="sheet-head"><h2>Seu carrinho</h2><button class="close" data-close="cartModal">×</button></div>
+ <div id="cartList" class="cart-list"></div>
+ <div class="summary"><div class="row"><span>Produtos</span><strong id="subtotal">R$ 0,00</strong></div><div class="row"><span>Frete</span><strong id="shippingValue">R$ 0,00</strong></div><div class="row total"><span>Total</span><strong id="grandTotal">R$ 0,00</strong></div></div>
+ <button class="btn primary full" id="checkoutBtn" style="margin-top:12px">Finalizar pedido</button>
+</div></div>
+
+<div class="modal" id="checkoutModal"><div class="sheet">
+ <div class="sheet-head"><h2>Finalizar pedido</h2><button class="close" data-close="checkoutModal">×</button></div>
+ <div class="field"><label>Nome</label><input id="customerName"></div>
+ <div class="field"><label>DDD + WhatsApp</label><input id="customerWhatsapp" inputmode="numeric" placeholder="89 99999-9999"></div>
+ <div class="field"><label>Como deseja receber?</label><div class="receive-options"><button class="receive-option active" data-receive="RETIRADA">Retirada</button><button class="receive-option" data-receive="DELIVERY">Entrega Delivery</button></div></div>
+ <div id="deliveryFields" class="hide">
+  <div class="grid2"><div class="field"><label>Cidade</label><select id="deliveryCity"><option>Uruçuí</option><option>Benedito Leite</option></select></div><div class="field"><label>Bairro</label><select id="deliveryNeighborhood"></select></div></div>
+  <div class="field"><label>Rua, avenida ou alameda</label><input id="deliveryStreet"></div>
+  <div class="grid2"><div class="field"><label>Número</label><input id="deliveryNumber"></div><div class="field"><label>Referência</label><input id="deliveryReference"></div></div>
+  <button class="btn secondary full" id="calculateShipping">Calcular frete</button>
+  <div id="shippingOptions" class="shipping-list"></div>
+ </div>
+ <button class="btn success full" id="sendWhatsapp" style="margin-top:12px"><i class="fa-brands fa-whatsapp"></i> Solicitar via WhatsApp</button>
+</div></div>
+<div class="toast" id="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
