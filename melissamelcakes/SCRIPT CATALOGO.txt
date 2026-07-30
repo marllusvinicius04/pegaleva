@@ -1,0 +1,83 @@
+
+const API_URL="https://script.google.com/macros/s/AKfycbyn3065wcnSaDbtTGkjf78a-E5xvuyTn_grtEbWaS3LO8ziPX_I8BmrCKb3NzE3Mk_Y/exec";
+const COMPANY_ID=""; // TROQUE APENAS ESTE CÓDIGO PELO ID DA EMPRESA
+const AUTO_REFRESH_MS=5000;
+const $=id=>document.getElementById(id);
+const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
+const neighborhoods=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];
+const state={company:null,categories:[],products:[],cart:[],receiveType:"RETIRADA",shippingOptions:[],selectedShipping:null,revision:"",refreshTimer:null,loading:false};
+async function api(action,payload={}){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),12000);
+  try{
+    const r=await fetch(API_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+      body:new URLSearchParams({action,payload:JSON.stringify(payload)}),
+      cache:"no-store",
+      signal:controller.signal
+    });
+    if(!r.ok)throw new Error("Falha de conexão.");
+    const j=await r.json();
+    if(j.ok===false)throw new Error(j.error||"Erro.");
+    return j;
+  }catch(e){
+    if(e.name==="AbortError")throw new Error("A conexão demorou demais.");
+    throw e;
+  }finally{clearTimeout(timeout)}
+}
+function toast(m){toastEl.textContent=m;toastEl.classList.add("on");setTimeout(()=>toastEl.classList.remove("on"),2400)}
+const toastEl=$("toast");
+function imageUrl(url){url=String(url||"").trim();let m=url.match(/[?&]id=([^&]+)/)||url.match(/\/d\/([^/]+)/);return m&&/drive\.google\.com/i.test(url)?`https://drive.google.com/thumbnail?id=${encodeURIComponent(m[1])}&sz=w1200`:url}
+function openNow(hours){if(!hours||!hours.includes("-"))return true;const [a,b]=hours.split("-").map(x=>{const [h,m]=x.split(":").map(Number);return h*60+(m||0)}),d=new Date(),n=d.getHours()*60+d.getMinutes();return b>=a?n>=a&&n<=b:n>=a||n<=b}
+async function load(silent=false){
+  if(state.loading)return;
+  state.loading=true;
+  try{
+    const j=await api("getCatalog",{companyId:COMPANY_ID,sinceRevision:state.revision});
+    if(j.unchanged)return;
+    state.revision=String(j.revision||"");
+    state.company=j.company;
+    state.categories=j.categories||[];
+    state.products=j.products||[];
+    state.cart=state.cart.filter(item=>state.products.some(p=>p.id===item.id&&p.active));
+    renderCompany();
+    renderCategories();
+    renderProducts();
+    renderCart();
+  }catch(e){
+    if(!silent)toast(e.message);
+  }finally{
+    state.loading=false;
+    loading.classList.add("hide");
+  }
+}
+function startAutoRefresh(){
+  clearInterval(state.refreshTimer);
+  state.refreshTimer=setInterval(()=>{
+    if(!document.hidden&&navigator.onLine)load(true);
+  },AUTO_REFRESH_MS);
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)load(true)});
+window.addEventListener("online",()=>load(true));
+function renderCompany(){companyIdLabel.textContent=state.company.id;companyName.textContent=state.company.name;companyHours.textContent=`Funcionamento: ${state.company.hours||"Não informado"}`;companyLogoWrap.innerHTML=state.company.logo?`<img class="company-logo" src="${imageUrl(state.company.logo)}">`:`<div class="company-fallback"><i class="fa-solid fa-store"></i></div>`;const opened=openNow(state.company.hours);companyStatus.classList.toggle("closed",!opened);companyStatus.innerHTML=`<i class="fa-solid fa-circle"></i> ${opened?"Aberto agora":"Fechado agora"}`}
+function renderCategories(){categoryFilter.innerHTML='<option value="">Todas as categorias</option>'+state.categories.filter(c=>c.active).map(c=>`<option value="${c.id}">${c.name}</option>`).join("")}
+function renderProducts(){const category=categoryFilter.value;const list=state.products.filter(p=>p.active&&(!category||String(p.categoryId)===String(category)));productCount.textContent=`${list.length} produto(s)`;products.innerHTML=list.map(p=>`<article class="product"><div class="product-img"><img src="${imageUrl(p.image)||''}" alt="${p.name}"></div><div class="product-body"><h3>${p.name}</h3><p>${p.description||""}</p><div class="product-bottom"><span class="price">${money.format(p.price)}</span><button class="add" onclick="addToCart('${p.id}')"><i class="fa-solid fa-plus"></i></button></div></div></article>`).join("")||'<div class="empty">Nenhum produto nesta categoria.</div>'}
+categoryFilter.onchange=renderProducts;
+function addToCart(id){const p=state.products.find(x=>x.id===id);if(!p)return;const item=state.cart.find(x=>x.id===id);if(item)item.qty++;else state.cart.push({...p,qty:1});renderCart();toast("Produto adicionado.")}
+function changeQty(id,delta){const item=state.cart.find(x=>x.id===id);if(!item)return;item.qty+=delta;if(item.qty<=0)state.cart=state.cart.filter(x=>x.id!==id);renderCart()}
+function subtotalValue(){return state.cart.reduce((s,x)=>s+Number(x.price||0)*x.qty,0)}
+function shippingPrice(){return state.receiveType==="DELIVERY"&&state.selectedShipping?Number(state.selectedShipping.fee||0):0}
+function renderCart(){cartCount.textContent=state.cart.reduce((s,x)=>s+x.qty,0);cartList.innerHTML=state.cart.map(x=>`<div class="cart-item"><img src="${imageUrl(x.image)}"><div><strong>${x.name}</strong><span>${money.format(x.price*x.qty)}</span></div><div class="qty"><button onclick="changeQty('${x.id}',-1)">−</button><b>${x.qty}</b><button onclick="changeQty('${x.id}',1)">+</button></div></div>`).join("")||'<div class="empty">Seu carrinho está vazio.</div>';subtotal.textContent=money.format(subtotalValue());shippingValue.textContent=money.format(shippingPrice());grandTotal.textContent=money.format(subtotalValue()+shippingPrice())}
+cartBtn.onclick=()=>cartModal.classList.add("on");
+checkoutBtn.onclick=()=>{if(!state.cart.length)return toast("Adicione produtos ao carrinho.");cartModal.classList.remove("on");checkoutModal.classList.add("on")};
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove("on"));
+document.querySelectorAll(".receive-option").forEach(b=>b.onclick=()=>{document.querySelectorAll(".receive-option").forEach(x=>x.classList.remove("active"));b.classList.add("active");state.receiveType=b.dataset.receive;deliveryFields.classList.toggle("hide",state.receiveType!=="DELIVERY");state.selectedShipping=null;renderCart()});
+deliveryNeighborhood.innerHTML='<option value="">Selecione</option>'+neighborhoods.map(n=>`<option>${n}</option>`).join("");
+calculateShipping.onclick=async()=>{if(!deliveryNeighborhood.value)return toast("Selecione o bairro.");try{const j=await api("calculateFee",{pickupNeighborhood:state.company.neighborhood,deliveryNeighborhood:deliveryNeighborhood.value});state.shippingOptions=j.options||[];shippingOptions.innerHTML=state.shippingOptions.map((o,i)=>`<label class="shipping"><input type="radio" name="shipping" value="${o.id}" ${i===0?"checked":""}><span><strong>${o.name}</strong><small>${o.description||""}</small></span><b>${money.format(o.fee)}</b></label>`).join("");state.selectedShipping=state.shippingOptions[0]||null;shippingOptions.querySelectorAll("input").forEach(r=>r.onchange=()=>{state.selectedShipping=state.shippingOptions.find(o=>o.id===r.value);renderCart()});renderCart()}catch(e){toast(e.message)}};
+sendWhatsapp.onclick=()=>{const name=customerName.value.trim(),phone=customerWhatsapp.value.replace(/\D/g,"");if(!name||phone.length<10)return toast("Informe nome e WhatsApp.");if(state.receiveType==="DELIVERY"){if(!deliveryNeighborhood.value||!deliveryStreet.value.trim()||!deliveryNumber.value.trim())return toast("Preencha os dados da entrega.");if(!state.selectedShipping)return toast("Calcule e escolha o frete.");}
+const items=state.cart.map(x=>`${x.qty}x ${x.name} — ${money.format(x.price*x.qty)}`).join("\n");
+const receive=state.receiveType==="RETIRADA"?"Retirada no estabelecimento":`Entrega Delivery\nCidade: ${deliveryCity.value}\nBairro: ${deliveryNeighborhood.value}\nEndereço: ${deliveryStreet.value}, ${deliveryNumber.value}\nReferência: ${deliveryReference.value||"Não informada"}\nFrete: ${state.selectedShipping.name} — ${money.format(state.selectedShipping.fee)}`;
+const msg=`Olá! Gostaria de fazer este pedido:\n\n${items}\n\n${receive}\n\nSubtotal: ${money.format(subtotalValue())}\nFrete: ${money.format(shippingPrice())}\nTotal: ${money.format(subtotalValue()+shippingPrice())}\n\nCliente: ${name}\nWhatsApp: ${phone}`;
+window.open(`https://wa.me/${state.company.whatsapp}?text=${encodeURIComponent(msg)}`,"_blank")};
+load().then(startAutoRefresh);
