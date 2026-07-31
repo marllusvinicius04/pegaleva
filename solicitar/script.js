@@ -751,57 +751,91 @@ function activeTripMessage(status){
 }
 function trips(){
   const activeTrips=state.trips.filter(t=>String(t.status||"").trim().toUpperCase()!=="FINALIZADA");
+  const finishedTrips=state.trips.filter(t=>String(t.status||"").trim().toUpperCase()==="FINALIZADA");
   const sheetTitle=document.querySelector("#tripsSheet .sheet-head h3");
-  if(sheetTitle)sheetTitle.textContent="Entregas em andamento";
+  if(sheetTitle)sheetTitle.textContent="Minhas entregas";
 
-  tripsList.innerHTML=activeTrips.length?activeTrips.map(t=>{
-    const status=String(t.status||"").trim().toUpperCase();
-    const waiting=status==="AGUARDANDO ENTREGADOR"&&!String(t.driverName||"").trim();
-    const label=clientStatusLabel(t.status,t.paymentStatus);
-    const cls=statusClass(t.status,t.paymentStatus);
-    const currentStep=activeTripStep(t.status);
-    const progress=Math.max(8,Math.min(100,(currentStep/3)*100));
-    const driver=String(t.driverName||"").trim();
-
-    return `<article class="trip-uber-card">
-      <div class="trip-uber-top">
-        <div>
-          <small>ENTREGA ${t.code}</small>
-          <h4>${activeTripMessage(t.status)}</h4>
-        </div>
-        <span class="trip-live-badge"><i class="fa-solid fa-circle"></i> AO VIVO</span>
+  const activeHtml=activeTrips.length?`
+    <section class="trips-section">
+      <div class="trips-section-title">
+        <span><i class="fa-solid fa-motorcycle"></i> Em andamento</span>
+        <strong>${activeTrips.length}</strong>
       </div>
+      ${activeTrips.map(t=>{
+        const status=String(t.status||"").trim().toUpperCase();
+        const waiting=status==="AGUARDANDO ENTREGADOR"&&!String(t.driverName||"").trim();
+        const label=clientStatusLabel(t.status,t.paymentStatus);
+        const cls=statusClass(t.status,t.paymentStatus);
+        const currentStep=activeTripStep(t.status);
+        const progress=Math.max(8,Math.min(100,(currentStep/3)*100));
+        const driver=String(t.driverName||"").trim();
 
-      <div class="trip-route">
-        <div class="trip-route-point origin"><i class="fa-solid fa-store"></i></div>
-        <div class="trip-route-line"><span style="width:${progress}%"></span></div>
-        <div class="trip-route-bike" style="left:calc(${progress}% - 18px)"><i class="fa-solid fa-motorcycle"></i></div>
-        <div class="trip-route-point destination"><i class="fa-solid fa-location-dot"></i></div>
+        return `<article class="trip-uber-card">
+          <div class="trip-uber-top">
+            <div>
+              <small>ENTREGA ${t.code}</small>
+              <h4>${activeTripMessage(t.status)}</h4>
+            </div>
+            <span class="trip-live-badge"><i class="fa-solid fa-circle"></i> AO VIVO</span>
+          </div>
+
+          <div class="trip-route">
+            <div class="trip-route-point origin"><i class="fa-solid fa-store"></i></div>
+            <div class="trip-route-line"><span style="width:${progress}%"></span></div>
+            <div class="trip-route-bike" style="left:calc(${progress}% - 18px)"><i class="fa-solid fa-motorcycle"></i></div>
+            <div class="trip-route-point destination"><i class="fa-solid fa-location-dot"></i></div>
+          </div>
+
+          <div class="trip-addresses">
+            <div><small>COLETA</small><strong>${t.originNeighborhood||"Origem"}</strong></div>
+            <i class="fa-solid fa-arrow-right"></i>
+            <div class="destination"><small>ENTREGA</small><strong>${t.destinationNeighborhood||"Destino"}</strong></div>
+          </div>
+
+          <div class="trip-uber-info">
+            <div class="trip-driver-avatar"><i class="fa-solid ${driver?"fa-user":"fa-magnifying-glass"}"></i></div>
+            <div class="trip-driver-data">
+              <small>${driver?"ENTREGADOR":"PROCURANDO ENTREGADOR"}</small>
+              <strong>${driver||"Aguardando aceite"}</strong>
+              <span>${t.createdAt||""} • ${money.format(t.value||0)}</span>
+            </div>
+            <span class="trip-status ${cls}">${label}</span>
+          </div>
+
+          <div class="trip-steps">
+            ${["Solicitada","Aceita","Coletada","A caminho"].map((name,index)=>`<div class="trip-step ${index<currentStep?"done":index===currentStep?"current":""}"><span>${index<currentStep?'<i class="fa-solid fa-check"></i>':index+1}</span><small>${name}</small></div>`).join("")}
+          </div>
+
+          ${waiting?`<button class="btn trip-cancel-btn full" onclick="cancelUserTrip('${t.code}')"><i class="fa-solid fa-ban"></i> Cancelar entrega</button>`:""}
+        </article>`;
+      }).join("")}
+    </section>`:"";
+
+  const finishedHtml=finishedTrips.length?`
+    <section class="trips-section finished-trips-section">
+      <div class="trips-section-title finished">
+        <span><i class="fa-solid fa-clock-rotate-left"></i> Histórico</span>
+        <strong>${finishedTrips.length}</strong>
       </div>
-
-      <div class="trip-addresses">
-        <div><small>COLETA</small><strong>${t.originNeighborhood||"Origem"}</strong></div>
-        <i class="fa-solid fa-arrow-right"></i>
-        <div class="destination"><small>ENTREGA</small><strong>${t.destinationNeighborhood||"Destino"}</strong></div>
+      <div class="finished-trips-list">
+        ${finishedTrips.map(t=>{
+          const paid=String(t.paymentStatus||"").trim().toUpperCase()==="PAGO";
+          return `<article class="trip-finished-card">
+            <div class="trip-finished-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="trip-finished-content">
+              <div class="trip-finished-top">
+                <strong>Entrega ${t.code}</strong>
+                <span class="trip-finished-badge">Finalizada</span>
+              </div>
+              <span class="trip-finished-route">${t.originNeighborhood||"Origem"} <i class="fa-solid fa-arrow-right"></i> ${t.destinationNeighborhood||"Destino"}</span>
+              <small>${t.createdAt||""} • ${money.format(t.value||0)} • ${paid?"Pago":"Pagamento pendente"}</small>
+            </div>
+          </article>`;
+        }).join("")}
       </div>
+    </section>`:"";
 
-      <div class="trip-uber-info">
-        <div class="trip-driver-avatar"><i class="fa-solid ${driver?"fa-user":"fa-magnifying-glass"}"></i></div>
-        <div class="trip-driver-data">
-          <small>${driver?"ENTREGADOR":"PROCURANDO ENTREGADOR"}</small>
-          <strong>${driver||"Aguardando aceite"}</strong>
-          <span>${t.createdAt||""} • ${money.format(t.value||0)}</span>
-        </div>
-        <span class="trip-status ${cls}">${label}</span>
-      </div>
-
-      <div class="trip-steps">
-        ${["Solicitada","Aceita","Coletada","A caminho"].map((name,index)=>`<div class="trip-step ${index<currentStep?"done":index===currentStep?"current":""}"><span>${index<currentStep?'<i class="fa-solid fa-check"></i>':index+1}</span><small>${name}</small></div>`).join("")}
-      </div>
-
-      ${waiting?`<button class="btn trip-cancel-btn full" onclick="cancelUserTrip('${t.code}')"><i class="fa-solid fa-ban"></i> Cancelar entrega</button>`:""}
-    </article>`;
-  }).join(""):`<div class="trips-empty-state"><i class="fa-solid fa-motorcycle"></i><strong>Nenhuma entrega em andamento</strong><span>Quando você solicitar uma entrega, ela aparecerá aqui para acompanhamento.</span></div>`;
+  tripsList.innerHTML=activeHtml+finishedHtml||`<div class="trips-empty-state"><i class="fa-solid fa-motorcycle"></i><strong>Nenhuma entrega encontrada</strong><span>Suas entregas em andamento e finalizadas aparecerão aqui.</span></div>`;
 }
 async function cancelUserTrip(code){
   if(!confirm("Deseja cancelar esta entrega por falta de entregador? O valor será removido da sua fatura e a corrida será apagada."))return;
