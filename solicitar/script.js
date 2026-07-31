@@ -89,10 +89,10 @@ function clientStatusLabel(status,paymentStatus){
   const s=String(status||"").toUpperCase();
   const p=String(paymentStatus||"").toUpperCase();
   if(s==="AGUARDANDO ENTREGADOR")return "Aguardando entregador";
-  if(s==="ACEITA")return "Entregador aceitou a corrida";
-  if(s==="COLETADO")return "Pedido coletado";
-  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "Finalizando corrida próxima";
-  if(s==="ESTOU INDO")return "Entregador a caminho";
+  if(s==="ACEITA")return "Calculando rota e disponibilizando entregador";
+  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "Finalizando uma entrega na região";
+  if(s==="ESTOU INDO")return "Entregador indo para a coleta";
+  if(s==="COLETADO")return "Produto coletado e seguindo para o destino";
   if(s==="FINALIZADA")return p==="PAGO"?"Entrega finalizada • Pago":"Entrega finalizada • Pagamento pendente";
   return status||"Status atualizado";
 }
@@ -736,20 +736,41 @@ function activeTripStep(status){
   const s=String(status||"").trim().toUpperCase();
   if(s==="AGUARDANDO ENTREGADOR")return 0;
   if(s==="ACEITA"||s==="FINALIZANDO CORRIDA PRÓXIMA")return 1;
-  if(s==="COLETADO")return 2;
-  if(s==="ESTOU INDO")return 3;
+  if(s==="ESTOU INDO")return 2;
+  if(s==="COLETADO")return 3;
   return 0;
+}
+function animatedStatusDots(){
+  return `<span class="moving-status-dots" aria-label="carregando"><i></i><i></i><i></i></span>`;
+}
+function ensureTripStatusStyles(){
+  if(document.getElementById("tripStatusDynamicStyles"))return;
+  const style=document.createElement("style");
+  style.id="tripStatusDynamicStyles";
+  style.textContent=`
+    .moving-status-dots{display:inline-flex;align-items:center;gap:3px;margin-left:4px;vertical-align:middle}
+    .moving-status-dots i{display:block;width:5px;height:5px;border-radius:50%;background:currentColor;animation:movingStatusDot 1.15s infinite ease-in-out}
+    .moving-status-dots i:nth-child(2){animation-delay:.16s}
+    .moving-status-dots i:nth-child(3){animation-delay:.32s}
+    @keyframes movingStatusDot{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-4px);opacity:1}}
+    .trip-finished-receiver{display:block;margin-top:6px;color:#0f7a43;font-size:.74rem;font-weight:800;line-height:1.4}
+  `;
+  document.head.appendChild(style);
 }
 function activeTripMessage(status){
   const s=String(status||"").trim().toUpperCase();
-  if(s==="AGUARDANDO ENTREGADOR")return "Buscando um entregador próximo";
-  if(s==="ACEITA")return "O entregador está indo até o local de coleta";
-  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "O entregador finalizará uma entrega próxima antes da coleta";
-  if(s==="COLETADO")return "Pedido coletado e preparado para seguir viagem";
-  if(s==="ESTOU INDO")return "Sua entrega está a caminho do destino";
+  if(s==="AGUARDANDO ENTREGADOR")return `Buscando um entregador próximo${animatedStatusDots()}`;
+  if(s==="ACEITA")return `Calculando rota e disponibilizando entregador ao local${animatedStatusDots()}`;
+  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "O entregador está finalizando uma entrega na região e já está indo fazer a retirada do produto";
+  if(s==="ESTOU INDO")return "O entregador está indo até o local para fazer a coleta";
+  if(s==="COLETADO")return "Produto coletado. O entregador está seguindo para o destino";
   return clientStatusLabel(status,"");
 }
+function finishedTripTime(t){
+  return t.finalizedAt||t.finishedAt||t.completedAt||t.updatedAt||t.createdAt||"Horário não informado";
+}
 function trips(){
+  ensureTripStatusStyles();
   const activeTrips=state.trips.filter(t=>String(t.status||"").trim().toUpperCase()!=="FINALIZADA");
   const finishedTrips=state.trips.filter(t=>String(t.status||"").trim().toUpperCase()==="FINALIZADA");
   const sheetTitle=document.querySelector("#tripsSheet .sheet-head h3");
@@ -803,7 +824,7 @@ function trips(){
           </div>
 
           <div class="trip-steps">
-            ${["Solicitada","Aceita","Coletada","A caminho"].map((name,index)=>`<div class="trip-step ${index<currentStep?"done":index===currentStep?"current":""}"><span>${index<currentStep?'<i class="fa-solid fa-check"></i>':index+1}</span><small>${name}</small></div>`).join("")}
+            ${["Solicitada","Corrida aceita","Indo coletar","Produto coletado"].map((name,index)=>`<div class="trip-step ${index<currentStep?"done":index===currentStep?"current":""}"><span>${index<currentStep?'<i class="fa-solid fa-check"></i>':index+1}</span><small>${name}</small></div>`).join("")}
           </div>
 
           ${waiting?`<button class="btn trip-cancel-btn full" onclick="cancelUserTrip('${t.code}')"><i class="fa-solid fa-ban"></i> Cancelar entrega</button>`:""}
@@ -820,6 +841,7 @@ function trips(){
       <div class="finished-trips-list">
         ${finishedTrips.map(t=>{
           const paid=String(t.paymentStatus||"").trim().toUpperCase()==="PAGO";
+          const receiver=String(t.receiverName||t.recipientName||"O destinatário").trim();
           return `<article class="trip-finished-card">
             <div class="trip-finished-icon"><i class="fa-solid fa-circle-check"></i></div>
             <div class="trip-finished-content">
@@ -828,7 +850,8 @@ function trips(){
                 <span class="trip-finished-badge">Finalizada</span>
               </div>
               <span class="trip-finished-route">${t.originNeighborhood||"Origem"} <i class="fa-solid fa-arrow-right"></i> ${t.destinationNeighborhood||"Destino"}</span>
-              <small>${t.createdAt||""} • ${money.format(t.value||0)} • ${paid?"Pago":"Pagamento pendente"}</small>
+              <small>${finishedTripTime(t)} • ${money.format(t.value||0)} • ${paid?"Pago":"Pagamento pendente"}</small>
+              <span class="trip-finished-receiver"><i class="fa-solid fa-circle-check"></i> ${receiver} acabou de receber seu envio!</span>
             </div>
           </article>`;
         }).join("")}
@@ -837,6 +860,7 @@ function trips(){
 
   tripsList.innerHTML=activeHtml+finishedHtml||`<div class="trips-empty-state"><i class="fa-solid fa-motorcycle"></i><strong>Nenhuma entrega encontrada</strong><span>Suas entregas em andamento e finalizadas aparecerão aqui.</span></div>`;
 }
+
 async function cancelUserTrip(code){
   if(!confirm("Deseja cancelar esta entrega por falta de entregador? O valor será removido da sua fatura e a corrida será apagada."))return;
   try{
