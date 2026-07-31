@@ -61,7 +61,7 @@ function wa(number,message){
   const organizedMessage=motoboyWhatsappMessage(message);
   window.open(`https://wa.me/${n}?text=${encodeURIComponent(organizedMessage)}`,"_blank")
 }
-function statusLabel(s){const m={"AGUARDANDO ENTREGADOR":"Aguardando entregador","ACEITA":"Corrida aceita","FINALIZANDO CORRIDA PRÓXIMA":"Finalizando corrida próxima","ESTOU INDO":"Estou indo","FINALIZADA":"Corrida finalizada"};return m[String(s||"").toUpperCase()]||s}
+function statusLabel(s){const m={"AGUARDANDO ENTREGADOR":"Aguardando entregador","ACEITA":"Calculando rota","FINALIZANDO CORRIDA PRÓXIMA":"Finalizando entrega na região","ESTOU INDO":"Indo para a coleta","COLETADO":"Produto coletado","FINALIZADA":"Entrega finalizada"};return m[String(s||"").toUpperCase()]||s}
 function escapeCardText(value){
   return String(value??"")
     .replace(/&/g,"&amp;")
@@ -338,8 +338,8 @@ function renderTrips(){
     <span>Pagamento: ${paymentReady?t.paymentStatus:"Não informado"}</span>
   </div>
   <div class="card-command-menu" id="tripCommands-${t.code}">
-    <button class="btn secondary" onclick="updateTrip('${t.code}','FINALIZANDO CORRIDA PRÓXIMA')"><i class="fa-solid fa-motorcycle"></i> Finalizando</button>
-    <button class="btn primary" onclick="updateTrip('${t.code}','ESTOU INDO')"><i class="fa-solid fa-motorcycle"></i> Estou indo</button>
+    <button class="btn secondary" onclick="updateTrip('${t.code}','FINALIZANDO CORRIDA PRÓXIMA')"><i class="fa-solid fa-motorcycle"></i> Finalizando entrega próxima</button>
+    <button class="btn primary" onclick="updateTrip('${t.code}','ESTOU INDO')"><i class="fa-solid fa-motorcycle"></i> Estou indo para coleta</button>
     <button class="btn success-btn" onclick="alertCustomer('${t.code}')"><i class="fa-brands fa-whatsapp"></i> Alertar cliente</button>
     <button class="btn danger-btn" onclick="reportLocationError('${t.code}')"><i class="fa-solid fa-triangle-exclamation"></i> Erro na localização</button>
   </div>
@@ -539,6 +539,21 @@ whatsappNoBtn.onclick=()=>{
   state.pendingWhatsapp=null;
 }
 
+function customerStatusMessage(status,trip){
+  const s=String(status||"").trim().toUpperCase();
+  const code=String(trip&&trip.code||"").trim();
+  const prefix=code?`Pedido ${code}: `:"";
+  if(s==="FINALIZANDO CORRIDA PRÓXIMA"){
+    return `${prefix}o entregador está finalizando uma entrega na região e já está indo fazer a retirada do produto.`;
+  }
+  if(s==="ESTOU INDO"){
+    return `${prefix}o entregador está indo até o local para fazer a coleta.`;
+  }
+  if(s==="COLETADO"){
+    return `${prefix}o produto foi coletado e está seguindo para o destino.`;
+  }
+  return "";
+}
 async function updateTrip(code,status){
   try{
     const tripBeforeUpdate=state.trips.find(t=>String(t.code)===String(code));
@@ -559,7 +574,7 @@ async function updateTrip(code,status){
       :String(j.phone||"").trim();
 
     if(j.notifyWhatsapp&&notificationPhone){
-      askWhatsappNotification(notificationPhone,j.message);
+      askWhatsappNotification(notificationPhone,customerStatusMessage(normalizedStatus,tripBeforeUpdate)||j.message);
     }
   }catch(x){
     toast(x.message)
@@ -620,7 +635,14 @@ async function finalizeTrip(code){
       finalPhone&&
       confirm("Deseja avisar o solicitante pelo WhatsApp que a corrida foi finalizada?")
     ){
-      wa(finalPhone,j.message);
+      const receiverName=String(
+        tripBeforeFinalize&&(
+          tripBeforeFinalize.receiverName||
+          tripBeforeFinalize.recipientName
+        )||"O destinatário"
+      ).trim();
+      const finalMessage=`Entrega finalizada! ${receiverName} acabou de receber seu envio.`;
+      wa(finalPhone,finalMessage);
     }
 
     await dashboard()
