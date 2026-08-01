@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbxPTDveD77WgCbmFBMNFHWOQrpAYKfL4QTMEaax0fZZ1Q2XwgigzX10ZqCrKrOeuhQt/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbwHFENQmUeksbvVOO6u0FOkIa8lXb_Q30ef6odFpLVpp-dcqsKca8Ofs_koaXNzp9So/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false};
@@ -260,12 +260,6 @@ loginForm.onsubmit=async e=>{
 };
 
 
-const DRIVER_AVAILABILITY_KEY="pl_driver_online_status";
-
-function getDriverOnlineStatus(){
-  return localStorage.getItem(DRIVER_AVAILABILITY_KEY)==="true";
-}
-
 function ensureDriverStatusButton(){
   let btn=document.getElementById("driverStatusBtn");
   if(btn)return btn;
@@ -279,8 +273,6 @@ function ensureDriverStatusButton(){
   btn.title="Alterar disponibilidade";
   btn.setAttribute("aria-label","Alterar disponibilidade");
 
-  /* Não altera absolutamente nada nos botões Recarregar e Sair.
-     Apenas insere este novo botão ANTES dos ícones/botões existentes. */
   btn.style.cssText=`
     height:38px;
     padding:0 12px;
@@ -301,7 +293,6 @@ function ensureDriverStatusButton(){
 
   refresh.parentElement.insertBefore(btn,refresh);
   btn.onclick=toggleDriverOnlineStatus;
-
   return btn;
 }
 
@@ -310,7 +301,6 @@ function renderDriverOnlineStatus(){
   if(!btn)return;
 
   const online=!!state.driverOnline;
-
   btn.innerHTML=online
     ?'<i class="fa-solid fa-motorcycle"></i><span>ON</span>'
     :'<i class="fa-solid fa-motorcycle"></i><span>OFF</span>';
@@ -320,15 +310,30 @@ function renderDriverOnlineStatus(){
   btn.style.color=online?"#ffffff":"#475569";
 }
 
-function toggleDriverOnlineStatus(){
-  state.driverOnline=!state.driverOnline;
-  localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(state.driverOnline));
-  renderDriverOnlineStatus();
+async function toggleDriverOnlineStatus(){
+  const next=!state.driverOnline;
+  const btn=ensureDriverStatusButton();
+  if(btn)btn.disabled=true;
 
-  toast(state.driverOnline
-    ?"Você está ON e disponível."
-    :"Você está OFF."
-  );
+  try{
+    const j=await api("driverSetOnlineStatus",{status:next?"ONLINE":"OFFLINE"});
+    state.driver=j.driver||state.driver;
+    state.driverOnline=String(state.driver&&state.driver.status||"OFFLINE").toUpperCase()==="ONLINE";
+    renderDriverOnlineStatus();
+    renderDriverScoreSheet();
+
+    toast(state.driverOnline
+      ?"Você está ON e disponível."
+      :"Você está OFF."
+    );
+
+    state.revision="";
+    await dashboard(false);
+  }catch(x){
+    toast(x.message);
+  }finally{
+    if(btn)btn.disabled=false;
+  }
 }
 
 
@@ -402,6 +407,17 @@ function ensureDriverScoreNav(){
   });
 }
 
+function driverLevelStyle(level){
+  level=String(level||"BRONZE").toUpperCase();
+  const styles={
+    BRONZE:{icon:"fa-medal",label:"Bronze",bg:"#fff7ed",color:"#9a4f16",ring:"#b86b32"},
+    PRATA:{icon:"fa-medal",label:"Prata",bg:"#f1f5f9",color:"#64748b",ring:"#94a3b8"},
+    OURO:{icon:"fa-trophy",label:"Ouro",bg:"#fffbeb",color:"#b77900",ring:"#eab308"},
+    DIAMANTE:{icon:"fa-gem",label:"Diamante",bg:"#eff6ff",color:"#075bd8",ring:"#0ea5e9"}
+  };
+  return styles[level]||styles.BRONZE;
+}
+
 function ensureDriverScoreSheet(){
   let sheet=document.getElementById("driverScoreSheet");
   if(sheet)return sheet;
@@ -415,74 +431,188 @@ function ensureDriverScoreSheet(){
     display:none;
     align-items:flex-end;
     justify-content:center;
-    background:rgba(15,23,42,.48);
-    padding:16px;
+    background:rgba(15,23,42,.52);
+    padding:12px;
   `;
 
   sheet.innerHTML=`
-    <div style="
-      width:min(100%,560px);
+    <div id="driverScoreContent" style="
+      width:min(100%,600px);
+      max-height:92vh;
+      overflow:auto;
       background:#fff;
-      border-radius:24px 24px 18px 18px;
+      border-radius:26px 26px 18px 18px;
       padding:22px;
-      box-shadow:0 -12px 40px rgba(15,23,42,.20);
-    ">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <span style="
-            width:44px;height:44px;border-radius:14px;
-            display:inline-flex;align-items:center;justify-content:center;
-            background:#eef2ff;color:#0029ff;font-size:19px;
-          ">
-            <i class="fa-solid fa-star"></i>
-          </span>
-          <div>
-            <small style="display:block;color:#64748b;margin-bottom:2px">Desempenho</small>
-            <strong style="font-size:20px;color:#0f172a">Score do entregador</strong>
-          </div>
-        </div>
-
-        <button id="closeDriverScoreSheet" type="button" style="
-          width:40px;height:40px;border:0;border-radius:50%;
-          background:#f1f5f9;color:#334155;cursor:pointer;font-size:18px;
-        " aria-label="Fechar">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div style="
-        min-height:180px;
-        border:1px solid #e2e8f0;
-        border-radius:18px;
-        background:#f8fafc;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        text-align:center;
-        padding:28px 20px;
-      ">
-        <i class="fa-solid fa-star" style="font-size:32px;color:#0029ff;margin-bottom:12px"></i>
-        <strong style="font-size:18px;color:#0f172a">Seu Score</strong>
-        <p style="margin:7px 0 0;color:#64748b;max-width:330px">
-          Em breve, suas informações de pontuação e desempenho aparecerão aqui.
-        </p>
-      </div>
-    </div>
+      box-shadow:0 -16px 48px rgba(15,23,42,.24);
+    "></div>
   `;
 
   document.body.appendChild(sheet);
-
-  sheet.querySelector("#closeDriverScoreSheet").onclick=closeDriverScoreSheet;
   sheet.addEventListener("click",e=>{
     if(e.target===sheet)closeDriverScoreSheet();
   });
-
   return sheet;
+}
+
+function renderDriverScoreSheet(){
+  const sheet=document.getElementById("driverScoreSheet");
+  if(!sheet)return;
+
+  const content=sheet.querySelector("#driverScoreContent");
+  if(!content)return;
+
+  const d=state.driver||{};
+  const score=Math.max(0,Number(d.score||0));
+  const reviews=Math.max(0,Number(d.reviews||0));
+  const rating=Math.max(0,Number(d.averageRating||0));
+  const level=String(d.level||"BRONZE").toUpperCase();
+  const style=driverLevelStyle(level);
+  const progress=Math.max(0,Math.min(100,Number(d.levelProgress||0)));
+  const scoreToNext=Math.max(0,Number(d.scoreToNext||0));
+  const next=String(d.nextLevel||"").toUpperCase();
+  const online=String(d.status||"OFFLINE").toUpperCase()==="ONLINE";
+  const shift=String(d.shift||"MANHA,TARDE,NOITE")
+    .replace(/MANHA/g,"Manhã")
+    .replace(/TARDE/g,"Tarde")
+    .replace(/NOITE/g,"Noite")
+    .replace(/,/g," • ");
+
+  content.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="
+          width:46px;height:46px;border-radius:15px;
+          display:inline-flex;align-items:center;justify-content:center;
+          background:${style.bg};color:${style.color};font-size:20px;
+        ">
+          <i class="fa-solid ${style.icon}"></i>
+        </span>
+        <div>
+          <small style="display:block;color:#64748b;margin-bottom:2px">Desempenho do entregador</small>
+          <strong style="font-size:21px;color:#0f172a">Seu Score</strong>
+        </div>
+      </div>
+
+      <button id="closeDriverScoreSheet" type="button" style="
+        width:40px;height:40px;border:0;border-radius:50%;
+        background:#f1f5f9;color:#334155;cursor:pointer;font-size:18px;
+      " aria-label="Fechar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div style="
+      padding:22px;border-radius:22px;
+      background:linear-gradient(145deg,#07133b,#0029ff);
+      color:#fff;margin-bottom:16px;position:relative;overflow:hidden;
+    ">
+      <div style="display:flex;justify-content:space-between;gap:18px;align-items:center">
+        <div>
+          <span style="
+            display:inline-flex;align-items:center;gap:7px;
+            padding:7px 11px;border-radius:999px;
+            background:rgba(255,255,255,.14);font-size:12px;font-weight:900;
+          ">
+            <i class="fa-solid ${style.icon}"></i> NÍVEL ${style.label.toUpperCase()}
+          </span>
+          <div style="font-size:44px;font-weight:950;line-height:1;margin-top:15px">${score}</div>
+          <small style="color:rgba(255,255,255,.78)">pontos de Score</small>
+        </div>
+
+        <div style="
+          width:112px;height:112px;border-radius:50%;
+          background:conic-gradient(#ffffff ${progress}%,rgba(255,255,255,.18) 0);
+          display:grid;place-items:center;
+        ">
+          <div style="
+            width:88px;height:88px;border-radius:50%;
+            background:#0629bd;display:grid;place-items:center;text-align:center;
+          ">
+            <div>
+              <strong style="display:block;font-size:22px">${progress}%</strong>
+              <small style="font-size:10px;color:rgba(255,255,255,.75)">PROGRESSO</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${next?`
+      <div style="margin-top:18px">
+        <div style="height:8px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden">
+          <div style="width:${progress}%;height:100%;background:#fff;border-radius:999px"></div>
+        </div>
+        <small style="display:block;margin-top:7px;color:rgba(255,255,255,.82)">
+          Faltam <strong>${scoreToNext} pontos</strong> para o nível ${next}.
+        </small>
+      </div>`:`
+      <div style="margin-top:18px;font-weight:800">
+        Você está no nível máximo. Continue mantendo seu desempenho.
+      </div>`}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px">
+      <div style="padding:14px 10px;border:1px solid #e2e8f0;border-radius:16px;text-align:center;background:#f8fafc">
+        <i class="fa-solid fa-star" style="color:#f59e0b"></i>
+        <strong style="display:block;font-size:19px;margin-top:5px">${rating?rating.toFixed(1):"—"}</strong>
+        <small style="color:#64748b">Média</small>
+      </div>
+      <div style="padding:14px 10px;border:1px solid #e2e8f0;border-radius:16px;text-align:center;background:#f8fafc">
+        <i class="fa-solid fa-comment-dots" style="color:#0029ff"></i>
+        <strong style="display:block;font-size:19px;margin-top:5px">${reviews}</strong>
+        <small style="color:#64748b">Avaliações</small>
+      </div>
+      <div style="padding:14px 10px;border:1px solid #e2e8f0;border-radius:16px;text-align:center;background:#f8fafc">
+        <i class="fa-solid fa-motorcycle" style="color:${online?"#16a34a":"#64748b"}"></i>
+        <strong style="display:block;font-size:14px;margin-top:6px;color:${online?"#16a34a":"#64748b"}">${online?"ONLINE":"OFFLINE"}</strong>
+        <small style="color:#64748b">Status</small>
+      </div>
+    </div>
+
+    <div style="padding:15px;border:1px solid #dbe7ff;border-radius:16px;background:#f8fbff;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:9px">
+        <i class="fa-solid fa-clock" style="color:#0029ff"></i>
+        <div>
+          <small style="display:block;color:#64748b">Seu turno</small>
+          <strong style="color:#172033">${shift}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:18px;border-radius:18px;background:#f8fafc;border:1px solid #e2e8f0">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">
+        <span style="width:36px;height:36px;border-radius:11px;background:#e8f0ff;color:#0029ff;display:grid;place-items:center">
+          <i class="fa-solid fa-arrow-trend-up"></i>
+        </span>
+        <div>
+          <strong style="display:block;color:#0f172a">Como aumentar seu Nível/Score?</strong>
+          <small style="color:#64748b">Boas ações aumentam sua pontuação.</small>
+        </div>
+      </div>
+
+      <div style="display:grid;gap:10px">
+        <div style="display:flex;gap:10px"><span style="color:#16a34a"><i class="fa-solid fa-circle-check"></i></span><span>Entre todos os dias e fique <strong>online no seu turno</strong>.</span></div>
+        <div style="display:flex;gap:10px"><span style="color:#16a34a"><i class="fa-solid fa-circle-check"></i></span><span>Aceite entregas disponíveis <strong>dentro do seu turno</strong>.</span></div>
+        <div style="display:flex;gap:10px"><span style="color:#16a34a"><i class="fa-solid fa-bolt"></i></span><span>Aceitar novas entregas rapidamente pode render mais Score.</span></div>
+        <div style="display:flex;gap:10px"><span style="color:#16a34a"><i class="fa-solid fa-star"></i></span><span>Boas avaliações ajudam você a subir de nível.</span></div>
+        <div style="display:flex;gap:10px"><span style="color:#dc2626"><i class="fa-solid fa-circle-minus"></i></span><span>Cancelar sem justificativa reduz seu Score.</span></div>
+        <div style="display:flex;gap:10px"><span style="color:#dc2626"><i class="fa-solid fa-circle-minus"></i></span><span>Ficar online e ignorar entregas disponíveis também pode reduzir sua pontuação.</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;padding:14px;border-radius:15px;background:#fff7ed;border:1px solid #fed7aa;color:#9a4f16">
+      <strong><i class="fa-solid fa-gift"></i> Bônus de nível</strong>
+      <p style="margin:5px 0 0;font-size:13px;line-height:1.45">
+        Conforme seu nível aumenta, você pode receber mais oportunidades de corridas e bônus maiores em entregas selecionadas. Os bônus não aparecem em todas as viagens.
+      </p>
+    </div>
+  `;
+
+  content.querySelector("#closeDriverScoreSheet").onclick=closeDriverScoreSheet;
 }
 
 function openDriverScoreSheet(){
   const sheet=ensureDriverScoreSheet();
+  renderDriverScoreSheet();
   sheet.style.display="flex";
   document.body.style.overflow="hidden";
 }
@@ -509,7 +639,7 @@ function openApp(driver,token){
   driverInfo.textContent=`${driver.plate||"Sem placa"} • ${driver.whatsapp||""}`;
   withdrawEmail.value=driver.email||"";
   show("appView");
-  state.driverOnline=getDriverOnlineStatus();
+  state.driverOnline=String(driver.status||"OFFLINE").toUpperCase()==="ONLINE";
   renderDriverOnlineStatus();
   ensureDriverScoreNav();
   dashboard();
@@ -526,12 +656,15 @@ async function dashboard(useLoading=false){
     if(j.unchanged)return;
     state.revision=String(j.revision||state.revision||"");
     state.driver=j.driver;
+    state.driverOnline=String(j.driver&&j.driver.status||"OFFLINE").toUpperCase()==="ONLINE";
     state.trips=j.trips||[];
     state.availableTrips=j.availableTrips||[];
     balance.textContent=state.balanceVisible?money.format(j.driver.balance||0):"R$ •••••";
-    discountBadge.textContent=j.driver.autoDiscount?"Desconto automático ativo":"Saldo disponível";
-    balanceInfo.textContent=j.driver.autoDiscount?`O saldo já considera o desconto automático de ${money.format(j.driver.fee||0)} por corrida.`:"Valor integral das corridas finalizadas.";
+    discountBadge.textContent=`Taxa da plataforma: ${Number(j.driver.feePercent||20)}%`;
+    balanceInfo.textContent="O valor recebido pelo entregador considera o desconto de 20% da plataforma. Bônus, quando houver, é somado ao seu ganho.";
     tripCount.textContent=`${state.trips.filter(t=>!["FINALIZADA","CANCELADA PELO ENTREGADOR"].includes(String(t.status).toUpperCase())).length} corrida(s)`;
+    renderDriverOnlineStatus();
+    renderDriverScoreSheet();
     renderTrips();renderHistory();renderAvailableTrips()
   }catch(x){toast(x.message)}
   finally{state.dashboardBusy=false}
@@ -539,10 +672,10 @@ async function dashboard(useLoading=false){
 function startDriverPolling(){
   clearInterval(state.dashboardTimer);
   state.dashboardTimer=setInterval(()=>{
-    if(state.driver&&!document.hidden&&navigator.onLine)dashboard(false);
+    if(state.driver&&state.driverOnline&&!document.hidden&&navigator.onLine)dashboard(false);
   },7000);
 }
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.driver)dashboard(false)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.driver&&state.driverOnline)dashboard(false)});
 window.addEventListener("online",()=>{if(state.driver){toast("Conexão restabelecida.");dashboard(false)}});
 window.addEventListener("offline",()=>toast("Você está sem internet. O painel atualizará ao reconectar."));
 function renderTrips(){
@@ -557,7 +690,10 @@ function renderTrips(){
   <div class="trip-top">
     <div><div class="trip-code">${t.code}</div><span class="status">${statusLabel(t.status)}</span></div>
     <div style="display:flex;align-items:center;gap:8px">
-      <div class="trip-price">${money.format(t.value)}</div>
+      <div style="text-align:right">
+        <div class="trip-price">${money.format(t.driverValue!==undefined?t.driverValue:t.value)}</div>
+        ${Number(t.bonus||0)>0?`<small style="display:block;color:#16a34a;font-weight:900">+ bônus ${money.format(t.bonus)}</small>`:""}
+      </div>
       <button class="card-menu-btn" onclick="toggleTripCommands('${t.code}')" title="Comandos da corrida">
         <i class="fa-solid fa-plus"></i>
       </button>
@@ -596,7 +732,10 @@ function renderHistory(){
     <div class="trip-card" style="margin-bottom:10px">
       <div class="trip-top">
         <div class="trip-code">${t.code}</div>
-        <div class="trip-price">${money.format(t.value)}</div>
+        <div style="text-align:right">
+          <div class="trip-price">${money.format(t.driverValue!==undefined?t.driverValue:t.value)}</div>
+          ${Number(t.bonus||0)>0?`<small style="display:block;color:#16a34a;font-weight:900">+ bônus ${money.format(t.bonus)}</small>`:""}
+        </div>
       </div>
       ${tripPeopleInfo(t)}
       <p class="muted">${t.originNeighborhood} → ${t.destinationNeighborhood}</p>
@@ -610,6 +749,10 @@ newRequestsBtn.onclick=()=>{openRequestsDrawer()}
 closeRequestsBtn.onclick=()=>closeRequestsDrawer()
 requestsDrawer.onclick=e=>{if(e.target===requestsDrawer)closeRequestsDrawer()}
 function openRequestsDrawer(){
+  if(!state.driverOnline){
+    toast("Você está OFF. Ative o status ON para receber novas solicitações.");
+    return;
+  }
   requestsDrawer.classList.add("on");
   dashboard(false);
 }
@@ -635,6 +778,14 @@ function playNewTripSound(){
 }
 
 function renderAvailableTrips(){
+  if(!state.driverOnline){
+    state.lastAvailableCount=0;
+    requestBadge.textContent="0";
+    requestBadge.classList.add("hide");
+    requestsList.innerHTML='<div class="empty">Você está OFF. Ative o botão 🏍 ON no topo para receber novas solicitações.</div>';
+    return;
+  }
+
   const available=[...state.availableTrips].sort(
     (a,b)=>Number(a.createdMs||a.createdAtMs||0)-Number(b.createdMs||b.createdAtMs||0)
   );
@@ -657,7 +808,11 @@ function renderAvailableTrips(){
           <div class="trip-code">${escapeCardText(data.code)}</div>
           <span class="request-new">Nova solicitação</span>
         </div>
-        <div class="trip-price">${money.format(data.value)}</div>
+        <div style="text-align:right">
+          <div class="trip-price">${money.format(Number(t.driverValue!==undefined?t.driverValue:data.value))}</div>
+          <small style="display:block;color:#64748b;font-size:10px">você recebe</small>
+          ${Number(t.bonus||0)>0?`<span style="display:inline-block;margin-top:4px;padding:4px 7px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:10px;font-weight:900">+ BÔNUS ${money.format(t.bonus)}</span>`:""}
+        </div>
       </div>
 
       ${tripPeopleInfo(t)}
@@ -889,9 +1044,23 @@ async function finalizeTrip(code){
 }
 async function cancelTrip(code){
   if(!confirm("Deseja cancelar esta corrida? Ela ficará disponível para outro entregador."))return;
+
+  const justification=String(prompt(
+    "Informe o motivo do cancelamento. Cancelar sem justificativa reduz mais o seu Score:",
+    ""
+  )||"").trim();
+
   try{
-    await withActionLoading("Cancelando corrida","Removendo a corrida do seu painel e liberando para outro entregador.",()=>api("driverCancelTrip",{driverId:state.driver.id,code}));
-    toast("Corrida cancelada e liberada.");
+    const j=await withActionLoading(
+      "Cancelando corrida",
+      "Removendo a corrida do seu painel e liberando para outro entregador.",
+      ()=>api("driverCancelTrip",{driverId:state.driver.id,code,justification})
+    );
+    toast(j.scorePenalty<=-10
+      ?"Corrida cancelada. Seu Score foi reduzido por falta de justificativa."
+      :"Corrida cancelada e liberada."
+    );
+    state.revision="";
     await dashboard()
   }catch(x){toast(x.message)}
 }
