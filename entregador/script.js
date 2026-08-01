@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbxhAuiYGej9pJ_HT4B7-N8aRZwvTeXCw0RxjMZAJP6aw3prxwxxOW9Y5dWEBvzl9RSt/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbzKeWcypvjewx1M7IpvZGww2ikDOxOEQuk5ReMABqkuCJUa2DM_baT28qQhUB1oNj3c/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false,profileImageData:""};
@@ -263,20 +263,88 @@ loginForm.onsubmit=async e=>{
 
 
 
+function getDriverPhotoRaw(){
+  const d=state.driver||{};
+
+  return String(
+    d.photoUrl ||
+    d.profilePhotoUrl ||
+    d.fotoPerfilUrl ||
+    d.FOTO_PERFIL_URL ||
+    ""
+  ).trim();
+}
+
+function extractDriveFileId(value){
+  const text=String(value||"").trim();
+  if(!text)return"";
+
+  // Se vier só o ID salvo na planilha.
+  if(/^[a-zA-Z0-9_-]{20,}$/.test(text) && !/^https?:/i.test(text)){
+    return text;
+  }
+
+  const patterns=[
+    /[?&]id=([a-zA-Z0-9_-]{20,})/i,
+    /\/d\/([a-zA-Z0-9_-]{20,})/i,
+    /\/thumbnail\?id=([a-zA-Z0-9_-]{20,})/i
+  ];
+
+  for(const pattern of patterns){
+    const match=text.match(pattern);
+    if(match&&match[1])return match[1];
+  }
+
+  return"";
+}
+
 function safeDriverPhotoUrl(url){
   const value=String(url||"").trim();
   if(!value)return"";
-  return value+(value.includes("?")?"&":"?")+"_="+Date.now();
+
+  if(value.startsWith("data:image/"))return value;
+
+  const driveId=extractDriveFileId(value);
+  if(driveId){
+    return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveId)}&sz=w1000`;
+  }
+
+  return value;
+}
+
+function currentDriverPhotoUrl(){
+  const d=state.driver||{};
+
+  // Primeiro tenta o ID da imagem, que é a forma mais confiável.
+  const photoId=String(
+    d.photoId ||
+    d.profilePhotoId ||
+    d.fotoPerfilId ||
+    d.FOTO_PERFIL_ID ||
+    ""
+  ).trim();
+
+  if(photoId){
+    return `https://drive.google.com/thumbnail?id=${encodeURIComponent(photoId)}&sz=w1000`;
+  }
+
+  return safeDriverPhotoUrl(getDriverPhotoRaw());
 }
 
 function bindAvatarFallback(root=document){
   root.querySelectorAll("img[data-driver-avatar]").forEach(img=>{
+    img.onload=()=>{
+      img.style.opacity="1";
+    };
+
     img.onerror=()=>{
-      const fallback=document.createElement("span");
-      const size=Number(img.dataset.size||46);
-      fallback.style.cssText=`width:${size}px;height:${size}px;border-radius:50%;display:grid;place-items:center;background:#e8f0ff;color:#0646c8;font-size:${Math.round(size*.42)}px`;
-      fallback.innerHTML='<i class="fa-solid fa-user"></i>';
-      img.replaceWith(fallback);
+      img.style.display="none";
+
+      const wrapper=img.parentElement;
+      if(wrapper){
+        const fallback=wrapper.querySelector("[data-driver-avatar-fallback]");
+        if(fallback)fallback.style.display="grid";
+      }
     };
   });
 }
@@ -286,16 +354,59 @@ function driverFirstName(){
 }
 
 function driverAvatarHTML(size=46){
-  const d=state.driver||{};
-  const url=String(d.photoUrl||"").trim();
+  const url=currentDriverPhotoUrl();
 
-  if(url){
-    return `<img data-driver-avatar data-size="${size}" src="${escapeCardText(safeDriverPhotoUrl(url))}" alt="Foto de perfil" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block">`;
-  }
+  return `
+    <span style="
+      position:relative;
+      width:${size}px;
+      height:${size}px;
+      min-width:${size}px;
+      border-radius:50%;
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+      background:#e8f0ff;
+      color:#0646c8;
+    ">
+      <span
+        data-driver-avatar-fallback
+        style="
+          position:absolute;
+          inset:0;
+          display:grid;
+          place-items:center;
+          background:#e8f0ff;
+          color:#0646c8;
+          font-size:${Math.round(size*.42)}px;
+        "
+      >
+        <i class="fa-solid fa-user"></i>
+      </span>
 
-  return `<span style="width:${size}px;height:${size}px;border-radius:50%;display:grid;place-items:center;background:#e8f0ff;color:#0646c8;font-size:${Math.round(size*.42)}px">
-    <i class="fa-solid fa-user"></i>
-  </span>`;
+      ${url?`
+        <img
+          data-driver-avatar
+          data-size="${size}"
+          src="${escapeCardText(url)}"
+          alt="Foto de perfil"
+          referrerpolicy="no-referrer"
+          style="
+            position:absolute;
+            inset:0;
+            width:100%;
+            height:100%;
+            border-radius:50%;
+            object-fit:cover;
+            display:block;
+            opacity:0;
+            transition:opacity .18s ease;
+            background:#e8f0ff;
+          "
+        >
+      `:""}
+    </span>
+  `;
 }
 
 function renderDriverProfileButton(){
@@ -313,6 +424,10 @@ function renderDriverProfileButton(){
   btn.style.overflow="hidden";
   btn.style.display="inline-grid";
   btn.style.placeItems="center";
+  btn.style.background="transparent";
+  btn.style.border="0";
+  btn.style.boxShadow="none";
+  btn.style.color="#0646c8";
   btn.innerHTML=driverAvatarHTML(40);
   bindAvatarFallback(btn);
   btn.onclick=openDriverProfileMenu;
@@ -592,7 +707,7 @@ function renderDriverEditProfileAvatar(){
   const modal=ensureDriverEditProfile();
   const box=modal.querySelector("#driverEditProfileAvatar");
   const preview=String(state.profileImageData||"").trim();
-  const current=String(state.driver&&state.driver.photoUrl||"").trim();
+  const current=currentDriverPhotoUrl();
   const src=preview||current;
 
   box.innerHTML=src
@@ -649,7 +764,18 @@ async function saveDriverProfile(){
       }
     },{timeout:20000});
 
-    if(j&&j.driver)state.driver=j.driver;
+    if(j&&j.driver){
+      state.driver=j.driver;
+
+      // Compatibilidade com diferentes nomes de campo retornados pelo backend.
+      if(!state.driver.photoUrl){
+        state.driver.photoUrl=
+          state.driver.profilePhotoUrl ||
+          state.driver.fotoPerfilUrl ||
+          state.driver.FOTO_PERFIL_URL ||
+          "";
+      }
+    }
 
     sessionStorage.setItem(
       "pl_driver",
@@ -1193,6 +1319,14 @@ async function dashboard(useLoading=false){
     state.revision=String(j.revision||state.revision||"");
     if(j.driver){
       state.driver=j.driver;
+
+      if(!state.driver.photoUrl){
+        state.driver.photoUrl=
+          state.driver.profilePhotoUrl ||
+          state.driver.fotoPerfilUrl ||
+          state.driver.FOTO_PERFIL_URL ||
+          "";
+      }
       state.driverOnline=String(j.driver.status||"OFFLINE").toUpperCase()==="ONLINE";
       localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(state.driverOnline));
       renderDriverOnlineStatus();
