@@ -433,7 +433,7 @@ function startDriverStatusSync(){
   // Consulta leve só do STATUS, sem carregar dashboard completo.
   state.statusTimer=setInterval(()=>{
     syncDriverOnlineStatus();
-  },6000);
+  },3000);
 }
 
 function keepDriverTopNavSingleRow(){
@@ -750,7 +750,7 @@ function openApp(driver,token){
 async function dashboard(useLoading=false){
   if(state.dashboardBusy)return;
   state.dashboardBusy=true;
-  const load=()=>api("driverDashboard",{sinceRevision:state.revision},{timeout:25000});
+  const load=()=>api("driverDashboard",{sinceRevision:state.revision},{timeout:10000,noRetry:true});
   try{
     const j=useLoading
       ?await withActionLoading("Atualizando entregas","Buscando saldos, corridas e pagamentos.",load)
@@ -785,10 +785,16 @@ async function dashboard(useLoading=false){
 function startDriverPolling(){
   clearInterval(state.dashboardTimer);
   state.dashboardTimer=setInterval(()=>{
-    if(state.driver&&state.driverOnline&&!document.hidden&&navigator.onLine){
+    if(
+      state.driver &&
+      state.driverOnline &&
+      !state.dashboardBusy &&
+      !document.hidden &&
+      navigator.onLine
+    ){
       dashboard(false);
     }
-  },12000);
+  },3000);
 }
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden||!state.driver)return;
@@ -988,18 +994,65 @@ function renderAvailableTrips(){
     </article>`;
   }).join(""):`<div class="empty">Nenhuma nova solicitação disponível neste momento.</div>`;
 }
+
+function applyAcceptedTripImmediately(j,code){
+  if(!j||!j.trip)return;
+
+  const trip=j.trip;
+
+  state.availableTrips=state.availableTrips.filter(
+    t=>String(t.code)!==String(code)
+  );
+
+  const exists=state.trips.some(
+    t=>String(t.code)===String(trip.code)
+  );
+
+  if(!exists)state.trips.unshift(trip);
+
+  renderAvailableTrips();
+  renderTrips();
+
+  if(typeof requestBadge!=="undefined"&&requestBadge){
+    const count=state.availableTrips.length;
+    requestBadge.textContent=String(count);
+    requestBadge.classList.toggle("hide",count<=0);
+  }
+}
+
+function patchTripImmediately(code,patch){
+  const trip=state.trips.find(t=>String(t.code)===String(code));
+  if(!trip)return;
+  Object.assign(trip,patch||{});
+  renderTrips();
+  renderHistory();
+}
+
 async function acceptAvailableTrip(code){
   try{
-    const j=await withActionLoading("Aceitando corrida","Confirmando a disponibilidade e adicionando ao seu carrossel.",()=>api("driverAcceptTrip",{driverId:state.driver.id,code}));
+    const j=await withActionLoading(
+      "Aceitando corrida",
+      "Confirmando a disponibilidade.",
+      ()=>api("driverAcceptTrip",{driverId:state.driver.id,code},{timeout:10000})
+    );
+
+    applyAcceptedTripImmediately(j,code);
     playAcceptSound();
-    if(j.notifyWhatsapp&&j.phone&&confirm("Deseja avisar o cliente pelo WhatsApp que a corrida foi aceita?"))wa(j.phone,j.message);
+
     closeRequestsDrawer();
     openL("acceptedModal");
-    setTimeout(()=>closeL("acceptedModal"),2000);
-    await dashboard()
+    setTimeout(()=>closeL("acceptedModal"),1400);
+
+    if(j.notifyWhatsapp&&j.phone&&confirm("Deseja avisar o cliente pelo WhatsApp que a corrida foi aceita?")){
+      wa(j.phone,j.message);
+    }
+
+    state.revision="";
+    setTimeout(()=>dashboard(false),120);
   }catch(x){
     toast(x.message);
-    await dashboard()
+    state.revision="";
+    setTimeout(()=>dashboard(false),150);
   }
 }
 function normalizeTripCode(value){
@@ -1022,15 +1075,34 @@ tripCodeInput.addEventListener("input",()=>{
 acceptTripBtn.onclick=async()=>{
   const code=normalizeTripCode(tripCodeInput.value);
   if(!code)return toast("Informe o código do pedido.");
+
   acceptTripBtn.disabled=true;
+
   try{
-    const j=await withActionLoading("Aceitando corrida","Confirmando o código e vinculando a entrega ao seu perfil.",()=>api("driverAcceptTrip",{driverId:state.driver.id,code}));
-    closeL("addTripSheet");playAcceptSound();
-    if(j.notifyWhatsapp&&j.phone&&confirm("Deseja avisar o cliente pelo WhatsApp que a corrida foi aceita?"))wa(j.phone,j.message);openL("acceptedModal");
-    setTimeout(()=>closeL("acceptedModal"),2000);
-    await dashboard()
-  }catch(x){toast(x.message)}
-  finally{acceptTripBtn.disabled=false}
+    const j=await withActionLoading(
+      "Aceitando corrida",
+      "Confirmando o código.",
+      ()=>api("driverAcceptTrip",{driverId:state.driver.id,code},{timeout:10000})
+    );
+
+    applyAcceptedTripImmediately(j,code);
+    closeL("addTripSheet");
+    playAcceptSound();
+
+    openL("acceptedModal");
+    setTimeout(()=>closeL("acceptedModal"),1400);
+
+    if(j.notifyWhatsapp&&j.phone&&confirm("Deseja avisar o cliente pelo WhatsApp que a corrida foi aceita?")){
+      wa(j.phone,j.message);
+    }
+
+    state.revision="";
+    setTimeout(()=>dashboard(false),120);
+  }catch(x){
+    toast(x.message);
+  }finally{
+    acceptTripBtn.disabled=false;
+  }
 }
 function playAcceptSound(){try{const ctx=new (window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.setValueAtTime(740,ctx.currentTime);o.frequency.exponentialRampToValueAtTime(1040,ctx.currentTime+.18);g.gain.setValueAtTime(.15,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.35);o.start();o.stop(ctx.currentTime+.35)}catch(e){}}
 function playUpdateSound(){
@@ -1093,16 +1165,17 @@ function customerStatusMessage(status,trip){
 async function updateTrip(code,status){
   try{
     const tripBeforeUpdate=state.trips.find(t=>String(t.code)===String(code));
+
     const j=await withActionLoading(
       "Atualizando situação",
-      `${statusLabel(status)}. Salvando a alteração na corrida.`,
-      ()=>api("driverUpdateStatus",{driverId:state.driver.id,code,status})
+      `${statusLabel(status)}.`,
+      ()=>api("driverUpdateStatus",{driverId:state.driver.id,code,status},{timeout:9000})
     );
+
+    patchTripImmediately(code,{status});
     toast(statusLabel(status));
     playUpdateSound();
-    await dashboard();
 
-    // FINALIZANDO e ESTOU INDO avisam sempre o SOLICITANTE da entrega.
     const normalizedStatus=String(status||"").toUpperCase();
     const requesterPhone=String(tripBeforeUpdate&&tripBeforeUpdate.requesterWhatsapp||"").trim();
     const notificationPhone=["FINALIZANDO CORRIDA PRÓXIMA","ESTOU INDO"].includes(normalizedStatus)
@@ -1110,10 +1183,16 @@ async function updateTrip(code,status){
       :String(j.phone||"").trim();
 
     if(j.notifyWhatsapp&&notificationPhone){
-      askWhatsappNotification(notificationPhone,customerStatusMessage(normalizedStatus,tripBeforeUpdate)||j.message);
+      askWhatsappNotification(
+        notificationPhone,
+        customerStatusMessage(normalizedStatus,tripBeforeUpdate)||j.message
+      );
     }
+
+    state.revision="";
+    setTimeout(()=>dashboard(false),100);
   }catch(x){
-    toast(x.message)
+    toast(x.message);
   }
 }
 function openPayment(code,value){
@@ -1138,8 +1217,13 @@ async function setPaymentStatus(paymentStatus){
       ?"Pagamento realizado registrado. Agora você pode finalizar a corrida."
       :"Pagamento pendente registrado. Agora você pode finalizar a corrida.";
     paymentChoiceInfo.classList.remove("hide");
-    setTimeout(()=>closeL("paymentSheet"),900);
-    await dashboard()
+    patchTripImmediately(state.currentPaymentCode,{
+      paymentStatus,
+      paymentDefined:true
+    });
+    setTimeout(()=>closeL("paymentSheet"),650);
+    state.revision="";
+    setTimeout(()=>dashboard(false),100)
   }catch(x){toast(x.message)}
   finally{paidBtn.disabled=pendingBtn.disabled=false}
 }
@@ -1181,7 +1265,19 @@ async function finalizeTrip(code){
       wa(finalPhone,finalMessage);
     }
 
-    await dashboard()
+    patchTripImmediately(code,{
+      status:"FINALIZADA",
+      driverValue:j.valorLiquido!==undefined?j.valorLiquido:undefined,
+      bonus:j.bonus!==undefined?j.bonus:(tripBeforeFinalize&&tripBeforeFinalize.bonus||0)
+    });
+
+    if(state.driver&&j.saldoTotal!==undefined){
+      state.driver.balance=Number(j.saldoTotal||0);
+      balance.textContent=state.balanceVisible?money.format(state.driver.balance):"R$ •••••";
+    }
+
+    state.revision="";
+    setTimeout(()=>dashboard(false),100);
   }catch(x){
     toast(x.message)
   }
