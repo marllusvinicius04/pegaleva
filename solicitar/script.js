@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbx8gnpsGW_wdXt6gQb5S8CHab6lRSJvO3Ic97AdjZ9bByi4N8zpjAl89reHAoMYZ4E9/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbx8gnpsGW_wdXt6gQb5S8CHab6lRSJvO3Ic97AdjZ9bByi4N8zpjAl89reHAoMYZ4E9/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
@@ -128,13 +128,224 @@ function showStatusAlert(trip){
     });
   }
 }
+
+function ensureDriverRatingModal(){
+  let modal=document.getElementById("driverRatingModal");
+  if(modal)return modal;
+
+  modal=document.createElement("div");
+  modal.id="driverRatingModal";
+  modal.style.cssText=`
+    position:fixed;
+    inset:0;
+    z-index:1800;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(15,23,42,.64);
+  `;
+
+  modal.innerHTML=`
+    <div style="
+      width:min(100%,430px);
+      background:#fff;
+      border-radius:26px;
+      padding:26px 22px 22px;
+      text-align:center;
+      box-shadow:0 28px 70px rgba(15,23,42,.28);
+    ">
+      <div style="
+        width:58px;height:58px;border-radius:50%;
+        margin:0 auto 13px;
+        display:grid;place-items:center;
+        background:#dcfce7;color:#15803d;font-size:27px;
+      ">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+
+      <h2 style="margin:0;color:#0f172a;font-size:25px">Viagem Finalizada!</h2>
+      <p style="margin:7px 0 20px;color:#64748b;font-size:14px">
+        Sua entrega foi concluída com sucesso.
+      </p>
+
+      <div id="driverRatingAvatar" style="
+        width:78px;height:78px;border-radius:50%;
+        margin:0 auto 10px;
+        display:grid;place-items:center;
+        background:linear-gradient(135deg,#0029ff,#0740b8);
+        color:#fff;font-size:25px;font-weight:900;
+        border:5px solid #eef2ff;
+      ">M</div>
+
+      <strong id="driverRatingName" style="display:block;font-size:18px;color:#172033">
+        Entregador
+      </strong>
+
+      <span id="driverRatingPlate" style="
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        margin-top:6px;
+        padding:6px 10px;
+        border-radius:999px;
+        background:#f1f5f9;
+        color:#475569;
+        font-size:12px;
+        font-weight:800;
+      ">
+        <i class="fa-solid fa-motorcycle"></i>
+        Placa não informada
+      </span>
+
+      <div style="height:1px;background:#e2e8f0;margin:21px 0 18px"></div>
+
+      <strong style="display:block;color:#0f172a;font-size:17px">Avalie o motoboy</strong>
+      <small style="display:block;color:#64748b;margin-top:4px">
+        Sua avaliação ajuda a reconhecer o desempenho do entregador.
+      </small>
+
+      <div id="driverRatingStars" style="
+        display:flex;
+        justify-content:center;
+        gap:8px;
+        margin:18px 0;
+      ">
+        ${[1,2,3,4,5].map(n=>`
+          <button type="button" data-rating="${n}" style="
+            border:0;background:transparent;padding:3px;
+            font-size:34px;color:#cbd5e1;cursor:pointer;
+          " aria-label="${n} estrela${n>1?"s":""}">
+            <i class="fa-solid fa-star"></i>
+          </button>
+        `).join("")}
+      </div>
+
+      <button id="submitDriverRating" type="button" class="btn full" disabled
+        style="background:#0029ff;color:#fff;font-weight:900">
+        Enviar avaliação
+      </button>
+
+      <button id="closeDriverRating" type="button"
+        style="margin-top:10px;border:0;background:transparent;color:#64748b;font-weight:700;cursor:pointer">
+        Avaliar depois
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll("[data-rating]").forEach(btn=>{
+    btn.onclick=()=>{
+      state.ratingValue=Number(btn.dataset.rating||0);
+      modal.querySelectorAll("[data-rating]").forEach(star=>{
+        const active=Number(star.dataset.rating)<=state.ratingValue;
+        star.style.color=active?"#f5b301":"#cbd5e1";
+        star.style.transform=active?"scale(1.08)":"scale(1)";
+      });
+      modal.querySelector("#submitDriverRating").disabled=!state.ratingValue;
+    };
+  });
+
+  modal.querySelector("#closeDriverRating").onclick=()=>closeDriverRatingModal();
+
+  modal.querySelector("#submitDriverRating").onclick=async()=>{
+    if(!state.ratingTripCode||!state.ratingValue)return;
+
+    const button=modal.querySelector("#submitDriverRating");
+    button.disabled=true;
+    button.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+
+    try{
+      await api("rateDriver",{
+        code:state.ratingTripCode,
+        rating:state.ratingValue
+      },{timeout:15000});
+
+      localStorage.setItem(
+        "pl_rated_trip_"+state.ratingTripCode,
+        String(state.ratingValue)
+      );
+
+      toast("Avaliação enviada. Obrigado!");
+      closeDriverRatingModal();
+      state.revision="";
+      dashboard(true);
+    }catch(e){
+      toast(e.message||"Não foi possível enviar a avaliação.");
+    }finally{
+      button.disabled=false;
+      button.textContent="Enviar avaliação";
+    }
+  };
+
+  modal.onclick=e=>{
+    if(e.target===modal)closeDriverRatingModal();
+  };
+
+  return modal;
+}
+
+function driverInitials(name){
+  const parts=String(name||"Motoboy").trim().split(/\s+/).filter(Boolean);
+  return (parts[0]?.[0]||"M")+(parts.length>1?(parts[parts.length-1]?.[0]||""):"");
+}
+
+function openDriverRatingModal(trip){
+  if(!trip||!trip.code)return;
+
+  if(localStorage.getItem("pl_rated_trip_"+trip.code))return;
+
+  const modal=ensureDriverRatingModal();
+  const name=String(trip.driverName||"Motoboy Pega & Leva").trim();
+  const plate=String(
+    trip.driverPlate||trip.plate||trip.driverPlaca||"Placa não informada"
+  ).trim();
+
+  state.ratingTripCode=trip.code;
+  state.ratingValue=0;
+
+  modal.querySelector("#driverRatingAvatar").textContent=driverInitials(name).toUpperCase();
+  modal.querySelector("#driverRatingName").textContent=name;
+  modal.querySelector("#driverRatingPlate").innerHTML=
+    `<i class="fa-solid fa-motorcycle"></i> ${plate}`;
+
+  modal.querySelectorAll("[data-rating]").forEach(star=>{
+    star.style.color="#cbd5e1";
+    star.style.transform="scale(1)";
+  });
+
+  const submit=modal.querySelector("#submitDriverRating");
+  submit.disabled=true;
+  submit.textContent="Enviar avaliação";
+
+  modal.style.display="flex";
+  document.body.style.overflow="hidden";
+}
+
+function closeDriverRatingModal(){
+  const modal=document.getElementById("driverRatingModal");
+  if(modal)modal.style.display="none";
+  document.body.style.overflow="";
+  state.ratingValue=0;
+}
+
 function compareTripUpdates(newTrips){
   const next={};
   newTrips.forEach(t=>{
     const key=`${String(t.status||"").toUpperCase()}|${String(t.paymentStatus||"").toUpperCase()}`;
     next[t.code]=key;
     const previous=state.tripStatusMap[t.code];
-    if(!state.firstDashboard && previous && previous!==key)showStatusAlert(t);
+    if(!state.firstDashboard && previous && previous!==key){
+      showStatusAlert(t);
+
+      const previousStatus=String(previous).split("|")[0];
+      const currentStatus=String(t.status||"").toUpperCase();
+
+      if(previousStatus!=="FINALIZADA"&&currentStatus==="FINALIZADA"){
+        setTimeout(()=>openDriverRatingModal(t),350);
+      }
+    }
   });
   state.tripStatusMap=next;
   state.firstDashboard=false;
@@ -159,9 +370,7 @@ async function dashboard(silent=false){
     compareTripUpdates(newTrips);
     state.trips=newTrips;
     $("tripNotification").textContent=state.trips.filter(t=>String(t.status).toUpperCase()!=="FINALIZADA").length;
-    $("invoiceBalance").textContent=money.format(j.user.invoiceBalance||0);
-    $("invoiceModalBalance").textContent=money.format(j.user.invoiceBalance||0);
-    $("invoiceText").textContent=`${j.pendingCount||0} entrega(s) pendente(s).`;
+    hideInvoicePaymentUI();
     state.user=j.user||state.user;
     sessionStorage.setItem("pl_session",JSON.stringify({user:state.user,token:state.token}));
     renderBusinessArea(state.user,j.config||{});
@@ -172,6 +381,32 @@ async function dashboard(silent=false){
   }
 }
 
+
+
+function hideInvoicePaymentUI(){
+  const ids=[
+    "invoiceBalance",
+    "invoiceModalBalance",
+    "invoiceText",
+    "payInvoice",
+    "navInvoice",
+    "invoiceSheet"
+  ];
+
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+
+    if(id==="invoiceBalance"||id==="invoiceText"){
+      const parent=el.closest(".card,.balance-card,.finance-card,.invoice-card")||el.parentElement;
+      if(parent)parent.style.display="none";
+      else el.style.display="none";
+      return;
+    }
+
+    el.style.display="none";
+  });
+}
 
 function normalizeAccountPlan(value){
   const plan=String(value||"GRATUITO").trim().toUpperCase();
@@ -380,7 +615,7 @@ copyCatalogLink.onclick=async()=>{
   }
 };
 function openApp(u,token){state.user=u;state.token=token||state.token;state.revision="";state.firstDashboard=true;state.tripStatusMap={};sessionStorage.setItem("pl_session",JSON.stringify({user:u,token:state.token}));const firstName=String(u.name||"").trim().split(/\s+/)[0]||"";
-$("welcomeName").textContent=`Olá, ${firstName}!`;$("welcomeCompany").textContent=`${u.city}`;$("profileName").textContent=u.name;$("profileCompany").textContent=u.company;$("profileAddress").textContent=`${u.street}, ${u.number} • ${u.city}`;show("appView");floatingTrips.style.display="block";renderBusinessArea(u,{});renderAccountPlan(u);dashboard();startDashboardPolling();
+$("welcomeName").textContent=`Olá, ${firstName}!`;$("welcomeCompany").textContent=`${u.city}`;$("profileName").textContent=u.name;$("profileCompany").textContent=u.company;$("profileAddress").textContent=`${u.street}, ${u.number} • ${u.city}`;show("appView");floatingTrips.style.display="block";hideInvoicePaymentUI();renderBusinessArea(u,{});renderAccountPlan(u);dashboard();startDashboardPolling();
   if("Notification" in window && Notification.permission==="default"){
     setTimeout(()=>Notification.requestPermission().catch(()=>{}),1500);
   }
@@ -818,7 +1053,7 @@ function trips(){
             <div class="trip-driver-data">
               <small>${driver?"ENTREGADOR":"PROCURANDO ENTREGADOR"}</small>
               <strong>${driver||"Aguardando aceite"}</strong>
-              <span>${t.createdAt||""} • ${money.format(t.value||0)}</span>
+              <span>${t.createdAt||""}</span>
             </div>
             <span class="trip-status ${cls}">${label}</span>
           </div>
@@ -850,7 +1085,7 @@ function trips(){
                 <span class="trip-finished-badge">Finalizada</span>
               </div>
               <span class="trip-finished-route">${t.originNeighborhood||"Origem"} <i class="fa-solid fa-arrow-right"></i> ${t.destinationNeighborhood||"Destino"}</span>
-              <small>${finishedTripTime(t)} • ${money.format(t.value||0)} • ${paid?"Pago":"Pagamento pendente"}</small>
+              <small>${finishedTripTime(t)}</small>
               <span class="trip-finished-receiver"><i class="fa-solid fa-circle-check"></i> ${receiver} acabou de receber seu envio!</span>
             </div>
           </article>`;
@@ -862,10 +1097,10 @@ function trips(){
 }
 
 async function cancelUserTrip(code){
-  if(!confirm("Deseja cancelar esta entrega por falta de entregador? O valor será removido da sua fatura e a corrida será apagada."))return;
+  if(!confirm("Deseja cancelar esta entrega por falta de entregador? A solicitação será apagada."))return;
   try{
     const j=await api("cancelUserTrip",{code});
-    toast(`Entrega cancelada. ${money.format(j.refundedValue||0)} removidos da fatura.`);
+    toast("Entrega cancelada.");
     state.revision="";
     await dashboard();
     renderAccountPlan(state.user);
@@ -878,30 +1113,18 @@ async function cancelUserTrip(code){
 }
 viewTrips.onclick=()=>{trips();openL("tripsSheet")};floatingTrips.onclick=viewTrips.onclick;navTrips.onclick=viewTrips.onclick;
 let paymentTimer=null;
-function startPaymentCountdown(){
-  clearInterval(paymentTimer);
-  let seconds=50;
-  confirmInvoicePayment.classList.add("hide");
-  paymentWaitingText.textContent="Aguarde o tempo de processamento do pagamento.";
-  paymentCountdown.textContent="00:50";
-  paymentTimer=setInterval(()=>{
-    seconds--;
-    paymentCountdown.textContent=`00:${String(seconds).padStart(2,"0")}`;
-    if(seconds<=0){
-      clearInterval(paymentTimer);
-      paymentCountdown.textContent="Tempo concluído";
-      paymentWaitingText.textContent="Se o pagamento já foi realizado, confirme abaixo.";
-      confirmInvoicePayment.classList.remove("hide");
-    }
-  },1000);
+function startPaymentCountdown(){}
+if(typeof payInvoice!=="undefined"&&payInvoice){
+  payInvoice.style.display="none";
+  payInvoice.onclick=e=>e.preventDefault();
 }
-payInvoice.onclick=()=>{openL("invoiceSheet");startPaymentCountdown()};
-navInvoice.onclick=payInvoice.onclick;
-confirmInvoicePayment.onclick=()=>{
-  const value=invoiceModalBalance.textContent;
-  const msg=`Olá, sou ${state.user.name}, código ${state.user.travelCode}, e informo que realizei o pagamento das viagens pendentes no valor de ${value}. Segue a confirmação para conferência.`;
-  window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`,"_blank");
-};
+if(typeof navInvoice!=="undefined"&&navInvoice){
+  navInvoice.style.display="none";
+  navInvoice.onclick=e=>e.preventDefault();
+}
+if(typeof confirmInvoicePayment!=="undefined"&&confirmInvoicePayment){
+  confirmInvoicePayment.onclick=e=>e.preventDefault();
+}
 profileBtn.onclick=()=>{
   const profileSheetBox=document.querySelector("#profileSheet .sheet-box");
   renderAccountPlan(state.user);
