@@ -1000,34 +1000,189 @@ function receiverWhatsappLink(number){
   const message="Olá, aqui é do app de Delivery Pega&Leva: Chegamos em sua residência!";
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
+
+function ensureRequestSentModal(){
+  let modal=document.getElementById("requestSentModal");
+  if(modal)return modal;
+
+  modal=document.createElement("div");
+  modal.id="requestSentModal";
+  modal.style.cssText=`
+    position:fixed;
+    inset:0;
+    z-index:1900;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(15,23,42,.62);
+  `;
+
+  modal.innerHTML=`
+    <div style="
+      width:min(100%,430px);
+      background:#fff;
+      border-radius:26px;
+      padding:28px 22px 22px;
+      text-align:center;
+      box-shadow:0 28px 70px rgba(15,23,42,.28);
+    ">
+      <div style="
+        width:62px;height:62px;border-radius:50%;
+        margin:0 auto 14px;
+        display:grid;place-items:center;
+        background:#eafaf0;color:#16803d;
+        font-size:28px;
+      ">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+
+      <h2 style="margin:0;color:#0f172a;font-size:25px;line-height:1.2">
+        Solicitação enviada!
+      </h2>
+
+      <p style="
+        margin:10px auto 18px;
+        color:#64748b;
+        font-size:14px;
+        line-height:1.55;
+        max-width:360px;
+      ">
+        Nossos entregadores estão visualizando sua viagem.
+        Em instantes, um deles poderá aceitar sua solicitação.
+      </p>
+
+      <div style="
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        margin:4px 0 16px;
+      ">
+        ${[
+          ["fa-user","#e8f0ff","#0646c8"],
+          ["fa-motorcycle","#ecfdf5","#15803d"],
+          ["fa-user","#fff7ed","#c2410c"],
+          ["fa-user","#f3e8ff","#7e22ce"]
+        ].map((item,index)=>`
+          <span style="
+            width:46px;
+            height:46px;
+            border-radius:50%;
+            display:grid;
+            place-items:center;
+            margin-left:${index===0?0:-10}px;
+            background:${item[1]};
+            color:${item[2]};
+            border:3px solid #fff;
+            box-shadow:0 5px 15px rgba(15,23,42,.10);
+            font-size:17px;
+          ">
+            <i class="fa-solid ${item[0]}"></i>
+          </span>
+        `).join("")}
+      </div>
+
+      <div style="
+        display:inline-flex;
+        align-items:center;
+        gap:7px;
+        padding:7px 11px;
+        border-radius:999px;
+        background:#eef3ff;
+        color:#0646c8;
+        font-size:12px;
+        font-weight:900;
+        margin-bottom:18px;
+      ">
+        <i class="fa-solid fa-eye"></i>
+        Entregadores visualizando
+      </div>
+
+      <div style="
+        padding:14px 15px;
+        border-radius:15px;
+        background:#f8fbff;
+        border:1px solid #dbe7ff;
+        color:#334155;
+        text-align:left;
+        font-size:13px;
+        line-height:1.5;
+        margin-bottom:18px;
+      ">
+        <strong style="display:block;color:#172033;margin-bottom:5px">
+          <i class="fa-brands fa-whatsapp" style="color:#16a34a"></i>
+          Importante
+        </strong>
+        Quando o entregador entrar em contato pelo WhatsApp, não esqueça de enviar sua
+        <strong>localização atual de entrega</strong> para facilitar a retirada ou chegada ao destino.
+      </div>
+
+      <button id="requestSentViewTrips" type="button" class="btn full" style="
+        margin-bottom:10px;
+        background:#0029ff;
+        color:#fff;
+        font-weight:900;
+      ">
+        <i class="fa-solid fa-motorcycle"></i>
+        Acompanhar em Minhas entregas
+      </button>
+
+      <button id="requestSentClose" type="button" style="
+        width:100%;
+        border:0;
+        background:transparent;
+        color:#64748b;
+        font-weight:800;
+        padding:10px;
+        cursor:pointer;
+      ">
+        Fechar
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#requestSentClose").onclick=closeRequestSentModal;
+
+  modal.querySelector("#requestSentViewTrips").onclick=()=>{
+    closeRequestSentModal();
+    trips();
+    openL("tripsSheet");
+  };
+
+  modal.onclick=e=>{
+    if(e.target===modal)closeRequestSentModal();
+  };
+
+  return modal;
+}
+
+function openRequestSentModal(){
+  const modal=ensureRequestSentModal();
+
+  if(typeof successModal!=="undefined" && successModal){
+    successModal.classList.remove("on");
+  }
+
+  modal.style.display="flex";
+  document.body.style.overflow="hidden";
+  playPositiveConfirmation();
+}
+
+function closeRequestSentModal(){
+  const modal=document.getElementById("requestSentModal");
+  if(modal)modal.style.display="none";
+  document.body.style.overflow="";
+}
+
 sendWhatsapp.onclick=()=>{
-  const r=state.request,u=state.user,f=r.selectedFreight;
-  const note=[
-    "*PEGA&LEVA DELIVERY*",
-    `*PEDIDO ${r.code}*`,
-    "",
-    `*Solicitante:* ${u.name}`,
-    `*Código do cliente:* ${u.travelCode}`,
-    `*WhatsApp:* ${u.whatsapp}`,
-    "",
-    "*COLETA*",
-    noteAddress("Endereço",r.origin,r.originNeighborhood),
-    "",
-    "*ENTREGA*",
-    noteAddress("Endereço",r.destination,r.destinationNeighborhood),
-    "",
-    `*Recebedor:* ${r.receiverName}`,
-    `*WhatsApp do recebedor:* ${r.receiverWhatsapp}`,
-    `*Avisar chegada:* ${receiverWhatsappLink(r.receiverWhatsapp)}`,
-    "",
-    `*Conteúdo:* ${r.contentType}`,
-    `*Retorno:* ${r.returnTrip?"Sim":"Não"}`,
-    `*Frete:* ${f.type==="NORMAL"?"Normal":"Econômico"}`,
-    `*Valor:* ${money.format(f.value)}`,
-    "",
-    "_Solicitação enviada pelo painel Pega&Leva._"
-  ].join("\n");
-  window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(note)}`,"_blank");
+  // O pedido já foi registrado no sistema.
+  // Não gera mais pedido para o WhatsApp administrativo.
+  openRequestSentModal();
+
+  state.revision="";
+  setTimeout(()=>dashboard(true),150);
 };
 function simulatorNeighborhoodOptions(city){
   if(city==="Benedito Leite") return ["Benedito Leite"];
@@ -1336,3 +1491,17 @@ profileBtn.onclick=()=>{
 };document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeL(b.dataset.close));document.querySelectorAll(".sheet,.modal").forEach(x=>x.onclick=e=>{if(e.target===x)closeL(x.id)});floatingTrips.style.display="none";
 const saved=JSON.parse(sessionStorage.getItem("pl_session")||"null");
 if(saved?.user&&saved?.token)openApp(saved.user,saved.token);
+
+function configureLocationWhatsappButton(){
+  if(typeof sendWhatsapp==="undefined"||!sendWhatsapp)return;
+
+  sendWhatsapp.innerHTML=`
+    <i class="fa-brands fa-whatsapp"></i>
+    Enviar localização pelo WhatsApp
+  `;
+  sendWhatsapp.title="Confirmar solicitação e lembrar de enviar sua localização ao entregador";
+}
+
+document.addEventListener("DOMContentLoaded",configureLocationWhatsappButton);
+setTimeout(configureLocationWhatsappButton,0);
+
