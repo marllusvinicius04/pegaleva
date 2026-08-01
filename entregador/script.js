@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbz2GhAG7iS3UjALv20R7xHcnwafV_J0K2PZRWJMPfkl2ouqlshZFqMspEA9fqCKr9qN/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxmJYYudIdHXlxHDAlPQAVJ-OiZyD66GbvRkrzS5QpDQBGfP_N7282O0hu66_mFKhQ/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false,profileImageData:""};
@@ -865,8 +865,8 @@ function startDriverStatusSync(){
 
   // Consulta leve só do STATUS, sem carregar dashboard completo.
   state.statusTimer=setInterval(()=>{
-    syncDriverOnlineStatus();
-  },3000);
+    if(!state.statusBusy)syncDriverOnlineStatus();
+  },2000);
 }
 
 function keepDriverTopNavSingleRow(){
@@ -1184,7 +1184,7 @@ function openApp(driver,token){
 async function dashboard(useLoading=false){
   if(state.dashboardBusy)return;
   state.dashboardBusy=true;
-  const load=()=>api("driverDashboard",{sinceRevision:state.revision},{timeout:10000,noRetry:true});
+  const load=()=>api("driverDashboard",{sinceRevision:state.revision},{timeout:8000,noRetry:true});
   try{
     const j=useLoading
       ?await withActionLoading("Atualizando entregas","Buscando saldos, corridas e pagamentos.",load)
@@ -1229,7 +1229,7 @@ function startDriverPolling(){
     ){
       dashboard(false);
     }
-  },3000);
+  },2000);
 }
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden||!state.driver)return;
