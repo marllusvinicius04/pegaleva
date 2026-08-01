@@ -311,28 +311,54 @@ function renderDriverOnlineStatus(){
 }
 
 async function toggleDriverOnlineStatus(){
-  const next=!state.driverOnline;
   const btn=ensureDriverStatusButton();
-  if(btn)btn.disabled=true;
+  if(!btn||btn.disabled)return;
+
+  const previous=!!state.driverOnline;
+  const next=!previous;
+
+  btn.disabled=true;
+  btn.style.opacity=".75";
+  btn.style.cursor="wait";
+  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>Carregando...</span>';
 
   try{
-    const j=await api("driverSetOnlineStatus",{status:next?"ONLINE":"OFFLINE"});
-    state.driver=j.driver||state.driver;
-    state.driverOnline=String(state.driver&&state.driver.status||"OFFLINE").toUpperCase()==="ONLINE";
-    renderDriverOnlineStatus();
-    renderDriverScoreSheet();
+    /* Se o Apps Script possuir ação de status, aguarda a confirmação do servidor. */
+    try{
+      const response=await api("driverSetStatus",{
+        token:state.token,
+        status:next?"ONLINE":"OFFLINE"
+      });
 
-    toast(state.driverOnline
+      if(response&&response.ok===false){
+        throw new Error(response.error||"Não foi possível alterar o status.");
+      }
+    }catch(serverError){
+      /* Compatibilidade: se essa ação ainda não existir no backend,
+         mantém o funcionamento local já existente. */
+      const msg=String(serverError&&serverError.message||serverError||"");
+      if(!/ação inválida|acao invalida|invalid action|driverSetStatus/i.test(msg)){
+        throw serverError;
+      }
+    }
+
+    state.driverOnline=next;
+    localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(next));
+    renderDriverOnlineStatus();
+
+    toast(next
       ?"Você está ON e disponível."
       :"Você está OFF."
     );
-
-    state.revision="";
-    await dashboard(false);
-  }catch(x){
-    toast(x.message);
+  }catch(e){
+    state.driverOnline=previous;
+    renderDriverOnlineStatus();
+    toast(e.message||"Não foi possível alterar seu status.");
   }finally{
-    if(btn)btn.disabled=false;
+    btn.disabled=false;
+    btn.style.opacity="1";
+    btn.style.cursor="pointer";
+    renderDriverOnlineStatus();
   }
 }
 
@@ -1042,6 +1068,98 @@ async function finalizeTrip(code){
     toast(x.message)
   }
 }
+
+function chooseCancellationReason(){
+  return new Promise(resolve=>{
+    let modal=document.getElementById("cancelReasonModal");
+
+    if(!modal){
+      modal=document.createElement("div");
+      modal.id="cancelReasonModal";
+      modal.style.cssText=`
+        position:fixed;inset:0;z-index:1200;background:rgba(15,23,42,.55);
+        display:none;align-items:flex-end;justify-content:center;padding:16px;
+      `;
+
+      modal.innerHTML=`
+        <div style="width:min(100%,520px);background:#fff;border-radius:22px;padding:22px;box-shadow:0 -12px 45px rgba(15,23,42,.22)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px">
+            <div>
+              <small style="color:#64748b">Cancelamento</small>
+              <h3 style="margin:2px 0 0;color:#0f172a">Qual o motivo?</h3>
+            </div>
+            <button id="cancelReasonClose" type="button" style="width:38px;height:38px;border:0;border-radius:50%;background:#f1f5f9;cursor:pointer">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div id="cancelReasonOptions" style="display:grid;gap:9px">
+            ${[
+              "Problema com a moto",
+              "Problema de saúde ou emergência",
+              "Endereço ou rota com problema",
+              "Não consegui contato com o cliente",
+              "Estabelecimento fechado",
+              "Problema com a mercadoria",
+              "Outro"
+            ].map(x=>`
+              <button type="button" data-reason="${x}" style="
+                width:100%;padding:13px 14px;border:1px solid #e2e8f0;border-radius:13px;
+                background:#fff;color:#0f172a;text-align:left;font-weight:700;cursor:pointer
+              ">${x}</button>
+            `).join("")}
+          </div>
+
+          <div id="cancelReasonOtherWrap" style="display:none;margin-top:12px">
+            <textarea id="cancelReasonOther" rows="3" maxlength="250"
+              placeholder="Descreva o motivo..."
+              style="width:100%;resize:none;padding:12px;border:1px solid #cbd5e1;border-radius:12px;font:inherit;outline:none"></textarea>
+            <button id="cancelReasonOtherConfirm" type="button" style="
+              width:100%;margin-top:9px;padding:13px;border:0;border-radius:12px;
+              background:#0029ff;color:#fff;font-weight:800;cursor:pointer
+            ">Confirmar motivo</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    modal.style.display="flex";
+    document.body.style.overflow="hidden";
+
+    const finish=value=>{
+      modal.style.display="none";
+      document.body.style.overflow="";
+      resolve(value);
+    };
+
+    modal.querySelector("#cancelReasonClose").onclick=()=>finish(null);
+
+    modal.querySelectorAll("[data-reason]").forEach(btn=>{
+      btn.onclick=()=>{
+        const reason=btn.dataset.reason;
+        if(reason==="Outro"){
+          modal.querySelector("#cancelReasonOptions").style.display="none";
+          modal.querySelector("#cancelReasonOtherWrap").style.display="block";
+          modal.querySelector("#cancelReasonOther").focus();
+          return;
+        }
+        finish(reason);
+      };
+    });
+
+    modal.querySelector("#cancelReasonOtherConfirm").onclick=()=>{
+      const value=modal.querySelector("#cancelReasonOther").value.trim();
+      if(!value)return toast("Informe o motivo do cancelamento.");
+      finish("Outro: "+value);
+    };
+
+    modal.onclick=e=>{
+      if(e.target===modal)finish(null);
+    };
+  });
+}
+
 async function cancelTrip(code){
   if(!confirm("Deseja cancelar esta corrida? Ela ficará disponível para outro entregador."))return;
 
