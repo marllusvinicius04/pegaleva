@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbzKeWcypvjewx1M7IpvZGww2ikDOxOEQuk5ReMABqkuCJUa2DM_baT28qQhUB1oNj3c/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxPY3HHffu0PTEXiB7yzfZKbFhHEf9tHOKZgctTooPqN2S0FGLq6vpdmDCMxiigCYMy/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false,profileImageData:""};
@@ -333,19 +333,30 @@ function currentDriverPhotoUrl(){
 
 function bindAvatarFallback(root=document){
   root.querySelectorAll("img[data-driver-avatar]").forEach(img=>{
+    const wrapper=img.parentElement;
+    const fallback=wrapper&&wrapper.querySelector("[data-driver-avatar-fallback]");
+
     img.onload=()=>{
       img.style.opacity="1";
+      if(fallback)fallback.style.visibility="hidden";
     };
 
     img.onerror=()=>{
-      img.style.display="none";
-
-      const wrapper=img.parentElement;
-      if(wrapper){
-        const fallback=wrapper.querySelector("[data-driver-avatar-fallback]");
-        if(fallback)fallback.style.display="grid";
+      img.remove();
+      if(fallback){
+        fallback.style.visibility="visible";
+        fallback.style.display="grid";
       }
     };
+
+    if(img.complete){
+      if(img.naturalWidth>0){
+        img.style.opacity="1";
+        if(fallback)fallback.style.visibility="hidden";
+      }else{
+        img.onerror();
+      }
+    }
   });
 }
 
@@ -355,9 +366,18 @@ function driverFirstName(){
 
 function driverAvatarHTML(size=46){
   const url=currentDriverPhotoUrl();
+  const initials=String(
+    (state.driver&&state.driver.name)||"Entregador"
+  )
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0,2)
+    .map(p=>p.charAt(0).toUpperCase())
+    .join("") || "E";
 
   return `
-    <span style="
+    <span class="driver-avatar-shell" style="
       position:relative;
       width:${size}px;
       height:${size}px;
@@ -368,6 +388,7 @@ function driverAvatarHTML(size=46){
       place-items:center;
       background:#e8f0ff;
       color:#0646c8;
+      border:1px solid rgba(6,70,200,.12);
     ">
       <span
         data-driver-avatar-fallback
@@ -378,11 +399,12 @@ function driverAvatarHTML(size=46){
           place-items:center;
           background:#e8f0ff;
           color:#0646c8;
-          font-size:${Math.round(size*.42)}px;
+          font-size:${Math.max(12,Math.round(size*.34))}px;
+          font-weight:950;
+          line-height:1;
+          z-index:1;
         "
-      >
-        <i class="fa-solid fa-user"></i>
-      </span>
+      >${escapeCardText(initials)}</span>
 
       ${url?`
         <img
@@ -390,7 +412,7 @@ function driverAvatarHTML(size=46){
           data-size="${size}"
           src="${escapeCardText(url)}"
           alt="Foto de perfil"
-          referrerpolicy="no-referrer"
+          loading="eager"
           style="
             position:absolute;
             inset:0;
@@ -400,8 +422,8 @@ function driverAvatarHTML(size=46){
             object-fit:cover;
             display:block;
             opacity:0;
-            transition:opacity .18s ease;
-            background:#e8f0ff;
+            z-index:2;
+            transition:opacity .15s ease;
           "
         >
       `:""}
@@ -872,12 +894,31 @@ function renderDriverOnlineStatus(){
   btn.style.color=online?"#ffffff":"#475569";
 }
 
+
+function driverHasActiveTripLocal(){
+  return state.trips.some(t=>{
+    const status=String(t&&t.status||"").trim().toUpperCase();
+    return ![
+      "FINALIZADA",
+      "CANCELADA PELO ENTREGADOR",
+      "CANCELADA"
+    ].includes(status);
+  });
+}
+
 async function toggleDriverOnlineStatus(){
   const btn=ensureDriverStatusButton();
   if(!btn||btn.disabled)return;
 
   const previous=!!state.driverOnline;
   const next=!previous;
+
+  if(!next && driverHasActiveTripLocal()){
+    toast("Você possui uma entrega ativa. Finalize ou cancele a corrida antes de ficar OFF.");
+    state.driverOnline=true;
+    renderDriverOnlineStatus();
+    return;
+  }
 
   btn.disabled=true;
   btn.style.opacity=".75";
@@ -902,6 +943,7 @@ async function toggleDriverOnlineStatus(){
     );
 
     renderDriverOnlineStatus();
+    renderDriverProfileButton();
 
     try{
       sessionStorage.setItem(
@@ -912,7 +954,6 @@ async function toggleDriverOnlineStatus(){
 
     if(state.driverOnline){
       toast("Você está ON e disponível.");
-      // Não trava o botão esperando o dashboard inteiro.
       state.revision="";
       setTimeout(()=>dashboard(false),50);
     }else{
@@ -926,6 +967,8 @@ async function toggleDriverOnlineStatus(){
     state.driverOnline=previous;
     renderDriverOnlineStatus();
     toast(e.message||"Não foi possível alterar seu status.");
+    state.revision="";
+    setTimeout(()=>dashboard(false),100);
   }finally{
     btn.disabled=false;
     btn.style.opacity="1";
@@ -947,7 +990,10 @@ async function syncDriverOnlineStatus(){
       noRetry:true
     });
 
-    const serverOnline=String(j&&j.status||"OFFLINE").toUpperCase()==="ONLINE";
+    const serverOnline=
+      String(j&&j.status||"OFFLINE").toUpperCase()==="ONLINE" ||
+      !!(j&&j.hasActiveTrip);
+
     const changed=serverOnline!==state.driverOnline;
 
     state.driverOnline=serverOnline;
