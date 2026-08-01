@@ -332,6 +332,44 @@ function toggleDriverOnlineStatus(){
 }
 
 
+
+function keepDriverTopNavSingleRow(){
+  const clickable=[...document.querySelectorAll("button,a,[role='button']")];
+  const saque=clickable.find(el=>String(el.textContent||"").trim().toLowerCase().includes("saque"));
+  const historico=clickable.find(el=>{
+    const txt=String(el.textContent||"").trim().toLowerCase();
+    return txt.includes("histórico")||txt.includes("historico");
+  });
+
+  if(!saque||!historico||!saque.parentElement||saque.parentElement!==historico.parentElement)return;
+
+  const nav=saque.parentElement;
+
+  // Mantém os 4 itens da navegação em uma única fila.
+  nav.style.display="flex";
+  nav.style.flexDirection="row";
+  nav.style.flexWrap="nowrap";
+  nav.style.alignItems="center";
+  nav.style.justifyContent="space-between";
+  nav.style.gap="4px";
+  nav.style.width="100%";
+
+  [...nav.children].forEach(item=>{
+    item.style.flex="1 1 0";
+    item.style.minWidth="0";
+  });
+
+  // Compacta apenas o necessário em telas menores para Histórico não cair.
+  if(window.innerWidth<=520){
+    [...nav.children].forEach(item=>{
+      item.style.paddingLeft="5px";
+      item.style.paddingRight="5px";
+      item.style.fontSize="11px";
+      item.style.whiteSpace="nowrap";
+    });
+  }
+}
+
 function ensureDriverScoreNav(){
   if(document.getElementById("driverScoreNavBtn"))return;
 
@@ -356,6 +394,7 @@ function ensureDriverScoreNav(){
   score.title="Score do entregador";
 
   saque.parentElement.insertBefore(score,historico);
+  keepDriverTopNavSingleRow();
 
   score.addEventListener("click",e=>{
     e.preventDefault();
@@ -984,3 +1023,4 @@ try{
 if(saved?.driver&&saved?.token){
   openApp(saved.driver,saved.token);
 }
+window.addEventListener("resize",keepDriverTopNavSingleRow);
