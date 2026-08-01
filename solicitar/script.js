@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbwLgyal6fu1zFEadcIZlkFoQhtN9ZSo7iYJ68DIX9lOmti_Z-Y8bVxCYwPjISLCKeBt/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbx8gnpsGW_wdXt6gQb5S8CHab6lRSJvO3Ic97AdjZ9bByi4N8zpjAl89reHAoMYZ4E9/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
@@ -336,7 +336,19 @@ function openDriverRatingModal(trip){
   state.ratingTripCode=trip.code;
   state.ratingValue=0;
 
-  modal.querySelector("#driverRatingAvatar").textContent=driverInitials(name).toUpperCase();
+  const profilePhoto=String(trip.driverPhotoUrl||"").trim();
+  const avatar=modal.querySelector("#driverRatingAvatar");
+
+  if(profilePhoto){
+    avatar.innerHTML=`<img src="${profilePhoto}" alt="${name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+    avatar.style.padding="0";
+    avatar.style.overflow="hidden";
+  }else{
+    avatar.textContent=driverInitials(name).toUpperCase();
+    avatar.style.padding="";
+    avatar.style.overflow="";
+  }
+
   modal.querySelector("#driverRatingName").textContent=name;
   modal.querySelector("#driverRatingPlate").innerHTML=
     `<i class="fa-solid fa-motorcycle"></i> ${plate}`;
@@ -1137,7 +1149,12 @@ function trips(){
           </div>
 
           <div class="trip-uber-info">
-            <div class="trip-driver-avatar"><i class="fa-solid ${driver?"fa-user":"fa-magnifying-glass"}"></i></div>
+            <div class="trip-driver-avatar" style="overflow:hidden">
+              ${driver&&t.driverPhotoUrl
+                ?`<img src="${t.driverPhotoUrl}" alt="${driver}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`
+                :`<i class="fa-solid ${driver?"fa-user":"fa-magnifying-glass"}"></i>`
+              }
+            </div>
             <div class="trip-driver-data">
               <small>${driver?"ENTREGADOR":"PROCURANDO ENTREGADOR"}</small>
               <strong>${driver||"Aguardando aceite"}</strong>
