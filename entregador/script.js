@@ -2,7 +2,7 @@
 const API_URL="https://script.google.com/macros/s/AKfycbzKeWcypvjewx1M7IpvZGww2ikDOxOEQuk5ReMABqkuCJUa2DM_baT28qQhUB1oNj3c/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
-const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false};
+const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false,profileImageData:""};
 async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
@@ -259,6 +259,416 @@ loginForm.onsubmit=async e=>{
     false
   );
 };
+
+
+
+function driverFirstName(){
+  return String(state.driver&&state.driver.name||"Entregador").trim().split(/\s+/)[0]||"Entregador";
+}
+
+function driverAvatarHTML(size=46){
+  const d=state.driver||{};
+  const url=String(d.photoUrl||"").trim();
+
+  if(url){
+    return `<img src="${escapeCardText(url)}" alt="Foto de perfil" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block">`;
+  }
+
+  return `<span style="width:${size}px;height:${size}px;border-radius:50%;display:grid;place-items:center;background:#e8f0ff;color:#0646c8;font-size:${Math.round(size*.42)}px">
+    <i class="fa-solid fa-user"></i>
+  </span>`;
+}
+
+function renderDriverProfileButton(){
+  const btn=document.getElementById("logoutBtn");
+  if(!btn)return;
+
+  // O botão original de sair vira o avatar de perfil.
+  btn.title="Abrir meu perfil";
+  btn.setAttribute("aria-label","Abrir meu perfil");
+  btn.style.width="40px";
+  btn.style.height="40px";
+  btn.style.minWidth="40px";
+  btn.style.padding="0";
+  btn.style.borderRadius="50%";
+  btn.style.overflow="hidden";
+  btn.style.display="inline-grid";
+  btn.style.placeItems="center";
+  btn.innerHTML=driverAvatarHTML(40);
+  btn.onclick=openDriverProfileMenu;
+}
+
+function ensureDriverProfileMenu(){
+  let overlay=document.getElementById("driverProfileOverlay");
+  if(overlay)return overlay;
+
+  overlay=document.createElement("div");
+  overlay.id="driverProfileOverlay";
+  overlay.style.cssText=`
+    position:fixed;inset:0;z-index:1900;display:none;
+    background:rgba(15,23,42,.48);
+  `;
+
+  overlay.innerHTML=`
+    <aside id="driverProfileMenu" style="
+      position:absolute;right:0;top:0;height:100%;width:min(88vw,360px);
+      background:#fff;box-shadow:-18px 0 48px rgba(15,23,42,.18);
+      padding:22px 18px;overflow:auto;transform:translateX(0);
+    ">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button id="closeDriverProfileMenu" type="button" style="
+          width:38px;height:38px;border:0;border-radius:50%;
+          background:#f1f5f9;color:#334155;cursor:pointer
+        "><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="driverProfileMenuHeader"></div>
+
+      <div style="height:1px;background:#e2e8f0;margin:20px 0"></div>
+
+      <div style="display:grid;gap:8px">
+        <button type="button" data-profile-action="balance" class="driver-profile-menu-item"></button>
+        <button type="button" data-profile-action="trips" class="driver-profile-menu-item"></button>
+        <button type="button" data-profile-action="score" class="driver-profile-menu-item"></button>
+        <button type="button" data-profile-action="withdraw" class="driver-profile-menu-item"></button>
+        <button type="button" data-profile-action="edit" class="driver-profile-menu-item"></button>
+      </div>
+
+      <button id="driverProfileLogout" type="button" style="
+        width:100%;margin-top:22px;padding:13px 14px;border:1px solid #fecaca;
+        border-radius:14px;background:#fff;color:#dc2626;font-weight:800;
+        display:flex;align-items:center;gap:11px;cursor:pointer
+      ">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        Sair da conta
+      </button>
+    </aside>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const style=document.createElement("style");
+  style.textContent=`
+    .driver-profile-menu-item{
+      width:100%;padding:13px 14px;border:1px solid #e2e8f0;border-radius:14px;
+      background:#fff;color:#172033;display:flex;align-items:center;gap:12px;
+      text-align:left;cursor:pointer;font-weight:800;
+    }
+    .driver-profile-menu-item:hover{background:#f8fafc}
+    .driver-profile-menu-item .menu-icon{
+      width:36px;height:36px;border-radius:11px;background:#eef3ff;color:#0646c8;
+      display:grid;place-items:center;flex:0 0 auto;
+    }
+    .driver-profile-menu-item .menu-copy{min-width:0;flex:1}
+    .driver-profile-menu-item small{display:block;margin-top:2px;color:#64748b;font-weight:600}
+  `;
+  document.head.appendChild(style);
+
+  overlay.querySelector("#closeDriverProfileMenu").onclick=closeDriverProfileMenu;
+  overlay.onclick=e=>{if(e.target===overlay)closeDriverProfileMenu()};
+
+  overlay.querySelector('[data-profile-action="balance"]').onclick=()=>{
+    closeDriverProfileMenu();
+    const el=document.getElementById("balance");
+    if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
+  };
+
+  overlay.querySelector('[data-profile-action="trips"]').onclick=()=>{
+    closeDriverProfileMenu();
+    const el=document.getElementById("tripCarousel");
+    if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+  };
+
+  overlay.querySelector('[data-profile-action="score"]').onclick=()=>{
+    closeDriverProfileMenu();
+    openDriverScoreSheet();
+  };
+
+  overlay.querySelector('[data-profile-action="withdraw"]').onclick=()=>{
+    closeDriverProfileMenu();
+    withdrawValue.value=String(state.driver&&state.driver.balance||0).replace(".",",");
+    openL("withdrawSheet");
+  };
+
+  overlay.querySelector('[data-profile-action="edit"]').onclick=()=>{
+    closeDriverProfileMenu();
+    openDriverEditProfile();
+  };
+
+  overlay.querySelector("#driverProfileLogout").onclick=performDriverLogout;
+
+  return overlay;
+}
+
+function renderDriverProfileMenu(){
+  const overlay=ensureDriverProfileMenu();
+  const d=state.driver||{};
+  const header=overlay.querySelector("#driverProfileMenuHeader");
+
+  header.innerHTML=`
+    <div style="display:flex;align-items:center;gap:13px">
+      <div>${driverAvatarHTML(62)}</div>
+      <div style="min-width:0">
+        <strong style="display:block;font-size:20px;color:#0f172a">${escapeCardText(driverFirstName())}</strong>
+        <span style="display:block;margin-top:3px;color:#64748b;font-size:13px">
+          <i class="fa-solid fa-motorcycle"></i>
+          ${escapeCardText(d.plate||"Sem placa")}
+        </span>
+      </div>
+    </div>
+  `;
+
+  const items={
+    balance:[
+      "fa-wallet",
+      "Meu saldo",
+      state.balanceVisible?money.format(Number(d.balance||0)):"Saldo oculto"
+    ],
+    trips:[
+      "fa-motorcycle",
+      "Minhas entregas",
+      `${state.trips.filter(t=>String(t.status||"").toUpperCase()!=="FINALIZADA").length} ativa(s)`
+    ],
+    score:[
+      "fa-star",
+      "Meu Score",
+      `${Number(d.score||0)} pontos • ${String(d.level||"BRONZE")}`
+    ],
+    withdraw:[
+      "fa-money-bill-transfer",
+      "Sacar pagamento",
+      "Solicitar retirada do saldo"
+    ],
+    edit:[
+      "fa-user-pen",
+      "Editar perfil",
+      "Nome, telefone, e-mail e foto"
+    ]
+  };
+
+  Object.entries(items).forEach(([key,data])=>{
+    const btn=overlay.querySelector(`[data-profile-action="${key}"]`);
+    if(!btn)return;
+    btn.innerHTML=`
+      <span class="menu-icon"><i class="fa-solid ${data[0]}"></i></span>
+      <span class="menu-copy">${data[1]}<small>${data[2]}</small></span>
+      <i class="fa-solid fa-chevron-right" style="color:#94a3b8"></i>
+    `;
+  });
+}
+
+function openDriverProfileMenu(){
+  renderDriverProfileMenu();
+  const overlay=document.getElementById("driverProfileOverlay");
+  overlay.style.display="block";
+  document.body.style.overflow="hidden";
+}
+
+function closeDriverProfileMenu(){
+  const overlay=document.getElementById("driverProfileOverlay");
+  if(overlay)overlay.style.display="none";
+  document.body.style.overflow="";
+}
+
+function ensureDriverEditProfile(){
+  let modal=document.getElementById("driverEditProfileModal");
+  if(modal)return modal;
+
+  modal=document.createElement("div");
+  modal.id="driverEditProfileModal";
+  modal.style.cssText=`
+    position:fixed;inset:0;z-index:1950;display:none;align-items:flex-end;
+    justify-content:center;background:rgba(15,23,42,.58);padding:12px;
+  `;
+
+  modal.innerHTML=`
+    <div style="
+      width:min(100%,560px);max-height:92vh;overflow:auto;background:#fff;
+      border-radius:26px 26px 18px 18px;padding:22px;box-shadow:0 -18px 50px rgba(15,23,42,.24)
+    ">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <small style="color:#64748b">Minha conta</small>
+          <h3 style="margin:2px 0 0;color:#0f172a">Editar perfil</h3>
+        </div>
+        <button id="closeDriverEditProfile" type="button" style="
+          width:40px;height:40px;border:0;border-radius:50%;background:#f1f5f9;cursor:pointer
+        "><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div style="text-align:center;margin-bottom:20px">
+        <div id="driverEditProfileAvatar" style="display:inline-block"></div>
+        <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <label style="
+            padding:10px 12px;border-radius:12px;background:#eef3ff;color:#0646c8;
+            font-weight:800;cursor:pointer
+          ">
+            <i class="fa-solid fa-image"></i> Escolher foto
+            <input id="driverProfileGalleryInput" type="file" accept="image/*" style="display:none">
+          </label>
+          <label style="
+            padding:10px 12px;border-radius:12px;background:#eef3ff;color:#0646c8;
+            font-weight:800;cursor:pointer
+          ">
+            <i class="fa-solid fa-camera"></i> Tirar selfie
+            <input id="driverProfileCameraInput" type="file" accept="image/*" capture="user" style="display:none">
+          </label>
+        </div>
+        <small style="display:block;color:#64748b;margin-top:8px">Foto de até 6 MB.</small>
+      </div>
+
+      <div style="display:grid;gap:13px">
+        <label style="display:grid;gap:6px">
+          <span style="font-size:12px;font-weight:800;color:#475569">Nome</span>
+          <input id="driverEditName" type="text" maxlength="120" style="padding:13px;border:1px solid #cbd5e1;border-radius:12px;font:inherit">
+        </label>
+        <label style="display:grid;gap:6px">
+          <span style="font-size:12px;font-weight:800;color:#475569">Telefone</span>
+          <input id="driverEditPhone" type="tel" inputmode="numeric" maxlength="15" style="padding:13px;border:1px solid #cbd5e1;border-radius:12px;font:inherit">
+        </label>
+        <label style="display:grid;gap:6px">
+          <span style="font-size:12px;font-weight:800;color:#475569">E-mail</span>
+          <input id="driverEditEmail" type="email" maxlength="160" style="padding:13px;border:1px solid #cbd5e1;border-radius:12px;font:inherit">
+        </label>
+      </div>
+
+      <button id="saveDriverProfile" type="button" class="btn primary full" style="margin-top:18px">
+        <i class="fa-solid fa-floppy-disk"></i> Salvar alterações
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#closeDriverEditProfile").onclick=closeDriverEditProfile;
+  modal.onclick=e=>{if(e.target===modal)closeDriverEditProfile()};
+
+  const readImage=input=>{
+    const file=input.files&&input.files[0];
+    if(!file)return;
+    if(file.size>6*1024*1024){
+      input.value="";
+      return toast("Use uma foto de até 6 MB.");
+    }
+
+    const reader=new FileReader();
+    reader.onload=()=>{
+      state.profileImageData=String(reader.result||"");
+      renderDriverEditProfileAvatar();
+    };
+    reader.readAsDataURL(file);
+  };
+
+  modal.querySelector("#driverProfileGalleryInput").onchange=e=>readImage(e.target);
+  modal.querySelector("#driverProfileCameraInput").onchange=e=>readImage(e.target);
+  modal.querySelector("#saveDriverProfile").onclick=saveDriverProfile;
+
+  return modal;
+}
+
+function renderDriverEditProfileAvatar(){
+  const modal=ensureDriverEditProfile();
+  const box=modal.querySelector("#driverEditProfileAvatar");
+  const preview=String(state.profileImageData||"").trim();
+  const current=String(state.driver&&state.driver.photoUrl||"").trim();
+  const src=preview||current;
+
+  box.innerHTML=src
+    ?`<img src="${src}" alt="Foto de perfil" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:5px solid #eef2ff">`
+    :`<span style="width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:#eef3ff;color:#0646c8;font-size:38px;border:5px solid #f8fafc"><i class="fa-solid fa-user"></i></span>`;
+}
+
+function openDriverEditProfile(){
+  const modal=ensureDriverEditProfile();
+  const d=state.driver||{};
+
+  state.profileImageData="";
+  modal.querySelector("#driverEditName").value=d.name||"";
+  modal.querySelector("#driverEditPhone").value=d.whatsapp||"";
+  modal.querySelector("#driverEditEmail").value=d.email||"";
+  modal.querySelector("#driverProfileGalleryInput").value="";
+  modal.querySelector("#driverProfileCameraInput").value="";
+
+  renderDriverEditProfileAvatar();
+  modal.style.display="flex";
+  document.body.style.overflow="hidden";
+}
+
+function closeDriverEditProfile(){
+  const modal=document.getElementById("driverEditProfileModal");
+  if(modal)modal.style.display="none";
+  state.profileImageData="";
+  document.body.style.overflow="";
+}
+
+async function saveDriverProfile(){
+  const modal=ensureDriverEditProfile();
+  const btn=modal.querySelector("#saveDriverProfile");
+
+  const name=modal.querySelector("#driverEditName").value.trim();
+  const whatsapp=modal.querySelector("#driverEditPhone").value.replace(/\D/g,"");
+  const emailValue=modal.querySelector("#driverEditEmail").value.trim().toLowerCase();
+
+  if(!name)return toast("Informe seu nome.");
+  if(!whatsapp)return toast("Informe seu telefone.");
+  if(!emailValue)return toast("Informe seu e-mail.");
+
+  btn.disabled=true;
+  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+
+  try{
+    const j=await api("driverUpdateProfile",{
+      profile:{
+        name,
+        whatsapp,
+        email:emailValue,
+        imageData:state.profileImageData||""
+      }
+    },{timeout:20000});
+
+    if(j&&j.driver)state.driver=j.driver;
+
+    sessionStorage.setItem(
+      "pl_driver",
+      JSON.stringify({driver:state.driver,token:state.token})
+    );
+
+    const firstName=driverFirstName();
+    welcomeName.textContent=`Olá, ${firstName}!`;
+    driverInfo.textContent=`${state.driver.plate||"Sem placa"} • ${state.driver.whatsapp||""}`;
+    withdrawEmail.value=state.driver.email||"";
+
+    renderDriverProfileButton();
+    renderDriverProfileMenu();
+    renderDriverScoreSheet();
+
+    closeDriverEditProfile();
+    toast("Perfil atualizado!");
+    state.revision="";
+    setTimeout(()=>dashboard(false),100);
+  }catch(e){
+    toast(e.message||"Não foi possível atualizar o perfil.");
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Salvar alterações';
+  }
+}
+
+async function performDriverLogout(){
+  closeDriverProfileMenu();
+  try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
+
+  clearInterval(state.dashboardTimer);
+  clearInterval(state.statusTimer);
+  sessionStorage.removeItem("pl_driver");
+
+  state.driver=null;
+  state.token="";
+  state.revision="";
+  password.value="";
+  show("loginView");
+  renderQuickDriverAccount();
+}
 
 
 const DRIVER_AVAILABILITY_KEY="pl_driver_online_status";
@@ -740,6 +1150,7 @@ function openApp(driver,token){
   state.driverOnline=String(driver.status||"OFFLINE").toUpperCase()==="ONLINE";
   localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(state.driverOnline));
   renderDriverOnlineStatus();
+  renderDriverProfileButton();
   ensureDriverScoreNav();
 
   // Mostra ON/OFF imediatamente e sincroniza com a planilha em segundo plano.
@@ -762,6 +1173,7 @@ async function dashboard(useLoading=false){
       state.driverOnline=String(j.driver.status||"OFFLINE").toUpperCase()==="ONLINE";
       localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(state.driverOnline));
       renderDriverOnlineStatus();
+      renderDriverProfileButton();
     }
     state.trips=j.trips||[];
     state.availableTrips=j.availableTrips||[];
@@ -1412,21 +1824,7 @@ toggleBalance.onclick=()=>{
     :'<i class="fa-regular fa-eye-slash"></i>';
   balance.textContent=state.balanceVisible?money.format(state.driver.balance||0):"R$ •••••";
 }
-historyNav.onclick=()=>openL("historySheet");refreshBtn.onclick=()=>dashboard(true);logoutBtn.onclick=async()=>{
-  try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
-
-  clearInterval(state.dashboardTimer);
-  clearInterval(state.statusTimer);
-  sessionStorage.removeItem("pl_driver");
-
-  state.driver=null;
-  state.token="";
-  state.revision="";
-
-  password.value="";
-  show("loginView");
-  renderQuickDriverAccount();
-}
+historyNav.onclick=()=>openL("historySheet");refreshBtn.onclick=()=>dashboard(true);renderDriverProfileButton();
 function toggleTripCommands(code){
   const menu=$("tripCommands-"+code);
   if(menu)menu.classList.toggle("on");
