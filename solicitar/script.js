@@ -1143,13 +1143,18 @@ function ensureRequestSentModal(){
 
   document.body.appendChild(modal);
 
-  modal.querySelector("#requestSentClose").onclick=closeRequestSentModal;
+  const closeBtn=modal.querySelector("#requestSentClose");
+  if(closeBtn)closeBtn.onclick=closeRequestSentModal;
 
-  modal.querySelector("#requestSentViewTrips").onclick=()=>{
-    closeRequestSentModal();
-    trips();
-    openL("tripsSheet");
-  };
+  const viewTripsBtn=modal.querySelector("#requestSentViewTrips");
+  if(viewTripsBtn){
+    viewTripsBtn.onclick=()=>{
+      closeRequestSentModal();
+      trips();
+      const sheet=document.getElementById("tripsSheet");
+      if(sheet)sheet.classList.add("on");
+    };
+  }
 
   modal.onclick=e=>{
     if(e.target===modal)closeRequestSentModal();
@@ -1161,13 +1166,16 @@ function ensureRequestSentModal(){
 function openRequestSentModal(){
   const modal=ensureRequestSentModal();
 
-  if(typeof successModal!=="undefined" && successModal){
-    successModal.classList.remove("on");
-  }
+  const success=document.getElementById("successModal");
+  if(success)success.classList.remove("on");
 
   modal.style.display="flex";
   document.body.style.overflow="hidden";
   playPositiveConfirmation();
+
+  // Atualiza "Minhas entregas" em segundo plano sem travar o modal.
+  state.revision="";
+  setTimeout(()=>dashboard(true),120);
 }
 
 function closeRequestSentModal(){
@@ -1176,14 +1184,18 @@ function closeRequestSentModal(){
   document.body.style.overflow="";
 }
 
-sendWhatsapp.onclick=()=>{
-  // O pedido já foi registrado no sistema.
-  // Não gera mais pedido para o WhatsApp administrativo.
-  openRequestSentModal();
+function bindSendWhatsappAction(){
+  const btn=document.getElementById("sendWhatsapp");
+  if(!btn)return;
 
-  state.revision="";
-  setTimeout(()=>dashboard(true),150);
-};
+  btn.onclick=e=>{
+    e?.preventDefault?.();
+
+    // A corrida já foi criada pelo createTrip.
+    // Não envia mais o pedido para o WhatsApp administrativo.
+    openRequestSentModal();
+  };
+}
 function simulatorNeighborhoodOptions(city){
   if(city==="Benedito Leite") return ["Benedito Leite"];
   return bairros.filter(b=>b!=="Benedito Leite");
@@ -1493,15 +1505,20 @@ const saved=JSON.parse(sessionStorage.getItem("pl_session")||"null");
 if(saved?.user&&saved?.token)openApp(saved.user,saved.token);
 
 function configureLocationWhatsappButton(){
-  if(typeof sendWhatsapp==="undefined"||!sendWhatsapp)return;
+  const btn=document.getElementById("sendWhatsapp");
+  if(!btn)return;
 
-  sendWhatsapp.innerHTML=`
+  btn.innerHTML=`
     <i class="fa-brands fa-whatsapp"></i>
     Enviar localização pelo WhatsApp
   `;
-  sendWhatsapp.title="Confirmar solicitação e lembrar de enviar sua localização ao entregador";
+  btn.title="Confirmar solicitação e lembrar de enviar sua localização ao entregador";
+
+  bindSendWhatsappAction();
 }
 
-document.addEventListener("DOMContentLoaded",configureLocationWhatsappButton);
-setTimeout(configureLocationWhatsappButton,0);
-
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",configureLocationWhatsappButton,{once:true});
+}else{
+  configureLocationWhatsappButton();
+}
