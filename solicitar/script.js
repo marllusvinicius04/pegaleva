@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbx8gnpsGW_wdXt6gQb5S8CHab6lRSJvO3Ic97AdjZ9bByi4N8zpjAl89reHAoMYZ4E9/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbx8gnpsGW_wdXt6gQb5S8CHab6lRSJvO3Ic97AdjZ9bByi4N8zpjAl89reHAoMYZ4E9/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
@@ -267,10 +267,15 @@ function ensureDriverRatingModal(){
         String(state.ratingValue)
       );
 
-      toast("Avaliação enviada. Obrigado!");
-      closeDriverRatingModal();
+      modal.querySelector("#driverRatingStars").style.display="none";
+      modal.querySelector("#submitDriverRating").style.display="none";
+      modal.querySelector("#driverRatingName").insertAdjacentHTML(
+        "afterend",
+        '<div id="ratingThankYou" style="margin-top:18px;padding:14px;border-radius:14px;background:#ecfdf5;color:#15803d;font-weight:900"><i class="fa-solid fa-circle-check"></i> Obrigado, avaliado!</div>'
+      );
+      modal.querySelector("#closeDriverRating").textContent="Fechar";
       state.revision="";
-      dashboard(true);
+      setTimeout(()=>dashboard(true),100);
     }catch(e){
       toast(e.message||"Não foi possível enviar a avaliação.");
     }finally{
@@ -310,14 +315,18 @@ function openDriverRatingModal(trip){
   modal.querySelector("#driverRatingPlate").innerHTML=
     `<i class="fa-solid fa-motorcycle"></i> ${plate}`;
 
+  modal.querySelector("#ratingThankYou")?.remove();
+  modal.querySelector("#driverRatingStars").style.display="flex";
   modal.querySelectorAll("[data-rating]").forEach(star=>{
     star.style.color="#cbd5e1";
     star.style.transform="scale(1)";
   });
 
   const submit=modal.querySelector("#submitDriverRating");
+  submit.style.display="";
   submit.disabled=true;
   submit.textContent="Enviar avaliação";
+  modal.querySelector("#closeDriverRating").textContent="Avaliar depois";
 
   modal.style.display="flex";
   document.body.style.overflow="hidden";
@@ -332,29 +341,54 @@ function closeDriverRatingModal(){
 
 function compareTripUpdates(newTrips){
   const next={};
+  const newlyFinalized=[];
+
   newTrips.forEach(t=>{
     const key=`${String(t.status||"").toUpperCase()}|${String(t.paymentStatus||"").toUpperCase()}`;
     next[t.code]=key;
+
     const previous=state.tripStatusMap[t.code];
+
     if(!state.firstDashboard && previous && previous!==key){
       showStatusAlert(t);
 
       const previousStatus=String(previous).split("|")[0];
       const currentStatus=String(t.status||"").toUpperCase();
 
-      if(previousStatus!=="FINALIZADA"&&currentStatus==="FINALIZADA"){
-        setTimeout(()=>openDriverRatingModal(t),350);
+      if(
+        previousStatus!=="FINALIZADA" &&
+        currentStatus==="FINALIZADA" &&
+        !localStorage.getItem("pl_rated_trip_"+t.code)
+      ){
+        newlyFinalized.push(t);
       }
     }
   });
+
+  // Se várias finalizaram enquanto o cliente não estava olhando,
+  // mostra SOMENTE a última.
+  if(newlyFinalized.length){
+    const latest=newlyFinalized
+      .slice()
+      .sort((a,b)=>{
+        const ta=new Date(a.finalizedAt||a.createdAt||0).getTime()||0;
+        const tb=new Date(b.finalizedAt||b.createdAt||0).getTime()||0;
+        return tb-ta;
+      })[0];
+
+    setTimeout(()=>openDriverRatingModal(latest),250);
+  }
+
   state.tripStatusMap=next;
   state.firstDashboard=false;
 }
 function startDashboardPolling(){
   clearInterval(state.dashboardTimer);
   state.dashboardTimer=setInterval(()=>{
-    if(state.user && !document.hidden && navigator.onLine)dashboard(true);
-  },7000);
+    if(state.user && !state.dashboardBusy && !document.hidden && navigator.onLine){
+      dashboard(true);
+    }
+  },3000);
 }
 document.addEventListener("visibilitychange",()=>{
   if(!document.hidden && state.user)dashboard(true);
@@ -362,14 +396,37 @@ document.addEventListener("visibilitychange",()=>{
 window.addEventListener("online",()=>{if(state.user){toast("Conexão restabelecida.");dashboard(true)}});
 window.addEventListener("offline",()=>toast("Você está sem internet. As informações serão atualizadas ao reconectar."));
 async function dashboard(silent=false){
+  if(state.dashboardBusy)return;
+  state.dashboardBusy=true;
   try{
-    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:12000});
+    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:10000,noRetry:!!silent});
     if(j.unchanged)return;
     state.revision=String(j.revision||state.revision||"");
     const newTrips=j.trips||[];
+    const wasFirstDashboard=state.firstDashboard;
     compareTripUpdates(newTrips);
     state.trips=newTrips;
+
+    if(wasFirstDashboard){
+      const latestFinished=newTrips
+        .filter(t=>
+          String(t.status||"").toUpperCase()==="FINALIZADA" &&
+          !localStorage.getItem("pl_rated_trip_"+t.code)
+        )
+        .sort((a,b)=>{
+          const ta=new Date(a.finalizedAt||a.createdAt||0).getTime()||0;
+          const tb=new Date(b.finalizedAt||b.createdAt||0).getTime()||0;
+          return tb-ta;
+        })[0];
+
+      if(latestFinished){
+        setTimeout(()=>openDriverRatingModal(latestFinished),500);
+      }
+    }
     $("tripNotification").textContent=state.trips.filter(t=>String(t.status).toUpperCase()!=="FINALIZADA").length;
+    $("invoiceBalance") && ($("invoiceBalance").textContent=money.format(j.user.invoiceBalance||0));
+    $("invoiceModalBalance") && ($("invoiceModalBalance").textContent=money.format(j.user.invoiceBalance||0));
+    $("invoiceText") && ($("invoiceText").textContent=`${j.pendingCount||0} entrega(s) pendente(s).`);
     hideInvoicePaymentUI();
     state.user=j.user||state.user;
     sessionStorage.setItem("pl_session",JSON.stringify({user:state.user,token:state.token}));
@@ -378,33 +435,22 @@ async function dashboard(silent=false){
     if(document.querySelector("#tripsSheet.on"))trips();
   }catch(e){
     if(!silent)toast(e.message)
+  }finally{
+    state.dashboardBusy=false;
   }
 }
 
 
 
 function hideInvoicePaymentUI(){
-  const ids=[
-    "invoiceBalance",
-    "invoiceModalBalance",
-    "invoiceText",
+  // Mantém o saldo visível. Esconde apenas ações/modal de pagamento de fatura.
+  [
     "payInvoice",
     "navInvoice",
-    "invoiceSheet"
-  ];
-
-  ids.forEach(id=>{
+    "confirmInvoicePayment"
+  ].forEach(id=>{
     const el=document.getElementById(id);
-    if(!el)return;
-
-    if(id==="invoiceBalance"||id==="invoiceText"){
-      const parent=el.closest(".card,.balance-card,.finance-card,.invoice-card")||el.parentElement;
-      if(parent)parent.style.display="none";
-      else el.style.display="none";
-      return;
-    }
-
-    el.style.display="none";
+    if(el)el.style.display="none";
   });
 }
 
