@@ -331,6 +331,129 @@ function toggleDriverOnlineStatus(){
   );
 }
 
+
+function ensureDriverScoreNav(){
+  if(document.getElementById("driverScoreNavBtn"))return;
+
+  /* Procura os itens existentes "Saque" e "Histórico" sem alterar nenhum deles. */
+  const clickable=[...document.querySelectorAll("button,a,[role='button']")];
+  const saque=clickable.find(el=>String(el.textContent||"").trim().toLowerCase().includes("saque"));
+  const historico=clickable.find(el=>{
+    const txt=String(el.textContent||"").trim().toLowerCase();
+    return txt.includes("histórico")||txt.includes("historico");
+  });
+
+  if(!saque||!historico||!saque.parentElement||saque.parentElement!==historico.parentElement)return;
+
+  const score=document.createElement(saque.tagName.toLowerCase()==="a"?"a":"button");
+  score.id="driverScoreNavBtn";
+  if(score.tagName==="BUTTON")score.type="button";
+  if(score.tagName==="A")score.href="#";
+
+  /* Herda as classes do botão Saque para manter exatamente o padrão visual da nav. */
+  score.className=saque.className;
+  score.innerHTML='<i class="fa-solid fa-star"></i><span>Score</span>';
+  score.title="Score do entregador";
+
+  saque.parentElement.insertBefore(score,historico);
+
+  score.addEventListener("click",e=>{
+    e.preventDefault();
+    openDriverScoreSheet();
+  });
+}
+
+function ensureDriverScoreSheet(){
+  let sheet=document.getElementById("driverScoreSheet");
+  if(sheet)return sheet;
+
+  sheet=document.createElement("div");
+  sheet.id="driverScoreSheet";
+  sheet.style.cssText=`
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    background:rgba(15,23,42,.48);
+    padding:16px;
+  `;
+
+  sheet.innerHTML=`
+    <div style="
+      width:min(100%,560px);
+      background:#fff;
+      border-radius:24px 24px 18px 18px;
+      padding:22px;
+      box-shadow:0 -12px 40px rgba(15,23,42,.20);
+    ">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="
+            width:44px;height:44px;border-radius:14px;
+            display:inline-flex;align-items:center;justify-content:center;
+            background:#eef2ff;color:#0029ff;font-size:19px;
+          ">
+            <i class="fa-solid fa-star"></i>
+          </span>
+          <div>
+            <small style="display:block;color:#64748b;margin-bottom:2px">Desempenho</small>
+            <strong style="font-size:20px;color:#0f172a">Score do entregador</strong>
+          </div>
+        </div>
+
+        <button id="closeDriverScoreSheet" type="button" style="
+          width:40px;height:40px;border:0;border-radius:50%;
+          background:#f1f5f9;color:#334155;cursor:pointer;font-size:18px;
+        " aria-label="Fechar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div style="
+        min-height:180px;
+        border:1px solid #e2e8f0;
+        border-radius:18px;
+        background:#f8fafc;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        padding:28px 20px;
+      ">
+        <i class="fa-solid fa-star" style="font-size:32px;color:#0029ff;margin-bottom:12px"></i>
+        <strong style="font-size:18px;color:#0f172a">Seu Score</strong>
+        <p style="margin:7px 0 0;color:#64748b;max-width:330px">
+          Em breve, suas informações de pontuação e desempenho aparecerão aqui.
+        </p>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(sheet);
+
+  sheet.querySelector("#closeDriverScoreSheet").onclick=closeDriverScoreSheet;
+  sheet.addEventListener("click",e=>{
+    if(e.target===sheet)closeDriverScoreSheet();
+  });
+
+  return sheet;
+}
+
+function openDriverScoreSheet(){
+  const sheet=ensureDriverScoreSheet();
+  sheet.style.display="flex";
+  document.body.style.overflow="hidden";
+}
+
+function closeDriverScoreSheet(){
+  const sheet=document.getElementById("driverScoreSheet");
+  if(sheet)sheet.style.display="none";
+  document.body.style.overflow="";
+}
+
 function openApp(driver,token){
   state.driver=driver;
   state.token=token||state.token;
@@ -349,6 +472,7 @@ function openApp(driver,token){
   show("appView");
   state.driverOnline=getDriverOnlineStatus();
   renderDriverOnlineStatus();
+  ensureDriverScoreNav();
   dashboard();
   startDriverPolling();
 }
