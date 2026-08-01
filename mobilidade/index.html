@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Pega&Leva Mobilidade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section id="loginView" class="auth">
+  <div class="auth-card">
+    <div class="logo"><img src="https://i.ibb.co/3YCDGsVD/PEGA-E-LEVA-MKT-1.png" alt="Pega&Leva"></div>
+    <h1>Entrar</h1>
+    <p>Acesse sua conta para solicitar e acompanhar suas viagens.</p>
+
+    <div id="quickLoginBox" class="hide" style="margin:14px 0 18px">
+      <div style="font-size:.72rem;font-weight:900;color:#64748b;letter-spacing:.06em;margin-bottom:8px">ENTRAR RAPIDAMENTE</div>
+      <div style="display:flex;align-items:center;gap:10px;border:1px solid #dbe7ff;background:#f8fbff;border-radius:14px;padding:10px">
+        <button id="quickLoginAccount" type="button" style="flex:1;display:flex;align-items:center;gap:11px;border:0;background:transparent;text-align:left;cursor:pointer;padding:2px">
+          <span style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#0646c8;color:#fff"><i class="fa-solid fa-user"></i></span>
+          <span style="min-width:0">
+            <strong id="quickLoginName" style="display:block;color:#172033">Conta salva</strong>
+            <small id="quickLoginEmail" style="display:block;color:#64748b"></small>
+          </span>
+        </button>
+        <button id="removeQuickLogin" type="button" title="Remover conta salva" style="width:38px;height:38px;border:0;border-radius:10px;background:#fff;color:#d93025;cursor:pointer"><i class="fa-solid fa-trash"></i></button>
+      </div>
+      <div id="quickLoginLoading" class="auth-loading"><span class="spinner"></span>Entrando...</div>
+      <div id="quickLoginError" class="err"></div>
+      <div class="auth-divider" style="margin-top:16px">ou entre com outra conta</div>
+    </div>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="field">
+        <label>E-mail</label>
+        <div class="input-icon-wrap">
+          <i class="fa-regular fa-envelope"></i>
+          <input id="loginEmail" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Senha</label>
+        <div class="input-icon-wrap has-toggle">
+          <i class="fa-solid fa-lock"></i>
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
+          <button class="password-toggle" type="button" data-toggle-password="loginPassword"><i class="fa-regular fa-eye"></i></button>
+        </div>
+      </div>
+
+      <label class="remember">
+        <input id="rememberLogin" type="checkbox">
+        Salvar minhas informações para entrar rapidamente
+      </label>
+
+      <button class="btn primary full" type="submit"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+      <div id="loginError" class="err"></div>
+      <div class="auth-loading" id="loginLoading"><span class="spinner"></span>Entrando...</div>
+    </form>
+
+    <div class="auth-divider">ou</div>
+    <button class="btn outline full" id="openRegister" type="button"><i class="fa-solid fa-user-plus"></i> Criar conta</button>
+  </div>
+</section>
+
+<section id="registerView" class="auth hide">
+  <div class="auth-card">
+    <div class="logo"><img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png" alt="Pega&Leva"></div>
+    <h1>Criar conta</h1>
+    <p>Cadastre-se para pedir suas viagens sempre que precisar.</p>
+
+    <div class="register-progress" id="registerProgress"><span class="on"></span><span></span><span></span></div>
+
+    <form id="registerForm" autocomplete="on">
+      <div class="register-step on" data-register-step="0">
+        <div class="register-step-title"><i class="fa-solid fa-user"></i><span><strong>Seus dados</strong><small>Informações para sua conta</small></span></div>
+        <div class="field"><label>Nome completo</label><input id="regName" autocomplete="name" required></div>
+        <div class="field"><label>E-mail</label><input id="regEmail" type="email" autocomplete="email" required></div>
+        <div class="field">
+          <label>Senha</label>
+          <div class="input-icon-wrap has-toggle">
+            <i class="fa-solid fa-lock"></i>
+            <input id="regPassword" type="password" autocomplete="new-password" minlength="6" required>
+            <button class="password-toggle" type="button" data-toggle-password="regPassword"><i class="fa-regular fa-eye"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="register-step" data-register-step="1">
+        <div class="register-step-title"><i class="fa-solid fa-shield-halved"></i><span><strong>Contato</strong><small>Usado para contato durante sua viagem</small></span></div>
+        <div class="field"><label>DDD + WhatsApp</label><input id="regWhatsapp" inputmode="numeric" autocomplete="tel" placeholder="89 9 9999-9999" required></div>
+        <div class="field"><label>CPF</label><input id="regDoc" inputmode="numeric" placeholder="Digite seu CPF" required></div>
+      </div>
+
+      <div class="register-step" data-register-step="2">
+        <div class="register-step-title"><i class="fa-solid fa-location-dot"></i><span><strong>Seu endereço</strong><small>Pode ser usado como ponto rápido de partida</small></span></div>
+        <div class="field"><label>Logradouro</label><input id="regStreet" autocomplete="street-address" required></div>
+        <div class="grid2">
+          <div class="field"><label>Número</label><input id="regNumber" required></div>
+          <div class="field"><label>Cidade</label><select id="regCity" required><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select></div>
+        </div>
+        <div class="field"><label>Ponto de referência</label><input id="regReference" required></div>
+      </div>
+
+      <div class="step-loading" id="registerStepLoading"><span class="spinner"></span>Carregando...</div>
+      <div class="moto-loading" id="registerMotoLoading"><div class="mini-road"><i class="fa-solid fa-motorcycle mini-bike"></i></div><p>Criando sua conta...</p></div>
+      <div class="step-actions">
+        <button class="btn secondary hide" id="registerBack" type="button">Voltar</button>
+        <button class="btn primary" id="registerNext" type="button">Continuar</button>
+        <button class="btn primary hide" id="registerSubmit" type="submit">Criar conta</button>
+      </div>
+    </form>
+
+    <div class="switch">Já possui conta? <button id="backLogin" type="button">Entrar</button></div>
+  </div>
+</section>
+
+<section id="appView" class="app hide">
+  <header class="topbar">
+    <div>
+      <img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png">
+      <button class="profile" id="profileBtn"><i class="fa-regular fa-user"></i></button>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="welcome">
+      <small>PEGA & LEVA MOBILIDADE</small>
+      <h2 id="welcomeName">Olá!</h2>
+      <p id="welcomeCity"></p>
+    </section>
+
+    <nav class="app-nav">
+      <button class="nav-item active"><i class="fa-solid fa-house"></i>Início</button>
+      <button class="nav-item" id="navSimulator"><i class="fa-solid fa-calculator"></i>Simular</button>
+      <button class="nav-item" id="navTrips"><i class="fa-solid fa-route"></i>Viagens</button>
+      <button class="nav-item" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i>Sair</button>
+    </nav>
+
+    <section class="card">
+      <div class="head">
+        <h3>Suas viagens</h3>
+        <span class="badge blue">Mobilidade</span>
+      </div>
+      <p>Escolha de onde você vai sair e para onde quer ir. O valor é calculado antes da solicitação.</p>
+      <button class="btn secondary full" id="viewTrips"><i class="fa-solid fa-clock-rotate-left"></i> Ver minhas viagens</button>
+    </section>
+  </main>
+
+  <section class="request">
+    <div style="text-align:center;margin-bottom:10px">
+      <div style="font-size:.72rem;font-weight:900;color:#0646c8;letter-spacing:.08em">PEÇA SUA VIAGEM</div>
+      <h3 style="margin:4px 0 6px;font-size:1.08rem"><i class="fa-solid fa-motorcycle"></i> Para onde vamos?</h3>
+    </div>
+
+    <div class="location-box">
+      <button class="loc" id="originTrigger"><i class="fa-solid fa-location-dot"></i><span><small>1º PASSO • PARTIDA</small><strong id="originLabel">Escolha onde o motorista vai buscar você</strong></span></button>
+      <button class="loc" id="destinationTrigger"><i class="fa-solid fa-flag-checkered"></i><span><small>2º PASSO • DESTINO</small><strong id="destinationLabel">Escolha para onde você vai</strong></span></button>
+    </div>
+    <button class="btn primary full" id="continueRequest" style="margin-top:9px">Ver valores da viagem →</button>
+  </section>
+</section>
+
+<button class="floating-trips" id="floatingTrips" style="display:none"><i class="fa-solid fa-motorcycle"></i><span class="dot" id="tripNotification">0</span></button>
+
+<div class="sheet" id="choiceSheet">
+  <div class="sheet-box">
+    <div class="sheet-head"><h3 id="choiceTitle"></h3><button class="close" data-close="choiceSheet">×</button></div>
+    <div class="option-list" id="choiceOptions"></div>
+  </div>
+</div>
+
+<div class="sheet" id="addressSheet">
+  <div class="sheet-box">
+    <div class="sheet-head"><h3 id="addressTitle">Informar local</h3><button class="close" data-close="addressSheet">×</button></div>
+    <form id="addressForm">
+      <div class="field"><label>Logradouro</label><input id="addressStreet" required></div>
+      <div class="grid2">
+        <div class="field"><label>Número</label><input id="addressNumber" required></div>
+        <div class="field"><label>Cidade</label><select id="addressCity"><option>Uruçuí</option><option>Benedito Leite</option></select></div>
+      </div>
+      <div class="field"><label>Ponto de referência</label><input id="addressReference" required></div>
+      <button class="btn primary full" type="submit">Salvar local</button>
+    </form>
+  </div>
+</div>
+
+<div class="sheet" id="wizardSheet">
+  <div class="sheet-box">
+    <div class="sheet-head"><h3 id="wizardTitle">Sua viagem</h3><button class="close" data-close="wizardSheet">×</button></div>
+    <div class="steps" id="steps"></div>
+    <div id="wizardContent"></div>
+    <div class="moto-loading" id="wizardMotoLoading"><div class="mini-road"><i class="fa-solid fa-motorcycle mini-bike"></i></div><p>Calculando sua viagem...</p></div>
+    <div class="actions"><button class="btn secondary" id="backStep">Voltar</button><button class="btn primary" id="nextStep">Continuar</button></div>
+  </div>
+</div>
+
+<div class="modal" id="loadingModal">
+  <div class="modal-box loading">
+    <div class="road"><i class="fa-solid fa-motorcycle bike"></i></div>
+    <h3>Solicitando sua viagem...</h3>
+    <p>Estamos enviando a corrida aos motoristas disponíveis.</p>
+  </div>
+</div>
+
+<div class="modal" id="successModal">
+  <div class="modal-box success">
+    <i class="fa-solid fa-circle-check"></i>
+    <h2>Viagem solicitada!</h2>
+    <p id="successCode"></p>
+    <p>Motoristas próximos já podem visualizar sua solicitação.</p>
+    <button class="btn primary full" id="successViewTrips"><i class="fa-solid fa-route"></i> Acompanhar minha viagem</button>
+    <button class="btn secondary full" data-close="successModal" style="margin-top:8px">Fechar</button>
+  </div>
+</div>
+
+<div class="sheet" id="simulatorSheet">
+  <div class="sheet-box">
+    <div class="sheet-head"><h3>Simular viagem</h3><button class="close" data-close="simulatorSheet">×</button></div>
+    <div class="field"><label>Cidade de partida</label><select id="simOriginCity"><option>Uruçuí</option><option>Benedito Leite</option></select></div>
+    <div class="field"><label>Bairro de partida</label><select id="simOriginNeighborhood"></select></div>
+    <div class="field"><label>Cidade de destino</label><select id="simDestinationCity"><option>Uruçuí</option><option>Benedito Leite</option></select></div>
+    <div class="field"><label>Bairro de destino</label><select id="simDestinationNeighborhood"></select></div>
+    <button class="btn primary full" id="calculateSimulation"><i class="fa-solid fa-calculator"></i> Calcular viagem</button>
+    <div id="simulationLoading" class="auth-loading"><span class="spinner"></span>Calculando...</div>
+    <div id="simulationResults" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<div class="sheet" id="tripsSheet">
+  <div class="sheet-box">
+    <div class="sheet-head"><h3>Minhas viagens</h3><button class="close" data-close="tripsSheet">×</button></div>
+    <div id="tripsList"></div>
+  </div>
+</div>
+
+<div class="sheet" id="profileSheet">
+  <div class="sheet-box">
+    <div class="sheet-head"><h3>Minha conta</h3><button class="close" data-close="profileSheet">×</button></div>
+    <div class="trip"><strong id="profileName"></strong><span id="profileEmail"></span><span id="profileAddress"></span></div>
+  </div>
+</div>
+
+<div class="status-alert" id="statusAlert">
+  <div class="status-alert-icon" id="statusAlertIcon"><i class="fa-solid fa-motorcycle"></i></div>
+  <div><strong id="statusAlertTitle">Atualização da viagem</strong><span id="statusAlertText"></span></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="success-toast" id="successToast">
+  <i class="fa-solid fa-circle-check"></i>
+  <div><strong>Viagem solicitada!</strong><br><small>Acompanhe o motorista em Minhas viagens.</small></div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
