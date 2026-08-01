@@ -767,7 +767,9 @@ async function dashboard(useLoading=false){
     state.availableTrips=j.availableTrips||[];
     balance.textContent=state.balanceVisible?money.format(j.driver.balance||0):"R$ •••••";
     discountBadge.textContent=`Taxa da plataforma: ${Number(j.driver.feePercent||20)}%`;
-    balanceInfo.textContent="O valor recebido pelo entregador considera o desconto de 20% da plataforma. Bônus, quando houver, é somado ao seu ganho.";
+    balanceInfo.textContent=state.driver&&state.driver.autoDiscount===false
+      ?"Você recebe o valor integral das corridas."
+      :"Seu saldo mostra o valor líquido das corridas após a taxa da plataforma. Bônus, quando houver, é somado separadamente.";
     tripCount.textContent=`${state.trips.filter(t=>!["FINALIZADA","CANCELADA PELO ENTREGADOR"].includes(String(t.status).toUpperCase())).length} corrida(s)`;
     renderDriverOnlineStatus();
     renderDriverScoreSheet();
@@ -795,6 +797,23 @@ document.addEventListener("visibilitychange",()=>{
 });
 window.addEventListener("online",()=>{if(state.driver){toast("Conexão restabelecida.");dashboard(false)}});
 window.addEventListener("offline",()=>toast("Você está sem internet. O painel atualizará ao reconectar."));
+
+function driverBaseNetValue(t){
+  const gross=Math.max(0,Number(t&&t.value||0));
+
+  // Se o desconto automático estiver INATIVO, recebe o valor cheio.
+  if(state.driver&&state.driver.autoDiscount===false){
+    return gross;
+  }
+
+  const feePercent=Math.max(
+    0,
+    Math.min(100,Number(state.driver&&state.driver.feePercent||20))
+  );
+
+  return Math.max(0,Math.round((gross*(1-feePercent/100))*100)/100);
+}
+
 function renderTrips(){
   const active=state.trips
     .filter(t=>!["FINALIZADA","CANCELADA PELO ENTREGADOR"].includes(String(t.status).toUpperCase()))
@@ -808,7 +827,7 @@ function renderTrips(){
     <div><div class="trip-code">${t.code}</div><span class="status">${statusLabel(t.status)}</span></div>
     <div style="display:flex;align-items:center;gap:8px">
       <div style="text-align:right">
-        <div class="trip-price">${money.format(t.driverValue!==undefined?t.driverValue:t.value)}</div>
+        <div class="trip-price">${money.format(driverBaseNetValue(t))}</div>
         ${Number(t.bonus||0)>0?`<small style="display:block;color:#16a34a;font-weight:900">+ bônus ${money.format(t.bonus)}</small>`:""}
       </div>
       <button class="card-menu-btn" onclick="toggleTripCommands('${t.code}')" title="Comandos da corrida">
@@ -850,7 +869,7 @@ function renderHistory(){
       <div class="trip-top">
         <div class="trip-code">${t.code}</div>
         <div style="text-align:right">
-          <div class="trip-price">${money.format(t.driverValue!==undefined?t.driverValue:t.value)}</div>
+          <div class="trip-price">${money.format(driverBaseNetValue(t))}</div>
           ${Number(t.bonus||0)>0?`<small style="display:block;color:#16a34a;font-weight:900">+ bônus ${money.format(t.bonus)}</small>`:""}
         </div>
       </div>
@@ -934,8 +953,8 @@ function renderAvailableTrips(){
           <span class="request-new">Nova solicitação</span>
         </div>
         <div style="text-align:right">
-          <div class="trip-price">${money.format(Number(t.driverValue!==undefined?t.driverValue:data.value))}</div>
-          <small style="display:block;color:#64748b;font-size:10px">você recebe</small>
+          <div class="trip-price">${money.format(driverBaseNetValue({...t,value:data.value}))}</div>
+          <small style="display:block;color:#64748b;font-size:10px">valor líquido para você</small>
           ${Number(t.bonus||0)>0?`<span style="display:inline-block;margin-top:4px;padding:4px 7px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:10px;font-weight:900">+ BÔNUS ${money.format(t.bonus)}</span>`:""}
         </div>
       </div>
