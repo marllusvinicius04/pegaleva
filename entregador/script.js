@@ -325,20 +325,12 @@ async function toggleDriverOnlineStatus(){
   btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>Carregando...</span>';
 
   try{
-    /* Se o Apps Script possuir ação de status, aguarda a confirmação do servidor. */
+    // Tenta registrar no servidor, caso a ação já esteja disponível.
     try{
-      const response=await api("driverSetStatus",{
-        token:state.token,
-        status:next?"ONLINE":"OFFLINE"
-      });
-
-      if(response&&response.ok===false){
-        throw new Error(response.error||"Não foi possível alterar o status.");
-      }
+      await api("driverSetStatus",{status:next?"ONLINE":"OFFLINE"});
     }catch(serverError){
-      /* Compatibilidade: se essa ação ainda não existir no backend,
-         mantém o funcionamento local já existente. */
       const msg=String(serverError&&serverError.message||serverError||"");
+      // Enquanto o backend não tiver essa ação, mantém o status salvo no aparelho.
       if(!/ação inválida|acao invalida|invalid action|driverSetStatus/i.test(msg)){
         throw serverError;
       }
@@ -348,12 +340,23 @@ async function toggleDriverOnlineStatus(){
     localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(next));
     renderDriverOnlineStatus();
 
-    toast(next
-      ?"Você está ON e disponível."
-      :"Você está OFF."
-    );
+    if(next){
+      // Força atualização completa para as corridas disponíveis aparecerem na hora.
+      state.revision="";
+      await dashboard(true);
+      renderAvailableTrips();
+      toast("Você está ON e disponível para receber corridas.");
+    }else{
+      // OFF permanece OFF até o próprio entregador clicar novamente.
+      if(typeof closeRequestsDrawer==="function")closeRequestsDrawer();
+      if(typeof requestBadge!=="undefined"&&requestBadge){
+        requestBadge.classList.add("hide");
+      }
+      toast("Você está OFF. Clique novamente quando quiser ficar disponível.");
+    }
   }catch(e){
     state.driverOnline=previous;
+    localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(previous));
     renderDriverOnlineStatus();
     toast(e.message||"Não foi possível alterar seu status.");
   }finally{
@@ -776,13 +779,18 @@ manualAddTripBtn.onclick=()=>{tripCodeInput.value="";openL("addTripSheet")}
 newRequestsBtn.onclick=()=>{openRequestsDrawer()}
 closeRequestsBtn.onclick=()=>closeRequestsDrawer()
 requestsDrawer.onclick=e=>{if(e.target===requestsDrawer)closeRequestsDrawer()}
-function openRequestsDrawer(){
+async function openRequestsDrawer(){
   if(!state.driverOnline){
-    toast("Você está OFF. Ative o status ON para receber novas solicitações.");
+    toast("Você está OFF. Ative o status ON para receber novas corridas.");
     return;
   }
+
   requestsDrawer.classList.add("on");
-  dashboard(false);
+
+  // Busca novamente as solicitações sempre que abrir a área estando ON.
+  state.revision="";
+  await dashboard(false);
+  renderAvailableTrips();
 }
 function closeRequestsDrawer(){requestsDrawer.classList.remove("on")}
 
