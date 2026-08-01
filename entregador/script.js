@@ -1,8 +1,8 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbxoxiwiw8WRV-9i0yGGfUMA2ye8eBZ2t7UQx06-4KjKidEJFfNKcCvMUmgwcB74XH_d/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbzKeWcypvjewx1M7IpvZGww2ikDOxOEQuk5ReMABqkuCJUa2DM_baT28qQhUB1oNj3c/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
-const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false};
+const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false};
 async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
@@ -19,6 +19,7 @@ async function api(action,data={},options={}){
     if(!j.ok){
       if(/sessão expirada|não autorizado/i.test(j.error||"")){
         clearInterval(state.dashboardTimer);
+        clearInterval(state.statusTimer);
         sessionStorage.removeItem("pl_driver");
         state.driver=null;state.token="";
         show("loginView");
@@ -327,33 +328,22 @@ async function toggleDriverOnlineStatus(){
   try{
     const j=await api("driverSetOnlineStatus",{
       status:next?"ONLINE":"OFFLINE"
-    },{timeout:20000});
+    },{timeout:12000});
 
-    // O servidor/planilha é a fonte oficial do status.
     const serverStatus=String(
       j&&j.driver&&j.driver.status || (next?"ONLINE":"OFFLINE")
     ).toUpperCase();
 
-    state.driver=j&&j.driver?j.driver:state.driver;
-    state.driverOnline=String(driver.status||"OFFLINE").toUpperCase()==="ONLINE";
-  renderDriverOnlineStatus();
+    if(j&&j.driver)state.driver=j.driver;
+    state.driverOnline=serverStatus==="ONLINE";
 
-    // Força novo dashboard porque a mudança de status altera a revisão no Apps Script.
-    state.revision="";
-    await dashboard(false);
+    localStorage.setItem(
+      DRIVER_AVAILABILITY_KEY,
+      String(state.driverOnline)
+    );
 
-    if(state.driverOnline){
-      renderAvailableTrips();
-      toast("Você está ON e disponível para receber corridas.");
-    }else{
-      if(typeof closeRequestsDrawer==="function")closeRequestsDrawer();
-      if(typeof requestBadge!=="undefined"&&requestBadge){
-        requestBadge.classList.add("hide");
-      }
-      toast("Você está OFF.");
-    }
+    renderDriverOnlineStatus();
 
-    // Atualiza a sessão salva para o status persistir visualmente também.
     try{
       sessionStorage.setItem(
         "pl_driver",
@@ -361,6 +351,18 @@ async function toggleDriverOnlineStatus(){
       );
     }catch(e){}
 
+    if(state.driverOnline){
+      toast("Você está ON e disponível.");
+      // Não trava o botão esperando o dashboard inteiro.
+      state.revision="";
+      setTimeout(()=>dashboard(false),50);
+    }else{
+      if(typeof closeRequestsDrawer==="function")closeRequestsDrawer();
+      if(typeof requestBadge!=="undefined"&&requestBadge){
+        requestBadge.classList.add("hide");
+      }
+      toast("Você está OFF.");
+    }
   }catch(e){
     state.driverOnline=previous;
     renderDriverOnlineStatus();
@@ -374,6 +376,65 @@ async function toggleDriverOnlineStatus(){
 }
 
 
+
+
+async function syncDriverOnlineStatus(){
+  if(!state.driver||!state.token||state.statusBusy||document.hidden||!navigator.onLine)return;
+
+  state.statusBusy=true;
+  try{
+    const j=await api("driverStatus",{},{
+      timeout:8000,
+      noRetry:true
+    });
+
+    const serverOnline=String(j&&j.status||"OFFLINE").toUpperCase()==="ONLINE";
+    const changed=serverOnline!==state.driverOnline;
+
+    state.driverOnline=serverOnline;
+
+    if(state.driver){
+      state.driver.status=serverOnline?"ONLINE":"OFFLINE";
+      if(j&&j.score!==undefined)state.driver.score=j.score;
+      if(j&&j.level)state.driver.level=j.level;
+    }
+
+    localStorage.setItem(
+      DRIVER_AVAILABILITY_KEY,
+      String(serverOnline)
+    );
+
+    renderDriverOnlineStatus();
+
+    if(changed&&serverOnline){
+      state.revision="";
+      dashboard(false);
+    }
+
+    if(changed&&!serverOnline){
+      if(typeof closeRequestsDrawer==="function")closeRequestsDrawer();
+      if(typeof requestBadge!=="undefined"&&requestBadge){
+        requestBadge.classList.add("hide");
+      }
+    }
+  }catch(e){
+    // Sincronização silenciosa: não trava a interface e não exibe erro repetitivo.
+  }finally{
+    state.statusBusy=false;
+  }
+}
+
+function startDriverStatusSync(){
+  clearInterval(state.statusTimer);
+
+  // Confere rapidamente ao entrar.
+  setTimeout(()=>syncDriverOnlineStatus(),500);
+
+  // Consulta leve só do STATUS, sem carregar dashboard completo.
+  state.statusTimer=setInterval(()=>{
+    syncDriverOnlineStatus();
+  },6000);
+}
 
 function keepDriverTopNavSingleRow(){
   const clickable=[...document.querySelectorAll("button,a,[role='button']")];
@@ -677,8 +738,12 @@ function openApp(driver,token){
   withdrawEmail.value=driver.email||"";
   show("appView");
   state.driverOnline=String(driver.status||"OFFLINE").toUpperCase()==="ONLINE";
+  localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(state.driverOnline));
   renderDriverOnlineStatus();
   ensureDriverScoreNav();
+
+  // Mostra ON/OFF imediatamente e sincroniza com a planilha em segundo plano.
+  startDriverStatusSync();
   dashboard();
   startDriverPolling();
 }
@@ -692,8 +757,12 @@ async function dashboard(useLoading=false){
       :await load();
     if(j.unchanged)return;
     state.revision=String(j.revision||state.revision||"");
-    state.driver=j.driver;
-    state.driverOnline=String(j.driver&&j.driver.status||"OFFLINE").toUpperCase()==="ONLINE";
+    if(j.driver){
+      state.driver=j.driver;
+      state.driverOnline=String(j.driver.status||"OFFLINE").toUpperCase()==="ONLINE";
+      localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(state.driverOnline));
+      renderDriverOnlineStatus();
+    }
     state.trips=j.trips||[];
     state.availableTrips=j.availableTrips||[];
     balance.textContent=state.balanceVisible?money.format(j.driver.balance||0):"R$ •••••";
@@ -714,10 +783,16 @@ async function dashboard(useLoading=false){
 function startDriverPolling(){
   clearInterval(state.dashboardTimer);
   state.dashboardTimer=setInterval(()=>{
-    if(state.driver&&state.driverOnline&&!document.hidden&&navigator.onLine)dashboard(false);
-  },10000);
+    if(state.driver&&state.driverOnline&&!document.hidden&&navigator.onLine){
+      dashboard(false);
+    }
+  },12000);
 }
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.driver&&state.driverOnline)dashboard(false)});
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden||!state.driver)return;
+  syncDriverOnlineStatus();
+  if(state.driverOnline)dashboard(false);
+});
 window.addEventListener("online",()=>{if(state.driver){toast("Conexão restabelecida.");dashboard(false)}});
 window.addEventListener("offline",()=>toast("Você está sem internet. O painel atualizará ao reconectar."));
 function renderTrips(){
@@ -1226,6 +1301,7 @@ historyNav.onclick=()=>openL("historySheet");refreshBtn.onclick=()=>dashboard(tr
   try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
 
   clearInterval(state.dashboardTimer);
+  clearInterval(state.statusTimer);
   sessionStorage.removeItem("pl_driver");
 
   state.driver=null;
