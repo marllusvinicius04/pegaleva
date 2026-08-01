@@ -129,6 +129,22 @@ function showStatusAlert(trip){
   }
 }
 
+
+function tripWasRated(trip){
+  if(!trip||!trip.code)return false;
+
+  if(trip.rated===true)return true;
+
+  const rating=Number(
+    trip.rating!==undefined?trip.rating:
+    trip.driverRating!==undefined?trip.driverRating:0
+  );
+
+  if(Number.isFinite(rating)&&rating>0)return true;
+
+  return !!localStorage.getItem("pl_rated_trip_"+trip.code);
+}
+
 function ensureDriverRatingModal(){
   let modal=document.getElementById("driverRatingModal");
   if(modal)return modal;
@@ -274,6 +290,7 @@ function ensureDriverRatingModal(){
         ratedTrip.rating=state.ratingValue;
         ratedTrip.rated=true;
         ratedTrip.driverRating=state.ratingValue;
+        ratedTrip.ratedAt=new Date().toISOString();
       }
 
       modal.querySelector("#driverRatingStars").style.display="none";
@@ -308,12 +325,7 @@ function driverInitials(name){
 function openDriverRatingModal(trip){
   if(!trip||!trip.code)return;
 
-  if(
-    trip.rating ||
-    trip.rated ||
-    trip.driverRating ||
-    localStorage.getItem("pl_rated_trip_"+trip.code)
-  )return;
+  if(tripWasRated(trip))return;
 
   const modal=ensureDriverRatingModal();
   const name=String(trip.driverName||"Motoboy Pega & Leva").trim();
@@ -372,10 +384,7 @@ function compareTripUpdates(newTrips){
       if(
         previousStatus!=="FINALIZADA" &&
         currentStatus==="FINALIZADA" &&
-        !t.rating &&
-        !t.rated &&
-        !t.driverRating &&
-        !localStorage.getItem("pl_rated_trip_"+t.code)
+        !tripWasRated(t)
       ){
         newlyFinalized.push(t);
       }
@@ -421,17 +430,37 @@ async function dashboard(silent=false){
     state.revision=String(j.revision||state.revision||"");
     const newTrips=j.trips||[];
     const wasFirstDashboard=state.firstDashboard;
+
+    // O servidor é a fonte oficial: se a planilha já possui avaliação,
+    // registra localmente também para nunca reabrir esse modal neste aparelho.
+    newTrips.forEach(t=>{
+      if(t&&t.code&&t.rated){
+        localStorage.setItem(
+          "pl_rated_trip_"+t.code,
+          String(t.rating||1)
+        );
+      }
+    });
     compareTripUpdates(newTrips);
     state.trips=newTrips;
+
+    if(state.ratingTripCode){
+      const currentRatingTrip=state.trips.find(
+        t=>String(t.code)===String(state.ratingTripCode)
+      );
+      if(currentRatingTrip&&tripWasRated(currentRatingTrip)){
+        const ratingModal=document.getElementById("driverRatingModal");
+        if(ratingModal&&ratingModal.style.display==="flex"){
+          closeDriverRatingModal();
+        }
+      }
+    }
 
     if(wasFirstDashboard){
       const latestFinished=newTrips
         .filter(t=>
           String(t.status||"").toUpperCase()==="FINALIZADA" &&
-          !t.rating &&
-          !t.rated &&
-          !t.driverRating &&
-          !localStorage.getItem("pl_rated_trip_"+t.code)
+          !tripWasRated(t)
         )
         .sort((a,b)=>{
           const ta=new Date(a.finalizedAt||a.createdAt||0).getTime()||0;
