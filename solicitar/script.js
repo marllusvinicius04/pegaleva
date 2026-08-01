@@ -2,7 +2,7 @@
 const API_URL="https://script.google.com/macros/s/AKfycbxPY3HHffu0PTEXiB7yzfZKbFhHEf9tHOKZgctTooPqN2S0FGLq6vpdmDCMxiigCYMy/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
+  const timeout=setTimeout(()=>controller.abort(),options.timeout||30000);
   const payload={action,...data};
   if(state.token)payload.token=state.token;
   try{
@@ -27,8 +27,13 @@ const API_URL="https://script.google.com/macros/s/AKfycbxPY3HHffu0PTEXiB7yzfZKbF
     return j;
   }catch(e){
     if(e.name==="AbortError")throw new Error("A conexão demorou demais. Tente novamente.");
-    if(!options.noRetry && /fetch|conexão|network/i.test(String(e.message))){
-      await new Promise(r=>setTimeout(r,900));
+    const nonRepeatable=["createTrip","cancelUserTrip","rateDriver","logout"].includes(String(action));
+    if(
+      !options.noRetry &&
+      !nonRepeatable &&
+      /fetch|conexão|network/i.test(String(e.message))
+    ){
+      await new Promise(r=>setTimeout(r,700));
       return api(action,data,{...options,noRetry:true});
     }
     throw e;
@@ -977,7 +982,61 @@ $("removeQuickLogin").onclick=()=>{
       $("backStep").disabled=false;
     },450);
   }
-};async function submit(){closeL("wizardSheet");openL("loadingModal");try{const j=await api("createTrip",{trip:{userId:state.user.id,origin:state.request.origin,destination:state.request.destination,originNeighborhood:state.request.originNeighborhood,destinationNeighborhood:state.request.destinationNeighborhood,receiverName:state.request.receiverName,receiverWhatsapp:state.request.receiverWhatsapp,contentType:state.request.contentType,returnTrip:state.request.returnTrip,freightType:state.request.selectedFreight.type}});state.request.code=j.trip.code;setTimeout(()=>{closeL("loadingModal");successCode.textContent=`Código do pedido: ${j.trip.code}`;openL("successModal");playPositiveConfirmation();successNotify();dashboard()},10000)}catch(x){closeL("loadingModal");toast(x.message)}}function cleanMapAddress(a){
+};async function submit(){
+  closeL("wizardSheet");
+  openL("loadingModal");
+
+  try{
+    const j=await api("createTrip",{
+      trip:{
+        userId:state.user.id,
+        origin:state.request.origin,
+        destination:state.request.destination,
+        originNeighborhood:state.request.originNeighborhood,
+        destinationNeighborhood:state.request.destinationNeighborhood,
+        receiverName:state.request.receiverName,
+        receiverWhatsapp:state.request.receiverWhatsapp,
+        contentType:state.request.contentType,
+        returnTrip:state.request.returnTrip,
+        freightType:state.request.selectedFreight.type
+      }
+    },{
+      timeout:40000,
+      noRetry:true
+    });
+
+    state.request.code=j.trip.code;
+
+    closeL("loadingModal");
+
+    if(typeof successCode!=="undefined"&&successCode){
+      successCode.textContent=`Código do pedido: ${j.trip.code}`;
+    }
+
+    openL("successModal");
+    playPositiveConfirmation();
+    successNotify();
+
+    state.revision="";
+    setTimeout(()=>dashboard(true),100);
+
+  }catch(x){
+    closeL("loadingModal");
+
+    const msg=String(x&&x.message||"");
+
+    if(/conexão demorou demais/i.test(msg)){
+      toast("A solicitação está demorando para confirmar. Verifique em Minhas entregas antes de tentar novamente.");
+      state.revision="";
+      setTimeout(()=>dashboard(true),300);
+      return;
+    }
+
+    toast(msg||"Não foi possível solicitar a entrega.");
+  }
+}
+
+function cleanMapAddress(a){
   if(!a || a.mode==="whatsapp") return "";
   return [a.street,a.number,a.city].filter(Boolean).join(", ");
 }
@@ -1192,7 +1251,7 @@ function bindSendWhatsappAction(){
     e?.preventDefault?.();
 
     // A corrida já foi criada pelo createTrip.
-    // Não envia mais o pedido para o WhatsApp administrativo.
+    // Apenas confirma a solicitação. Não abre WhatsApp administrativo.
     openRequestSentModal();
   };
 }
@@ -1509,10 +1568,10 @@ function configureLocationWhatsappButton(){
   if(!btn)return;
 
   btn.innerHTML=`
-    <i class="fa-brands fa-whatsapp"></i>
-    Enviar localização pelo WhatsApp
+    <i class="fa-solid fa-circle-check"></i>
+    Confirmar solicitação
   `;
-  btn.title="Confirmar solicitação e lembrar de enviar sua localização ao entregador";
+  btn.title="Confirmar que sua solicitação foi enviada";
 
   bindSendWhatsappAction();
 }
