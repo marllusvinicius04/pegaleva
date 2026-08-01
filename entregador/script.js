@@ -325,38 +325,44 @@ async function toggleDriverOnlineStatus(){
   btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>Carregando...</span>';
 
   try{
-    // Tenta registrar no servidor, caso a ação já esteja disponível.
-    try{
-      await api("driverSetStatus",{status:next?"ONLINE":"OFFLINE"});
-    }catch(serverError){
-      const msg=String(serverError&&serverError.message||serverError||"");
-      // Enquanto o backend não tiver essa ação, mantém o status salvo no aparelho.
-      if(!/ação inválida|acao invalida|invalid action|driverSetStatus/i.test(msg)){
-        throw serverError;
-      }
-    }
+    const j=await api("driverSetOnlineStatus",{
+      status:next?"ONLINE":"OFFLINE"
+    });
 
-    state.driverOnline=next;
-    localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(next));
-    renderDriverOnlineStatus();
+    // O servidor/planilha é a fonte oficial do status.
+    const serverStatus=String(
+      j&&j.driver&&j.driver.status || (next?"ONLINE":"OFFLINE")
+    ).toUpperCase();
 
-    if(next){
-      // Força atualização completa para as corridas disponíveis aparecerem na hora.
-      state.revision="";
-      await dashboard(true);
+    state.driver=j&&j.driver?j.driver:state.driver;
+    state.driverOnline=String(driver.status||"OFFLINE").toUpperCase()==="ONLINE";
+  renderDriverOnlineStatus();
+
+    // Força novo dashboard porque a mudança de status altera a revisão no Apps Script.
+    state.revision="";
+    await dashboard(false);
+
+    if(state.driverOnline){
       renderAvailableTrips();
       toast("Você está ON e disponível para receber corridas.");
     }else{
-      // OFF permanece OFF até o próprio entregador clicar novamente.
       if(typeof closeRequestsDrawer==="function")closeRequestsDrawer();
       if(typeof requestBadge!=="undefined"&&requestBadge){
         requestBadge.classList.add("hide");
       }
-      toast("Você está OFF. Clique novamente quando quiser ficar disponível.");
+      toast("Você está OFF.");
     }
+
+    // Atualiza a sessão salva para o status persistir visualmente também.
+    try{
+      sessionStorage.setItem(
+        "pl_driver",
+        JSON.stringify({driver:state.driver,token:state.token})
+      );
+    }catch(e){}
+
   }catch(e){
     state.driverOnline=previous;
-    localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(previous));
     renderDriverOnlineStatus();
     toast(e.message||"Não foi possível alterar seu status.");
   }finally{
@@ -787,10 +793,13 @@ async function openRequestsDrawer(){
 
   requestsDrawer.classList.add("on");
 
-  // Busca novamente as solicitações sempre que abrir a área estando ON.
-  state.revision="";
-  await dashboard(false);
-  renderAvailableTrips();
+  try{
+    state.revision="";
+    await dashboard(false);
+    renderAvailableTrips();
+  }catch(e){
+    toast(e.message||"Não foi possível carregar as corridas.");
+  }
 }
 function closeRequestsDrawer(){requestsDrawer.classList.remove("on")}
 
