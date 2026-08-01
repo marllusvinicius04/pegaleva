@@ -2,7 +2,7 @@
 const API_URL="https://script.google.com/macros/s/AKfycbxPTDveD77WgCbmFBMNFHWOQrpAYKfL4QTMEaax0fZZ1Q2XwgigzX10ZqCrKrOeuhQt/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
-const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0};
+const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:true};
 async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
@@ -259,6 +259,93 @@ loginForm.onsubmit=async e=>{
   );
 };
 
+
+const DRIVER_AVAILABILITY_KEY="pl_driver_online_status";
+
+function getDriverOnlineStatus(){
+  const saved=localStorage.getItem(DRIVER_AVAILABILITY_KEY);
+  return saved===null?true:saved==="true";
+}
+
+function ensureDriverStatusButton(){
+  let btn=document.getElementById("driverStatusBtn");
+  if(btn)return btn;
+
+  const app=document.getElementById("appView");
+  if(!app)return null;
+
+  const candidates=[
+    app.querySelector("nav"),
+    app.querySelector("header"),
+    app.querySelector(".topbar"),
+    app.querySelector(".navbar"),
+    app.querySelector(".nav")
+  ].filter(Boolean);
+
+  const nav=candidates[0]||app;
+  btn=document.createElement("button");
+  btn.id="driverStatusBtn";
+  btn.type="button";
+  btn.setAttribute("aria-label","Alterar disponibilidade");
+  btn.style.cssText=[
+    "border:0",
+    "border-radius:999px",
+    "padding:9px 13px",
+    "display:inline-flex",
+    "align-items:center",
+    "gap:8px",
+    "font-weight:900",
+    "font-size:12px",
+    "cursor:pointer",
+    "transition:.2s ease",
+    "box-shadow:0 5px 16px rgba(15,23,42,.14)",
+    "white-space:nowrap"
+  ].join(";");
+
+  // Tenta posicionar no topo/nav sem quebrar a estrutura existente.
+  if(nav===app){
+    btn.style.position="fixed";
+    btn.style.top="14px";
+    btn.style.right="14px";
+    btn.style.zIndex="90";
+    app.appendChild(btn);
+  }else{
+    nav.appendChild(btn);
+  }
+
+  btn.onclick=toggleDriverOnlineStatus;
+  return btn;
+}
+
+function renderDriverOnlineStatus(){
+  const btn=ensureDriverStatusButton();
+  if(!btn)return;
+
+  const online=!!state.driverOnline;
+
+  btn.innerHTML=online
+    ?'<i class="fa-solid fa-motorcycle"></i><span>ONLINE</span>'
+    :'<i class="fa-solid fa-motorcycle"></i><span>OFFLINE</span>';
+
+  btn.style.background=online?"#16a34a":"#e2e8f0";
+  btn.style.color=online?"#ffffff":"#475569";
+  btn.style.opacity=online?"1":".92";
+}
+
+async function toggleDriverOnlineStatus(){
+  state.driverOnline=!state.driverOnline;
+  localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(state.driverOnline));
+  renderDriverOnlineStatus();
+
+  if(state.driverOnline){
+    toast("Você está online e disponível para entregas.");
+    await dashboard(false);
+  }else{
+    toast("Você está offline.");
+    closeRequestsDrawer();
+  }
+}
+
 function openApp(driver,token){
   state.driver=driver;
   state.token=token||state.token;
@@ -275,6 +362,8 @@ function openApp(driver,token){
   driverInfo.textContent=`${driver.plate||"Sem placa"} • ${driver.whatsapp||""}`;
   withdrawEmail.value=driver.email||"";
   show("appView");
+  state.driverOnline=getDriverOnlineStatus();
+  renderDriverOnlineStatus();
   dashboard();
   startDriverPolling();
 }
@@ -302,7 +391,7 @@ async function dashboard(useLoading=false){
 function startDriverPolling(){
   clearInterval(state.dashboardTimer);
   state.dashboardTimer=setInterval(()=>{
-    if(state.driver&&!document.hidden&&navigator.onLine)dashboard(false);
+    if(state.driver&&state.driverOnline&&!document.hidden&&navigator.onLine)dashboard(false);
   },7000);
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.driver)dashboard(false)});
@@ -373,6 +462,10 @@ newRequestsBtn.onclick=()=>{openRequestsDrawer()}
 closeRequestsBtn.onclick=()=>closeRequestsDrawer()
 requestsDrawer.onclick=e=>{if(e.target===requestsDrawer)closeRequestsDrawer()}
 function openRequestsDrawer(){
+  if(!state.driverOnline){
+    toast("Você está offline. Fique online para receber novas solicitações.");
+    return;
+  }
   requestsDrawer.classList.add("on");
   dashboard(false);
 }
@@ -398,6 +491,14 @@ function playNewTripSound(){
 }
 
 function renderAvailableTrips(){
+  if(!state.driverOnline){
+    state.lastAvailableCount=0;
+    requestBadge.textContent="0";
+    requestBadge.classList.add("hide");
+    requestsList.innerHTML='<div class="empty">Você está offline. Ative o status ONLINE no topo para receber novas solicitações.</div>';
+    return;
+  }
+
   const available=[...state.availableTrips].sort(
     (a,b)=>Number(a.createdMs||a.createdAtMs||0)-Number(b.createdMs||b.createdAtMs||0)
   );
