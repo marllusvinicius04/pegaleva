@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbz2GhAG7iS3UjALv20R7xHcnwafV_J0K2PZRWJMPfkl2ouqlshZFqMspEA9fqCKr9qN/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbxmJYYudIdHXlxHDAlPQAVJ-OiZyD66GbvRkrzS5QpDQBGfP_N7282O0hu66_mFKhQ/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
@@ -439,7 +439,7 @@ function startDashboardPolling(){
     if(state.user && !state.dashboardBusy && !document.hidden && navigator.onLine){
       dashboard(true);
     }
-  },3000);
+  },2000);
 }
 document.addEventListener("visibilitychange",()=>{
   if(!document.hidden && state.user)dashboard(true);
@@ -450,7 +450,7 @@ async function dashboard(silent=false){
   if(state.dashboardBusy)return;
   state.dashboardBusy=true;
   try{
-    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:10000,noRetry:!!silent});
+    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:8000,noRetry:!!silent});
     if(j.unchanged)return;
     state.revision=String(j.revision||state.revision||"");
     const newTrips=j.trips||[];
