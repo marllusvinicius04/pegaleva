@@ -2,7 +2,7 @@
 const API_URL="https://script.google.com/macros/s/AKfycbxPTDveD77WgCbmFBMNFHWOQrpAYKfL4QTMEaax0fZZ1Q2XwgigzX10ZqCrKrOeuhQt/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
-const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:true};
+const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false};
 async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
@@ -263,57 +263,45 @@ loginForm.onsubmit=async e=>{
 const DRIVER_AVAILABILITY_KEY="pl_driver_online_status";
 
 function getDriverOnlineStatus(){
-  const saved=localStorage.getItem(DRIVER_AVAILABILITY_KEY);
-  return saved===null?true:saved==="true";
+  return localStorage.getItem(DRIVER_AVAILABILITY_KEY)==="true";
 }
 
 function ensureDriverStatusButton(){
   let btn=document.getElementById("driverStatusBtn");
   if(btn)return btn;
 
-  const app=document.getElementById("appView");
-  if(!app)return null;
+  const refresh=document.getElementById("refreshBtn");
+  if(!refresh||!refresh.parentElement)return null;
 
-  const candidates=[
-    app.querySelector("nav"),
-    app.querySelector("header"),
-    app.querySelector(".topbar"),
-    app.querySelector(".navbar"),
-    app.querySelector(".nav")
-  ].filter(Boolean);
-
-  const nav=candidates[0]||app;
   btn=document.createElement("button");
   btn.id="driverStatusBtn";
   btn.type="button";
+  btn.title="Alterar disponibilidade";
   btn.setAttribute("aria-label","Alterar disponibilidade");
-  btn.style.cssText=[
-    "border:0",
-    "border-radius:999px",
-    "padding:9px 13px",
-    "display:inline-flex",
-    "align-items:center",
-    "gap:8px",
-    "font-weight:900",
-    "font-size:12px",
-    "cursor:pointer",
-    "transition:.2s ease",
-    "box-shadow:0 5px 16px rgba(15,23,42,.14)",
-    "white-space:nowrap"
-  ].join(";");
 
-  // Tenta posicionar no topo/nav sem quebrar a estrutura existente.
-  if(nav===app){
-    btn.style.position="fixed";
-    btn.style.top="14px";
-    btn.style.right="14px";
-    btn.style.zIndex="90";
-    app.appendChild(btn);
-  }else{
-    nav.appendChild(btn);
-  }
+  /* Não altera absolutamente nada nos botões Recarregar e Sair.
+     Apenas insere este novo botão ANTES dos ícones/botões existentes. */
+  btn.style.cssText=`
+    height:38px;
+    padding:0 12px;
+    border:1px solid #cbd5e1;
+    border-radius:12px;
+    background:#e2e8f0;
+    color:#475569;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:background .18s ease,color .18s ease,border-color .18s ease;
+  `;
 
+  refresh.parentElement.insertBefore(btn,refresh);
   btn.onclick=toggleDriverOnlineStatus;
+
   return btn;
 }
 
@@ -324,26 +312,23 @@ function renderDriverOnlineStatus(){
   const online=!!state.driverOnline;
 
   btn.innerHTML=online
-    ?'<i class="fa-solid fa-motorcycle"></i><span>ONLINE</span>'
-    :'<i class="fa-solid fa-motorcycle"></i><span>OFFLINE</span>';
+    ?'<i class="fa-solid fa-motorcycle"></i><span>ON</span>'
+    :'<i class="fa-solid fa-motorcycle"></i><span>OFF</span>';
 
   btn.style.background=online?"#16a34a":"#e2e8f0";
+  btn.style.borderColor=online?"#16a34a":"#cbd5e1";
   btn.style.color=online?"#ffffff":"#475569";
-  btn.style.opacity=online?"1":".92";
 }
 
-async function toggleDriverOnlineStatus(){
+function toggleDriverOnlineStatus(){
   state.driverOnline=!state.driverOnline;
   localStorage.setItem(DRIVER_AVAILABILITY_KEY,String(state.driverOnline));
   renderDriverOnlineStatus();
 
-  if(state.driverOnline){
-    toast("Você está online e disponível para entregas.");
-    await dashboard(false);
-  }else{
-    toast("Você está offline.");
-    closeRequestsDrawer();
-  }
+  toast(state.driverOnline
+    ?"Você está ON e disponível."
+    :"Você está OFF."
+  );
 }
 
 function openApp(driver,token){
@@ -391,7 +376,7 @@ async function dashboard(useLoading=false){
 function startDriverPolling(){
   clearInterval(state.dashboardTimer);
   state.dashboardTimer=setInterval(()=>{
-    if(state.driver&&state.driverOnline&&!document.hidden&&navigator.onLine)dashboard(false);
+    if(state.driver&&!document.hidden&&navigator.onLine)dashboard(false);
   },7000);
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.driver)dashboard(false)});
@@ -462,10 +447,6 @@ newRequestsBtn.onclick=()=>{openRequestsDrawer()}
 closeRequestsBtn.onclick=()=>closeRequestsDrawer()
 requestsDrawer.onclick=e=>{if(e.target===requestsDrawer)closeRequestsDrawer()}
 function openRequestsDrawer(){
-  if(!state.driverOnline){
-    toast("Você está offline. Fique online para receber novas solicitações.");
-    return;
-  }
   requestsDrawer.classList.add("on");
   dashboard(false);
 }
@@ -491,14 +472,6 @@ function playNewTripSound(){
 }
 
 function renderAvailableTrips(){
-  if(!state.driverOnline){
-    state.lastAvailableCount=0;
-    requestBadge.textContent="0";
-    requestBadge.classList.add("hide");
-    requestsList.innerHTML='<div class="empty">Você está offline. Ative o status ONLINE no topo para receber novas solicitações.</div>';
-    return;
-  }
-
   const available=[...state.availableTrips].sort(
     (a,b)=>Number(a.createdMs||a.createdAtMs||0)-Number(b.createdMs||b.createdAtMs||0)
   );
