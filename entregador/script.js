@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbxPY3HHffu0PTEXiB7yzfZKbFhHEf9tHOKZgctTooPqN2S0FGLq6vpdmDCMxiigCYMy/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbzAcHjZTbgbzLgnc2GrYRyjw8GwL2PskbhCmUujCoM7XUxyU_rUG_B2QIHpQzYDkSpO/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false,profileImageData:""};
@@ -222,6 +222,9 @@ async function performDriverLogin(emailValue,passwordValue,quickLogin=false){
       ()=>api("driverLogin",{
         email:String(emailValue||"").trim().toLowerCase(),
         password:String(passwordValue||"")
+      },{
+        timeout:60000,
+        noRetry:true
       })
     );
 
@@ -243,7 +246,9 @@ async function performDriverLogin(emailValue,passwordValue,quickLogin=false){
         toast("A conta salva não é mais válida. Entre novamente.");
       }
     }else{
-      loginError.textContent=x.message;
+      loginError.textContent=/conexão demorou demais/i.test(String(x.message||""))
+        ?"O servidor demorou para responder. Tente entrar novamente em alguns segundos."
+        :x.message;
     }
   }finally{
     $("quickDriverLoginLoading")?.classList.remove("on");
@@ -1348,10 +1353,12 @@ function openApp(driver,token){
   renderDriverProfileButton();
   ensureDriverScoreNav();
 
-  // Mostra ON/OFF imediatamente e sincroniza com a planilha em segundo plano.
-  startDriverStatusSync();
+  // Primeiro abre o painel e carrega as corridas.
+  // A sincronização leve de status começa depois, evitando duas chamadas simultâneas
+  // logo após o login do Apps Script.
   dashboard();
   startDriverPolling();
+  setTimeout(()=>startDriverStatusSync(),1400);
 }
 async function dashboard(useLoading=false){
   if(state.dashboardBusy)return;
@@ -1467,9 +1474,10 @@ function renderTrips(){
     <span>Tempo estimado: ${t.estimatedMinutes} min</span>
     <span>Pagamento: ${paymentReady?t.paymentStatus:"Não informado"}</span>
   </div>
+  <div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef4ff;color:#315b9c;font-size:11px;font-weight:800">
+    <i class="fa-solid fa-route"></i> O sistema organiza automaticamente a ordem das corridas e informa o cliente quando você está a caminho.
+  </div>
   <div class="card-command-menu" id="tripCommands-${t.code}">
-    <button class="btn secondary" onclick="updateTrip('${t.code}','FINALIZANDO CORRIDA PRÓXIMA')"><i class="fa-solid fa-motorcycle"></i> Finalizando entrega próxima</button>
-    <button class="btn primary" onclick="updateTrip('${t.code}','ESTOU INDO')"><i class="fa-solid fa-motorcycle"></i> Estou indo para coleta</button>
     <button class="btn success-btn" onclick="alertCustomer('${t.code}')"><i class="fa-brands fa-whatsapp"></i> Alertar cliente</button>
     <button class="btn danger-btn" onclick="reportLocationError('${t.code}')"><i class="fa-solid fa-triangle-exclamation"></i> Erro na localização</button>
   </div>
