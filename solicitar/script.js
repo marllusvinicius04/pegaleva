@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbwfOya_e9RyCo5slILo3181hegHntD2Per4hS6LNedBm0L8bgeIF5z_FqlhTHVofuxx/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbz2GhAG7iS3UjALv20R7xHcnwafV_J0K2PZRWJMPfkl2ouqlshZFqMspEA9fqCKr9qN/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
@@ -143,6 +143,19 @@ function tripWasRated(trip){
   if(Number.isFinite(rating)&&rating>0)return true;
 
   return !!localStorage.getItem("pl_rated_trip_"+trip.code);
+}
+
+
+function safeClientDriverPhotoUrl(url){
+  const value=String(url||"").trim();
+  if(!value)return"";
+  return value+(value.includes("?")?"&":"?")+"_="+Date.now();
+}
+
+function clientDriverAvatarImage(url,name,size=48){
+  const safe=String(url||"").trim();
+  if(!safe)return`<i class="fa-solid fa-user"></i>`;
+  return `<img src="${safeClientDriverPhotoUrl(safe)}" alt="${String(name||"Entregador").replace(/"/g,"&quot;")}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=&quot;fa-solid fa-user&quot;></i>'">`;
 }
 
 function ensureDriverRatingModal(){
@@ -340,7 +353,7 @@ function openDriverRatingModal(trip){
   const avatar=modal.querySelector("#driverRatingAvatar");
 
   if(profilePhoto){
-    avatar.innerHTML=`<img src="${profilePhoto}" alt="${name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+    avatar.innerHTML=clientDriverAvatarImage(profilePhoto,name,78);
     avatar.style.padding="0";
     avatar.style.overflow="hidden";
   }else{
@@ -1151,7 +1164,7 @@ function trips(){
           <div class="trip-uber-info">
             <div class="trip-driver-avatar" style="overflow:hidden">
               ${driver&&t.driverPhotoUrl
-                ?`<img src="${t.driverPhotoUrl}" alt="${driver}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`
+                ?clientDriverAvatarImage(t.driverPhotoUrl,driver,48)
                 :`<i class="fa-solid ${driver?"fa-user":"fa-magnifying-glass"}"></i>`
               }
             </div>
