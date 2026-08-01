@@ -6,7 +6,7 @@ const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],current
 async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),options.timeout||15000);
+  const timeout=setTimeout(()=>controller.abort(),options.timeout||30000);
   const payload={action,...data};
   if(state.token)payload.token=state.token;
   try{
@@ -327,7 +327,7 @@ async function toggleDriverOnlineStatus(){
   try{
     const j=await api("driverSetOnlineStatus",{
       status:next?"ONLINE":"OFFLINE"
-    });
+    },{timeout:20000});
 
     // O servidor/planilha é a fonte oficial do status.
     const serverStatus=String(
@@ -685,7 +685,7 @@ function openApp(driver,token){
 async function dashboard(useLoading=false){
   if(state.dashboardBusy)return;
   state.dashboardBusy=true;
-  const load=()=>api("driverDashboard",{sinceRevision:state.revision},{timeout:12000});
+  const load=()=>api("driverDashboard",{sinceRevision:state.revision},{timeout:25000});
   try{
     const j=useLoading
       ?await withActionLoading("Atualizando entregas","Buscando saldos, corridas e pagamentos.",load)
@@ -703,14 +703,19 @@ async function dashboard(useLoading=false){
     renderDriverOnlineStatus();
     renderDriverScoreSheet();
     renderTrips();renderHistory();renderAvailableTrips()
-  }catch(x){toast(x.message)}
+  }catch(x){
+    const msg=String(x&&x.message||"");
+    if(useLoading || !/demorou demais/i.test(msg)){
+      toast(msg);
+    }
+  }
   finally{state.dashboardBusy=false}
 }
 function startDriverPolling(){
   clearInterval(state.dashboardTimer);
   state.dashboardTimer=setInterval(()=>{
     if(state.driver&&state.driverOnline&&!document.hidden&&navigator.onLine)dashboard(false);
-  },7000);
+  },10000);
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.driver&&state.driverOnline)dashboard(false)});
 window.addEventListener("online",()=>{if(state.driver){toast("Conexão restabelecida.");dashboard(false)}});
