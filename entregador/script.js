@@ -260,6 +260,8 @@ loginForm.onsubmit=async e=>{
 };
 
 
+const DRIVER_AVAILABILITY_KEY="pl_driver_online_status";
+
 function ensureDriverStatusButton(){
   let btn=document.getElementById("driverStatusBtn");
   if(btn)return btn;
