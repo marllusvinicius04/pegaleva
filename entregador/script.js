@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbwfOya_e9RyCo5slILo3181hegHntD2Per4hS6LNedBm0L8bgeIF5z_FqlhTHVofuxx/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbz2GhAG7iS3UjALv20R7xHcnwafV_J0K2PZRWJMPfkl2ouqlshZFqMspEA9fqCKr9qN/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false,profileImageData:""};
@@ -262,6 +262,25 @@ loginForm.onsubmit=async e=>{
 
 
 
+
+function safeDriverPhotoUrl(url){
+  const value=String(url||"").trim();
+  if(!value)return"";
+  return value+(value.includes("?")?"&":"?")+"_="+Date.now();
+}
+
+function bindAvatarFallback(root=document){
+  root.querySelectorAll("img[data-driver-avatar]").forEach(img=>{
+    img.onerror=()=>{
+      const fallback=document.createElement("span");
+      const size=Number(img.dataset.size||46);
+      fallback.style.cssText=`width:${size}px;height:${size}px;border-radius:50%;display:grid;place-items:center;background:#e8f0ff;color:#0646c8;font-size:${Math.round(size*.42)}px`;
+      fallback.innerHTML='<i class="fa-solid fa-user"></i>';
+      img.replaceWith(fallback);
+    };
+  });
+}
+
 function driverFirstName(){
   return String(state.driver&&state.driver.name||"Entregador").trim().split(/\s+/)[0]||"Entregador";
 }
@@ -271,7 +290,7 @@ function driverAvatarHTML(size=46){
   const url=String(d.photoUrl||"").trim();
 
   if(url){
-    return `<img src="${escapeCardText(url)}" alt="Foto de perfil" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block">`;
+    return `<img data-driver-avatar data-size="${size}" src="${escapeCardText(safeDriverPhotoUrl(url))}" alt="Foto de perfil" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block">`;
   }
 
   return `<span style="width:${size}px;height:${size}px;border-radius:50%;display:grid;place-items:center;background:#e8f0ff;color:#0646c8;font-size:${Math.round(size*.42)}px">
@@ -295,6 +314,7 @@ function renderDriverProfileButton(){
   btn.style.display="inline-grid";
   btn.style.placeItems="center";
   btn.innerHTML=driverAvatarHTML(40);
+  bindAvatarFallback(btn);
   btn.onclick=openDriverProfileMenu;
 }
 
@@ -417,6 +437,8 @@ function renderDriverProfileMenu(){
       </div>
     </div>
   `;
+
+  bindAvatarFallback(header);
 
   const items={
     balance:[
@@ -574,8 +596,9 @@ function renderDriverEditProfileAvatar(){
   const src=preview||current;
 
   box.innerHTML=src
-    ?`<img src="${src}" alt="Foto de perfil" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:5px solid #eef2ff">`
+    ?`<img data-driver-avatar data-size="96" src="${src.startsWith("data:")?src:safeDriverPhotoUrl(src)}" alt="Foto de perfil" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:5px solid #eef2ff">`
     :`<span style="width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:#eef3ff;color:#0646c8;font-size:38px;border:5px solid #f8fafc"><i class="fa-solid fa-user"></i></span>`;
+  bindAvatarFallback(box);
 }
 
 function openDriverEditProfile(){
