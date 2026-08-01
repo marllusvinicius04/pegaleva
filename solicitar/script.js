@@ -90,50 +90,84 @@ function playPositiveConfirmation(){
 }
 function successNotify(){successToast.classList.add("on");setTimeout(()=>successToast.classList.remove("on"),4000)}
 function setLoading(id,on){$(id)?.classList.toggle("on",!!on)}function openL(id){$(id).classList.add("on")}function closeL(id){$(id).classList.remove("on")}function addr(a){if(!a)return"Escolher localização";return a.mode==="whatsapp"?"Enviar localização atual":`${a.street}, ${a.number} • ${a.city}`}function labels(){$("originLabel").textContent=addr(state.request.origin);$("destinationLabel").textContent=addr(state.request.destination)}
-function clientStatusLabel(status,paymentStatus){
+function clientStatusLabel(status,paymentStatus,trip){
   const s=String(status||"").toUpperCase();
   const p=String(paymentStatus||"").toUpperCase();
-  if(s==="AGUARDANDO ENTREGADOR")return "Aguardando entregador";
-  if(s==="ACEITA")return "Calculando rota e disponibilizando entregador";
-  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "Finalizando uma entrega na região";
-  if(s==="ESTOU INDO")return "Entregador indo para a coleta";
-  if(s==="COLETADO")return "Produto coletado e seguindo para o destino";
-  if(s==="FINALIZADA")return p==="PAGO"?"Entrega finalizada • Pago":"Entrega finalizada • Pagamento pendente";
+  const smart=String(trip&&trip.smartStatus||"").toUpperCase();
+  const eta=Number(trip&&trip.pickupEtaMinutes||0);
+
+  if(s==="FINALIZADA"){
+    return p==="PAGO"?"Entrega finalizada • Pago":"Entrega finalizada • Pagamento pendente";
+  }
+
+  if(s==="AGUARDANDO ENTREGADOR"&&!String(trip&&trip.driverName||"").trim()){
+    return "Aguardando entregador";
+  }
+
+  if(smart==="FINISHING_PREVIOUS"){
+    return eta>0
+      ?`Finalizando uma entrega próxima • coleta estimada em ${eta} min`
+      :"Finalizando uma entrega próxima";
+  }
+
+  if(smart==="ON_THE_WAY"){
+    return eta>0
+      ?`Entregador a caminho • coleta estimada em ${eta} min`
+      :"Entregador a caminho da coleta";
+  }
+
+  if(s==="ACEITA")return "Entrega aceita • organizando rota";
   return status||"Status atualizado";
 }
-function clientStatusIcon(status,paymentStatus){
+function clientStatusIcon(status,paymentStatus,trip){
   const s=String(status||"").toUpperCase();
+  const smart=String(trip&&trip.smartStatus||"").toUpperCase();
+
+  if(s==="FINALIZADA"){
+    return String(paymentStatus||"").toUpperCase()==="PAGO"?"fa-circle-check":"fa-flag-checkered";
+  }
+  if(smart==="FINISHING_PREVIOUS")return "fa-route";
+  if(smart==="ON_THE_WAY")return "fa-motorcycle";
   if(s==="ACEITA")return "fa-user-check";
-  if(s==="COLETADO")return "fa-box";
-  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "fa-route";
-  if(s==="ESTOU INDO")return "fa-motorcycle";
-  if(s==="FINALIZADA")return String(paymentStatus||"").toUpperCase()==="PAGO"?"fa-circle-check":"fa-flag-checkered";
   return "fa-bell";
 }
-function statusClass(status,paymentStatus){
+function statusClass(status,paymentStatus,trip){
   const s=String(status||"").toUpperCase();
+  const smart=String(trip&&trip.smartStatus||"").toUpperCase();
+
+  if(s==="FINALIZADA"){
+    return String(paymentStatus||"").toUpperCase()==="PAGO"?"paid":"finished";
+  }
+  if(smart==="FINISHING_PREVIOUS")return "collected";
+  if(smart==="ON_THE_WAY")return "going";
   if(s==="ACEITA")return "accepted";
-  if(s==="COLETADO"||s==="FINALIZANDO CORRIDA PRÓXIMA")return "collected";
-  if(s==="ESTOU INDO")return "going";
-  if(s==="FINALIZADA")return String(paymentStatus||"").toUpperCase()==="PAGO"?"paid":"finished";
   return "";
 }
 let statusAlertTimer=null;
 function showStatusAlert(trip){
   clearTimeout(statusAlertTimer);
   statusAlertTitle.textContent=`Pedido ${trip.code}`;
-  statusAlertText.textContent=clientStatusLabel(trip.status,trip.paymentStatus);
-  statusAlertIcon.innerHTML=`<i class="fa-solid ${clientStatusIcon(trip.status,trip.paymentStatus)}"></i>`;
+  statusAlertText.textContent=clientStatusLabel(trip.status,trip.paymentStatus,trip);
+  statusAlertIcon.innerHTML=`<i class="fa-solid ${clientStatusIcon(trip.status,trip.paymentStatus,trip)}"></i>`;
   statusAlert.classList.add("on");
   statusAlertTimer=setTimeout(()=>statusAlert.classList.remove("on"),5000);
 
   if("Notification" in window && Notification.permission==="granted"){
     new Notification(`Pega&Leva • Pedido ${trip.code}`,{
-      body:clientStatusLabel(trip.status,trip.paymentStatus)
+      body:clientStatusLabel(trip.status,trip.paymentStatus,trip)
     });
   }
 }
 
+
+function escapeHtmlSmart(value){
+  return String(value??"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
 
 function tripWasRated(trip){
   if(!trip||!trip.code)return false;
@@ -400,7 +434,12 @@ function compareTripUpdates(newTrips){
   const newlyFinalized=[];
 
   newTrips.forEach(t=>{
-    const key=`${String(t.status||"").toUpperCase()}|${String(t.paymentStatus||"").toUpperCase()}`;
+    const key=[
+      String(t.status||"").toUpperCase(),
+      String(t.paymentStatus||"").toUpperCase(),
+      String(t.smartStatus||"").toUpperCase(),
+      String(t.queuePosition||0)
+    ].join("|");
     next[t.code]=key;
 
     const previous=state.tripStatusMap[t.code];
@@ -1306,13 +1345,16 @@ calculateSimulation.onclick=async()=>{
   }
 };
 
-function activeTripStep(status){
-  const s=String(status||"").trim().toUpperCase();
+function activeTripStep(status,trip){
+  const s=String(status||"").toUpperCase();
+  const smart=String(trip&&trip.smartStatus||"").toUpperCase();
+
   if(s==="AGUARDANDO ENTREGADOR")return 0;
-  if(s==="ACEITA"||s==="FINALIZANDO CORRIDA PRÓXIMA")return 1;
-  if(s==="ESTOU INDO")return 2;
-  if(s==="COLETADO")return 3;
-  return 0;
+  if(smart==="FINISHING_PREVIOUS")return 1;
+  if(smart==="ON_THE_WAY")return 2;
+  if(s==="ACEITA")return 1;
+  if(s==="FINALIZADA")return 3;
+  return 1;
 }
 function animatedStatusDots(){
   return `<span class="moving-status-dots" aria-label="carregando"><i></i><i></i><i></i></span>`;
@@ -1331,14 +1373,15 @@ function ensureTripStatusStyles(){
   `;
   document.head.appendChild(style);
 }
-function activeTripMessage(status){
-  const s=String(status||"").trim().toUpperCase();
-  if(s==="AGUARDANDO ENTREGADOR")return `Buscando um entregador próximo${animatedStatusDots()}`;
-  if(s==="ACEITA")return `Calculando rota e disponibilizando entregador ao local${animatedStatusDots()}`;
-  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "O entregador está finalizando uma entrega na região e já está indo fazer a retirada do produto";
-  if(s==="ESTOU INDO")return "O entregador está indo até o local para fazer a coleta";
-  if(s==="COLETADO")return "Produto coletado. O entregador está seguindo para o destino";
-  return clientStatusLabel(status,"");
+function activeTripMessage(status,trip){
+  const s=String(status||"").toUpperCase();
+  const smart=String(trip&&trip.smartStatus||"").toUpperCase();
+
+  if(s==="AGUARDANDO ENTREGADOR")return "Buscando um entregador para você";
+  if(smart==="FINISHING_PREVIOUS")return "Seu entregador está finalizando uma corrida próxima";
+  if(smart==="ON_THE_WAY")return "Seu entregador já está a caminho";
+  if(s==="ACEITA")return "Entregador definido para sua entrega";
+  return "Acompanhando sua entrega";
 }
 function finishedTripTime(t){
   return t.finalizedAt||t.finishedAt||t.completedAt||t.updatedAt||t.createdAt||"Horário não informado";
@@ -1359,9 +1402,9 @@ function trips(){
       ${activeTrips.map(t=>{
         const status=String(t.status||"").trim().toUpperCase();
         const waiting=status==="AGUARDANDO ENTREGADOR"&&!String(t.driverName||"").trim();
-        const label=clientStatusLabel(t.status,t.paymentStatus);
-        const cls=statusClass(t.status,t.paymentStatus);
-        const currentStep=activeTripStep(t.status);
+        const label=clientStatusLabel(t.status,t.paymentStatus,t);
+        const cls=statusClass(t.status,t.paymentStatus,t);
+        const currentStep=activeTripStep(t.status,t);
         const progress=Math.max(8,Math.min(100,(currentStep/3)*100));
         const driver=String(t.driverName||"").trim();
 
@@ -1369,7 +1412,7 @@ function trips(){
           <div class="trip-uber-top">
             <div>
               <small>ENTREGA ${t.code}</small>
-              <h4>${activeTripMessage(t.status)}</h4>
+              <h4>${activeTripMessage(t.status,t)}</h4>
             </div>
             <span class="trip-live-badge"><i class="fa-solid fa-circle"></i> AO VIVO</span>
           </div>
@@ -1402,8 +1445,20 @@ function trips(){
             <span class="trip-status ${cls}">${label}</span>
           </div>
 
+          ${t.driverName&&t.pickupEtaMinutes?`
+          <div style="margin:11px 0 2px;padding:11px 12px;border-radius:13px;background:#f8fbff;border:1px solid #dbe7ff;display:flex;align-items:center;gap:10px">
+            <span style="width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#e8f0ff;color:#0646c8">
+              <i class="fa-solid fa-clock"></i>
+            </span>
+            <div>
+              <small style="display:block;color:#64748b;font-weight:800">ESTIMATIVA DE COLETA</small>
+              <strong style="display:block;color:#172033">${Number(t.pickupEtaMinutes)} min</strong>
+              <span style="display:block;color:#64748b;font-size:11px;margin-top:2px">${escapeHtmlSmart(t.smartMessage||"Atualizando rota")}</span>
+            </div>
+          </div>`:""}
+
           <div class="trip-steps">
-            ${["Solicitada","Corrida aceita","Indo coletar","Produto coletado"].map((name,index)=>`<div class="trip-step ${index<currentStep?"done":index===currentStep?"current":""}"><span>${index<currentStep?'<i class="fa-solid fa-check"></i>':index+1}</span><small>${name}</small></div>`).join("")}
+            ${["Solicitada","Aceita","A caminho","Atendimento"].map((name,index)=>`<div class="trip-step ${index<currentStep?"done":index===currentStep?"current":""}"><span>${index<currentStep?'<i class="fa-solid fa-check"></i>':index+1}</span><small>${name}</small></div>`).join("")}
           </div>
 
           ${waiting?`<button class="btn trip-cancel-btn full" onclick="cancelUserTrip('${t.code}')"><i class="fa-solid fa-ban"></i> Cancelar entrega</button>`:""}
