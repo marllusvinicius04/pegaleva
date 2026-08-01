@@ -267,6 +267,15 @@ function ensureDriverRatingModal(){
         String(state.ratingValue)
       );
 
+      const ratedTrip=state.trips.find(
+        t=>String(t.code)===String(state.ratingTripCode)
+      );
+      if(ratedTrip){
+        ratedTrip.rating=state.ratingValue;
+        ratedTrip.rated=true;
+        ratedTrip.driverRating=state.ratingValue;
+      }
+
       modal.querySelector("#driverRatingStars").style.display="none";
       modal.querySelector("#submitDriverRating").style.display="none";
       modal.querySelector("#driverRatingName").insertAdjacentHTML(
@@ -299,7 +308,12 @@ function driverInitials(name){
 function openDriverRatingModal(trip){
   if(!trip||!trip.code)return;
 
-  if(localStorage.getItem("pl_rated_trip_"+trip.code))return;
+  if(
+    trip.rating ||
+    trip.rated ||
+    trip.driverRating ||
+    localStorage.getItem("pl_rated_trip_"+trip.code)
+  )return;
 
   const modal=ensureDriverRatingModal();
   const name=String(trip.driverName||"Motoboy Pega & Leva").trim();
@@ -358,6 +372,9 @@ function compareTripUpdates(newTrips){
       if(
         previousStatus!=="FINALIZADA" &&
         currentStatus==="FINALIZADA" &&
+        !t.rating &&
+        !t.rated &&
+        !t.driverRating &&
         !localStorage.getItem("pl_rated_trip_"+t.code)
       ){
         newlyFinalized.push(t);
@@ -411,6 +428,9 @@ async function dashboard(silent=false){
       const latestFinished=newTrips
         .filter(t=>
           String(t.status||"").toUpperCase()==="FINALIZADA" &&
+          !t.rating &&
+          !t.rated &&
+          !t.driverRating &&
           !localStorage.getItem("pl_rated_trip_"+t.code)
         )
         .sort((a,b)=>{
@@ -443,15 +463,8 @@ async function dashboard(silent=false){
 
 
 function hideInvoicePaymentUI(){
-  // Mantém o saldo visível. Esconde apenas ações/modal de pagamento de fatura.
-  [
-    "payInvoice",
-    "navInvoice",
-    "confirmInvoicePayment"
-  ].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el)el.style.display="none";
-  });
+  // Pagamento de fatura ativo novamente.
+  // Mantém saldo, botão e modal de pagamento visíveis.
 }
 
 function normalizeAccountPlan(value){
@@ -1159,17 +1172,66 @@ async function cancelUserTrip(code){
 }
 viewTrips.onclick=()=>{trips();openL("tripsSheet")};floatingTrips.onclick=viewTrips.onclick;navTrips.onclick=viewTrips.onclick;
 let paymentTimer=null;
-function startPaymentCountdown(){}
+function startPaymentCountdown(){
+  clearInterval(paymentTimer);
+  let remaining=15*60;
+
+  const draw=()=>{
+    if(typeof paymentCountdown!=="undefined"&&paymentCountdown){
+      const min=Math.floor(remaining/60);
+      const sec=remaining%60;
+      paymentCountdown.textContent=`${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+    }
+
+    if(remaining<=0){
+      clearInterval(paymentTimer);
+      if(typeof confirmInvoicePayment!=="undefined"&&confirmInvoicePayment){
+        confirmInvoicePayment.disabled=true;
+      }
+      return;
+    }
+
+    remaining--;
+  };
+
+  draw();
+  paymentTimer=setInterval(draw,1000);
+}
+
 if(typeof payInvoice!=="undefined"&&payInvoice){
-  payInvoice.style.display="none";
-  payInvoice.onclick=e=>e.preventDefault();
+  payInvoice.style.display="";
+  payInvoice.onclick=()=>{
+    if(typeof invoiceModalBalance!=="undefined"&&invoiceModalBalance && state.user){
+      invoiceModalBalance.textContent=money.format(Number(state.user.invoiceBalance||0));
+    }
+    if(typeof invoicePaymentModal!=="undefined"&&invoicePaymentModal){
+      openL("invoicePaymentModal");
+    }else if(typeof invoiceSheet!=="undefined"&&invoiceSheet){
+      openL("invoiceSheet");
+    }
+    if(typeof confirmInvoicePayment!=="undefined"&&confirmInvoicePayment){
+      confirmInvoicePayment.disabled=false;
+    }
+    startPaymentCountdown();
+  };
 }
+
 if(typeof navInvoice!=="undefined"&&navInvoice){
-  navInvoice.style.display="none";
-  navInvoice.onclick=e=>e.preventDefault();
+  navInvoice.style.display="";
+  navInvoice.onclick=()=>{
+    if(typeof invoiceSheet!=="undefined"&&invoiceSheet){
+      openL("invoiceSheet");
+    }
+  };
 }
+
 if(typeof confirmInvoicePayment!=="undefined"&&confirmInvoicePayment){
-  confirmInvoicePayment.onclick=e=>e.preventDefault();
+  confirmInvoicePayment.onclick=()=>{
+    toast("Pagamento enviado para conferência.");
+    if(typeof invoicePaymentModal!=="undefined"&&invoicePaymentModal){
+      closeL("invoicePaymentModal");
+    }
+  };
 }
 profileBtn.onclick=()=>{
   const profileSheetBox=document.querySelector("#profileSheet .sheet-box");
