@@ -56,46 +56,77 @@ function shiftText(value){
 }
 
 async function api(action,data={},options={}){
-  if(!API_URL.startsWith("https://script.google.com/")){
-    throw new Error("Configure a URL do Apps Script de Mobilidade no script.js.");
+  if(!API_URL.startsWith("https://script.google.com/macros/s/")||!API_URL.endsWith("/exec")){
+    throw new Error("A URL do Apps Script está inválida. Use a URL publicada terminando em /exec.");
   }
 
   const ctrl=new AbortController();
-  const timer=setTimeout(()=>ctrl.abort(),options.timeout||30000);
+  const timeoutMs=Number(options.timeout||45000);
+  const timer=setTimeout(()=>ctrl.abort(),timeoutMs);
 
   try{
     const response=await fetch(API_URL,{
       method:"POST",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({action,token:state.token,...data}),
+      body:JSON.stringify({
+        action:String(action||""),
+        token:state.token||"",
+        ...data
+      }),
       signal:ctrl.signal,
-      cache:"no-store"
+      cache:"no-store",
+      redirect:"follow"
     });
 
-    if(!response.ok)throw new Error("Falha de conexão com o servidor.");
+    const raw=await response.text();
 
-    const result=await response.json();
+    if(!response.ok){
+      throw new Error(`Servidor respondeu ${response.status}.`);
+    }
 
-    if(!result.ok){
-      if(/sessão expirada|não autorizado/i.test(result.error||"")){
+    let result;
+    try{
+      result=JSON.parse(raw);
+    }catch(parseError){
+      const clean=String(raw||"").replace(/\s+/g," ").slice(0,180);
+      if(/<!doctype|<html/i.test(clean)){
+        throw new Error("A implantação do Apps Script não retornou a API. Publique como Web App e permita acesso pela URL /exec.");
+      }
+      throw new Error("Resposta inválida do Apps Script.");
+    }
+
+    if(!result||result.ok!==true){
+      const message=String(result&&result.error||"Erro no servidor.");
+
+      if(/sessão expirada|não autorizado|token/i.test(message)){
         finishLogout();
       }
-      throw new Error(result.error||"Erro no servidor.");
+
+      throw new Error(message);
     }
 
     return result;
+
   }catch(e){
     if(e.name==="AbortError"){
-      throw new Error("O servidor demorou para responder. Tente novamente.");
+      throw new Error("O Apps Script demorou para responder. Aguarde alguns segundos e tente novamente.");
     }
+
+    const nonRepeatable=[
+      "adminLogin",
+      "adminRegisterUser",
+      "adminRegisterDriver",
+      "adminCompleteWithdrawal",
+      "logout"
+    ].includes(String(action));
 
     if(
       !options.noRetry &&
-      !["adminLogin","adminRegisterUser","adminRegisterDriver","adminCompleteWithdrawal","logout"].includes(String(action)) &&
+      !nonRepeatable &&
       navigator.onLine &&
-      /fetch|network|conexão/i.test(String(e.message||""))
+      /fetch|network|conexão|failed to fetch/i.test(String(e.message||""))
     ){
-      await new Promise(r=>setTimeout(r,700));
+      await new Promise(r=>setTimeout(r,900));
       return api(action,data,{...options,noRetry:true});
     }
 
@@ -104,7 +135,6 @@ async function api(action,data={},options={}){
     clearTimeout(timer);
   }
 }
-
 function showLoading(title="Carregando...",text="Aguarde enquanto processamos as informações."){
   state.loadingCount++;
   $("loadingTitle").textContent=title;
@@ -141,6 +171,10 @@ function loadingButton(btn,text){
 function showApp(){
   $("loginView").classList.add("hide");
   $("appView").classList.remove("hide");
+  clearInterval(state.timer);
+  state.timer=null;
+  state.revision="";
+  state.data=null;
   startSync();
 }
 function finishLogout(){
@@ -397,23 +431,48 @@ function renderAll(){
 }
 
 async function loadDashboard(silent=false){
-  if(state.busy)return;
+  if(state.busy||!state.token)return;
+
   state.busy=true;
   setSyncing(true);
 
   try{
-    const j=await api("adminDashboard",{sinceRevision:state.revision},{
-      timeout:20000,
-      noRetry:!!silent
-    });
+    const firstLoad=!state.data;
+    const j=await api(
+      "adminDashboard",
+      {sinceRevision:firstLoad?"":state.revision},
+      {
+        timeout:firstLoad?60000:18000,
+        noRetry:!!silent
+      }
+    );
+
+    // Se o servidor disser "unchanged" antes de termos os dados,
+    // força uma leitura completa na mesma sessão.
+    if(j.unchanged&&firstLoad){
+      state.revision="";
+      const full=await api(
+        "adminDashboard",
+        {sinceRevision:"__FORCE_FULL__"},
+        {timeout:60000,noRetry:true}
+      );
+
+      state.revision=String(full.revision||"");
+      state.data=full;
+      renderAll();
+      return;
+    }
 
     if(!j.unchanged){
       state.revision=String(j.revision||state.revision||"");
       state.data=j;
       renderAll();
     }
+
   }catch(e){
-    if(!silent)toastMsg(e.message);
+    if(!silent){
+      toastMsg(e.message||"Não foi possível carregar a gestão.");
+    }
   }finally{
     state.busy=false;
     setSyncing(false);
@@ -421,10 +480,19 @@ async function loadDashboard(silent=false){
 }
 function startSync(){
   clearInterval(state.timer);
-  loadDashboard();
+
+  loadDashboard(false);
+
   state.timer=setInterval(()=>{
-    if(!state.busy&&!document.hidden&&navigator.onLine)loadDashboard(true);
-  },4000);
+    if(
+      state.token &&
+      !state.busy &&
+      !document.hidden &&
+      navigator.onLine
+    ){
+      loadDashboard(true);
+    }
+  },6000);
 }
 
 function panelTitle(panel){
@@ -647,22 +715,39 @@ $("toggleAdminPassword").onclick=()=>{
 $("loginForm").onsubmit=async e=>{
   e.preventDefault();
 
-  if($("adminPassword").value!==ADMIN_PASSWORD){
-    return toastMsg("Senha incorreta.");
+  const password=$("adminPassword").value;
+
+  if(!password){
+    return toastMsg("Digite a senha administrativa.");
   }
 
   try{
     const j=await withLoading(
-      "Entrando na gestão",
-      "Validando acesso e preparando os dados da operação.",
-      ()=>api("adminLogin",{password:$("adminPassword").value},{timeout:30000,noRetry:true})
+      "Conectando à gestão",
+      "Validando o Apps Script e carregando a central.",
+      ()=>api(
+        "adminLogin",
+        {password},
+        {timeout:60000,noRetry:true}
+      )
     );
 
-    state.token=j.token;
-    sessionStorage.setItem("pl_mob_admin_token",j.token);
+    if(!j.token){
+      throw new Error("O Apps Script não retornou a sessão administrativa.");
+    }
+
+    state.token=String(j.token);
+    state.revision="";
+    state.data=null;
+
+    sessionStorage.setItem("pl_mob_admin_token",state.token);
+
     showApp();
+
   }catch(err){
-    toastMsg(err.message);
+    state.token="";
+    sessionStorage.removeItem("pl_mob_admin_token");
+    toastMsg(err.message||"Não foi possível entrar na gestão.");
   }
 };
 
@@ -672,10 +757,16 @@ $("logoutBtn").onclick=async()=>{
 };
 $("mobileMenu").onclick=()=>$("sidebar").classList.toggle("on");
 $("refreshBtn").onclick=async()=>{
+  if(state.busy)return;
+
   $("refreshBtn").classList.add("rotating");
   state.revision="";
-  await loadDashboard();
-  setTimeout(()=>$("refreshBtn").classList.remove("rotating"),400);
+
+  try{
+    await loadDashboard(false);
+  }finally{
+    setTimeout(()=>$("refreshBtn").classList.remove("rotating"),400);
+  }
 };
 
 document.addEventListener("visibilitychange",()=>{
@@ -688,4 +779,7 @@ window.addEventListener("offline",()=>toastMsg("Você está sem internet."));
 
 if(state.token){
   showApp();
+}else{
+  $("loginView").classList.remove("hide");
+  $("appView").classList.add("hide");
 }
