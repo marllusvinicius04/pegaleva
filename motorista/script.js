@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbzLd8po3vGojfYVnHFN7COQwKGiN_nt3yayYUYkB6SsYxLeiwMmU8f1vIsm2Gft3g3qpQ/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbw7iwtvlegLD8jxTSYLOzUZrl-IZivNHij2IowTMcdRIV2RScsNZhao5wqwUtZMiYY8lw/exec";
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 const state={driver:null,token:"",revision:"",trips:[],availableTrips:[],currentPaymentCode:"",currentPhotoCode:"",photoBase64:"",loading:false,balanceVisible:true,dashboardTimer:null,dashboardBusy:false,pendingWhatsapp:null,lastAvailableCount:0,driverOnline:false,statusTimer:null,statusBusy:false,profileImageData:""};
