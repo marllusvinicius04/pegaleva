@@ -1,4 +1,4 @@
-const API_URL="https://script.google.com/macros/s/AKfycbzLd8po3vGojfYVnHFN7COQwKGiN_nt3yayYUYkB6SsYxLeiwMmU8f1vIsm2Gft3g3qpQ/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbw7iwtvlegLD8jxTSYLOzUZrl-IZivNHij2IowTMcdRIV2RScsNZhao5wqwUtZMiYY8lw/exec";
 const ADMIN_PASSWORD="ADMMINDEUS1";
 
 const $=id=>document.getElementById(id);
@@ -56,8 +56,11 @@ function shiftText(value){
 }
 
 async function api(action,data={},options={}){
-  if(!API_URL.startsWith("https://script.google.com/macros/s/")||!API_URL.endsWith("/exec")){
-    throw new Error("A URL do Apps Script está inválida. Use a URL publicada terminando em /exec.");
+  if(
+    !API_URL.startsWith("https://script.google.com/macros/s/") ||
+    !API_URL.endsWith("/exec")
+  ){
+    throw new Error("URL do Apps Script inválida. Use a implantação Web App terminando em /exec.");
   }
 
   const ctrl=new AbortController();
@@ -70,7 +73,7 @@ async function api(action,data={},options={}){
       headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify({
         action:String(action||""),
-        token:state.token||"",
+        token:String(state.token||""),
         ...data
       }),
       signal:ctrl.signal,
@@ -81,24 +84,24 @@ async function api(action,data={},options={}){
     const raw=await response.text();
 
     if(!response.ok){
-      throw new Error(`Servidor respondeu ${response.status}.`);
+      throw new Error(`Servidor indisponível (${response.status}).`);
     }
 
     let result;
+
     try{
       result=JSON.parse(raw);
-    }catch(parseError){
-      const clean=String(raw||"").replace(/\s+/g," ").slice(0,180);
-      if(/<!doctype|<html/i.test(clean)){
-        throw new Error("A implantação do Apps Script não retornou a API. Publique como Web App e permita acesso pela URL /exec.");
+    }catch(e){
+      if(/<!doctype|<html/i.test(raw)){
+        throw new Error("A URL abriu uma página do Google em vez da API. Confira a implantação do Web App e o acesso.");
       }
-      throw new Error("Resposta inválida do Apps Script.");
+      throw new Error("O Apps Script retornou uma resposta inválida.");
     }
 
     if(!result||result.ok!==true){
       const message=String(result&&result.error||"Erro no servidor.");
 
-      if(/sessão expirada|não autorizado|token/i.test(message)){
+      if(/sessão expirada|não autorizado/i.test(message)){
         finishLogout();
       }
 
@@ -109,7 +112,7 @@ async function api(action,data={},options={}){
 
   }catch(e){
     if(e.name==="AbortError"){
-      throw new Error("O Apps Script demorou para responder. Aguarde alguns segundos e tente novamente.");
+      throw new Error("O Apps Script demorou para responder. Tente novamente em alguns segundos.");
     }
 
     const nonRepeatable=[
@@ -124,13 +127,14 @@ async function api(action,data={},options={}){
       !options.noRetry &&
       !nonRepeatable &&
       navigator.onLine &&
-      /fetch|network|conexão|failed to fetch/i.test(String(e.message||""))
+      /fetch|network|conexão|failed to fetch|indisponível/i.test(String(e.message||""))
     ){
-      await new Promise(r=>setTimeout(r,900));
+      await new Promise(r=>setTimeout(r,850));
       return api(action,data,{...options,noRetry:true});
     }
 
     throw e;
+
   }finally{
     clearTimeout(timer);
   }
@@ -438,36 +442,23 @@ async function loadDashboard(silent=false){
 
   try{
     const firstLoad=!state.data;
+
     const j=await api(
       "adminDashboard",
       {sinceRevision:firstLoad?"":state.revision},
       {
-        timeout:firstLoad?60000:18000,
+        timeout:firstLoad?60000:20000,
         noRetry:!!silent
       }
     );
 
-    // Se o servidor disser "unchanged" antes de termos os dados,
-    // força uma leitura completa na mesma sessão.
-    if(j.unchanged&&firstLoad){
-      state.revision="";
-      const full=await api(
-        "adminDashboard",
-        {sinceRevision:"__FORCE_FULL__"},
-        {timeout:60000,noRetry:true}
-      );
-
-      state.revision=String(full.revision||"");
-      state.data=full;
-      renderAll();
+    if(j.unchanged){
       return;
     }
 
-    if(!j.unchanged){
-      state.revision=String(j.revision||state.revision||"");
-      state.data=j;
-      renderAll();
-    }
+    state.revision=String(j.revision||state.revision||"");
+    state.data=j;
+    renderAll();
 
   }catch(e){
     if(!silent){
@@ -715,16 +706,13 @@ $("toggleAdminPassword").onclick=()=>{
 $("loginForm").onsubmit=async e=>{
   e.preventDefault();
 
-  const password=$("adminPassword").value;
-
-  if(!password){
-    return toastMsg("Digite a senha administrativa.");
-  }
+  const password=$("adminPassword").value.trim();
+  if(!password)return toastMsg("Digite a senha administrativa.");
 
   try{
     const j=await withLoading(
       "Conectando à gestão",
-      "Validando o Apps Script e carregando a central.",
+      "Validando sua sessão no Apps Script.",
       ()=>api(
         "adminLogin",
         {password},
@@ -733,7 +721,7 @@ $("loginForm").onsubmit=async e=>{
     );
 
     if(!j.token){
-      throw new Error("O Apps Script não retornou a sessão administrativa.");
+      throw new Error("O servidor não retornou a sessão administrativa.");
     }
 
     state.token=String(j.token);
@@ -746,6 +734,8 @@ $("loginForm").onsubmit=async e=>{
 
   }catch(err){
     state.token="";
+    state.revision="";
+    state.data=null;
     sessionStorage.removeItem("pl_mob_admin_token");
     toastMsg(err.message||"Não foi possível entrar na gestão.");
   }
