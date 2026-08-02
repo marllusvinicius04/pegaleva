@@ -118,7 +118,7 @@
   </div>
 </section>
 
-<section id="appView" class="app hide">
+<section id="appView" class="app mobility-map-app hide">
   <header class="topbar">
     <div>
       <img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png">
@@ -133,21 +133,7 @@
       <p id="welcomeCity"></p>
     </section>
 
-    <nav class="app-nav">
-      <button class="nav-item active"><i class="fa-solid fa-house"></i>Início</button>
-      <button class="nav-item" id="navSimulator"><i class="fa-solid fa-calculator"></i>Simular</button>
-      <button class="nav-item" id="navTrips"><i class="fa-solid fa-route"></i>Viagens</button>
-      <button class="nav-item" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i>Sair</button>
-    </nav>
 
-    <section class="card">
-      <div class="head">
-        <h3>Suas viagens</h3>
-        <span class="badge blue">Mobilidade</span>
-      </div>
-      <p>Escolha de onde você vai sair e para onde quer ir. O valor é calculado antes da solicitação.</p>
-      <button class="btn secondary full" id="viewTrips"><i class="fa-solid fa-clock-rotate-left"></i> Ver minhas viagens</button>
-    </section>
   </main>
 
   <section class="request">
@@ -238,9 +224,61 @@
 </div>
 
 <div class="sheet" id="profileSheet">
-  <div class="sheet-box">
-    <div class="sheet-head"><h3>Minha conta</h3><button class="close" data-close="profileSheet">×</button></div>
-    <div class="trip"><strong id="profileName"></strong><span id="profileEmail"></span><span id="profileAddress"></span></div>
+  <div class="sheet-box account-menu-sheet">
+    <div class="sheet-head">
+      <div>
+        <small class="account-kicker">MINHA CONTA</small>
+        <h3>Conta e navegação</h3>
+      </div>
+      <button class="close" data-close="profileSheet">×</button>
+    </div>
+
+    <div class="account-user-card">
+      <div class="account-avatar"><i class="fa-solid fa-user"></i></div>
+      <div class="account-user-copy">
+        <strong id="profileName"></strong>
+        <span id="profileEmail"></span>
+        <small id="profileAddress"></small>
+      </div>
+    </div>
+
+    <div class="account-menu-list">
+      <button type="button" class="account-menu-item" id="accountHomeBtn">
+        <span class="account-menu-icon"><i class="fa-solid fa-house"></i></span>
+        <span class="account-menu-copy">
+          <strong>Início</strong>
+          <small>Voltar para solicitar uma viagem</small>
+        </span>
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+
+      <button type="button" class="account-menu-item" id="accountSimulatorBtn">
+        <span class="account-menu-icon"><i class="fa-solid fa-calculator"></i></span>
+        <span class="account-menu-copy">
+          <strong>Simular</strong>
+          <small>Consultar o valor antes de solicitar</small>
+        </span>
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+
+      <button type="button" class="account-menu-item" id="accountTripsBtn">
+        <span class="account-menu-icon"><i class="fa-solid fa-route"></i></span>
+        <span class="account-menu-copy">
+          <strong>Minhas viagens</strong>
+          <small>Acompanhar viagens em andamento e histórico</small>
+        </span>
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+
+      <button type="button" class="account-menu-item account-menu-logout" id="accountLogoutBtn">
+        <span class="account-menu-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>
+        <span class="account-menu-copy">
+          <strong>Sair</strong>
+          <small>Encerrar esta sessão</small>
+        </span>
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
   </div>
 </div>
 
