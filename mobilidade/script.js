@@ -750,10 +750,11 @@ $("simOriginCity").onchange=fillSimulatorNeighborhoods;
 $("simDestinationCity").onchange=fillSimulatorNeighborhoods;
 fillSimulatorNeighborhoods();
 
-$("navSimulator").onclick=()=>{
+function openSimulatorFromAccount(){
   $("simulationResults").innerHTML="";
+  fillSimulatorNeighborhoods();
   openL("simulatorSheet");
-};
+}
 $("calculateSimulation").onclick=async()=>{
   $("simulationResults").innerHTML="";
   setLoading("simulationLoading",true);
@@ -868,13 +869,35 @@ async function cancelRide(code){
   }
 }
 
-$("navTrips").onclick=()=>{renderTrips();openL("tripsSheet")};
-$("viewTrips").onclick=()=>{renderTrips();openL("tripsSheet")};
-$("floatingTrips").onclick=()=>{renderTrips();openL("tripsSheet")};
+function openTripsFromAccount(){
+  renderTrips();
+  openL("tripsSheet");
+}
+$("floatingTrips").onclick=openTripsFromAccount;
 
 // PERFIL / SAIR
 $("profileBtn").onclick=()=>openL("profileSheet");
-$("logoutBtn").onclick=async()=>{
+
+$("accountHomeBtn").onclick=()=>{
+  closeL("profileSheet");
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+$("accountSimulatorBtn").onclick=()=>{
+  closeL("profileSheet");
+  openSimulatorFromAccount();
+};
+
+$("accountTripsBtn").onclick=()=>{
+  closeL("profileSheet");
+  openTripsFromAccount();
+};
+
+$("accountLogoutBtn").onclick=async()=>{
+  closeL("profileSheet");
+  await performUserLogout();
+};
+async function performUserLogout(){
   try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
   clearInterval(state.dashboardTimer);
   sessionStorage.removeItem("pl_mob_session");
@@ -882,7 +905,8 @@ $("logoutBtn").onclick=async()=>{
   state.token="";
   state.trips=[];
   show("loginView");
-};
+}
+
 
 // EVENTOS GERAIS
 document.querySelectorAll("[data-close]").forEach(btn=>{
