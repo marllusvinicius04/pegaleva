@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pega&Leva Mobilidade • Gestão</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section id="loginView" class="login">
+  <div class="login-card">
+    <img src="https://i.ibb.co/3YCDGsVD/PEGA-E-LEVA-MKT-1.png" alt="Pega&Leva">
+    <div class="mobility-pill"><i class="fa-solid fa-motorcycle"></i> MOBILIDADE URBANA</div>
+    <h1>Central de Gestão</h1>
+    <p>Acompanhe usuários, motoristas, viagens, financeiro, Score e bônus.</p>
+
+    <form id="loginForm">
+      <div class="field">
+        <label>Senha administrativa</label>
+        <div class="password-wrap">
+          <input id="adminPassword" type="password" placeholder="Digite a senha" required autocomplete="current-password">
+          <button id="toggleAdminPassword" class="password-toggle" type="button" aria-label="Mostrar senha" title="Mostrar senha">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      <button class="btn primary full" type="submit">
+        <i class="fa-solid fa-shield-halved"></i> Entrar no dashboard
+      </button>
+    </form>
+  </div>
+</section>
+
+<section id="appView" class="app hide">
+  <aside id="sidebar" class="sidebar">
+    <div class="brand">
+      <img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png" alt="Pega&Leva">
+      <p>CENTRAL • MOBILIDADE URBANA</p>
+    </div>
+
+    <nav class="menu">
+      <button class="active" data-panel="overview"><i class="fa-solid fa-chart-pie"></i> Visão geral</button>
+      <button data-panel="trips"><i class="fa-solid fa-route"></i> Viagens</button>
+      <button data-panel="users"><i class="fa-solid fa-users"></i> Usuários</button>
+      <button data-panel="drivers"><i class="fa-solid fa-motorcycle"></i> Motoristas</button>
+      <button data-panel="finance"><i class="fa-solid fa-building-columns"></i> Financeiro</button>
+      <button data-panel="register"><i class="fa-solid fa-user-plus"></i> Cadastros</button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <button id="logoutBtn" class="btn full sidebar-logout">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
+      </button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="top">
+      <div class="top-left">
+        <button id="mobileMenu" class="mobile-menu"><i class="fa-solid fa-bars"></i></button>
+        <div>
+          <h1 id="pageTitle">Visão geral</h1>
+          <p>Dados da operação Pega&Leva Mobilidade Urbana.</p>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button id="refreshBtn" class="refresh-btn" title="Atualizar">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+        <div class="live" id="liveStatus">Atualização automática</div>
+      </div>
+    </header>
+
+    <section id="overview" class="panel active">
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-top"><small>Receita de hoje</small><span class="metric-icon"><i class="fa-solid fa-chart-line"></i></span></div>
+          <strong id="mSales">R$ 0,00</strong>
+        </div>
+        <div class="metric">
+          <div class="metric-top"><small>Recebido hoje</small><span class="metric-icon"><i class="fa-solid fa-circle-check"></i></span></div>
+          <strong id="mPaidToday">R$ 0,00</strong>
+        </div>
+        <div class="metric">
+          <div class="metric-top"><small>Usuários</small><span class="metric-icon"><i class="fa-solid fa-users"></i></span></div>
+          <strong id="mUsers">0</strong>
+        </div>
+        <div class="metric">
+          <div class="metric-top"><small>Motoristas</small><span class="metric-icon"><i class="fa-solid fa-motorcycle"></i></span></div>
+          <strong id="mDrivers">0</strong>
+        </div>
+        <div class="metric">
+          <div class="metric-top"><small>Viagens abertas</small><span class="metric-icon"><i class="fa-solid fa-route"></i></span></div>
+          <strong id="mOpen">0</strong>
+        </div>
+        <div class="metric">
+          <div class="metric-top"><small>Saldo dos motoristas</small><span class="metric-icon"><i class="fa-solid fa-wallet"></i></span></div>
+          <strong id="mDriverBalance">R$ 0,00</strong>
+        </div>
+        <div class="metric">
+          <div class="metric-top"><small>Saques solicitados</small><span class="metric-icon"><i class="fa-solid fa-money-bill-transfer"></i></span></div>
+          <strong id="mWithdrawals">R$ 0,00</strong>
+        </div>
+        <div class="metric">
+          <div class="metric-top"><small>Total de viagens</small><span class="metric-icon"><i class="fa-solid fa-location-arrow"></i></span></div>
+          <strong id="mTrips">0</strong>
+        </div>
+      </div>
+
+      <div id="financeSummary" class="finance-summary"></div>
+
+      <div class="grid overview-grid">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Viagens recentes</h3>
+              <small>Últimas solicitações da operação</small>
+            </div>
+            <button class="view-all" data-go-panel="trips"><i class="fa-solid fa-up-right-from-square"></i> Ver viagens</button>
+          </div>
+          <div id="overviewTrips"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Motoristas online</h3>
+              <small>Disponibilidade atual</small>
+            </div>
+            <span class="badge ok" id="onlineDriverCount">0 online</span>
+          </div>
+          <div id="overviewDrivers"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="trips" class="panel">
+      <div class="card">
+        <div class="card-head responsive-head">
+          <div>
+            <h3>Viagens do aplicativo</h3>
+            <small>Acompanhe rota, motorista, pagamento e valores.</small>
+          </div>
+          <input class="search" data-search="tripsTable" placeholder="Buscar viagem...">
+        </div>
+
+        <div class="table-wrap">
+          <table class="table trips-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Usuário</th>
+                <th>Rota</th>
+                <th>Motorista</th>
+                <th>Status</th>
+                <th>Pagamento</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Base motorista</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody id="tripsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="users" class="panel">
+      <div class="card">
+        <div class="card-head responsive-head">
+          <div>
+            <h3>Usuários cadastrados</h3>
+            <small>Sem planos e sem mensalidade: usuários comuns de mobilidade.</small>
+          </div>
+          <input class="search" data-search="usersTable" placeholder="Buscar usuário...">
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Usuário</th>
+                <th>Contato</th>
+                <th>Cidade</th>
+                <th>Código</th>
+                <th>Viagens</th>
+                <th>Cadastro</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="drivers" class="panel">
+      <div class="card">
+        <div class="card-head responsive-head">
+          <div>
+            <h3>Motoristas cadastrados</h3>
+            <small>Status, Score, avaliações, bônus, taxa e saldo.</small>
+          </div>
+          <input class="search" data-search="driversTable" placeholder="Buscar motorista...">
+        </div>
+
+        <div class="table-wrap">
+          <table class="table drivers-table">
+            <thead>
+              <tr>
+                <th>Motorista</th>
+                <th>Contato / Placa</th>
+                <th>Status</th>
+                <th>Nível / Score</th>
+                <th>Avaliações</th>
+                <th>Turno</th>
+                <th>Taxa</th>
+                <th>Bônus</th>
+                <th>Saldo</th>
+                <th>Saques solicitados</th>
+                <th>Saldo livre</th>
+              </tr>
+            </thead>
+            <tbody id="driversTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="finance" class="panel">
+      <div class="finance-hero">
+        <div>
+          <small>FINANCEIRO DOS MOTORISTAS</small>
+          <h2>Saques, bônus e saldo operacional</h2>
+          <p>O backend valida novamente o saldo antes de concluir qualquer saque.</p>
+        </div>
+        <span><i class="fa-solid fa-building-columns"></i></span>
+      </div>
+
+      <div id="financePanelCards" class="finance-panel-cards"></div>
+
+      <div class="card">
+        <div class="card-head responsive-head">
+          <div>
+            <h3>Solicitações de saque</h3>
+            <small>Confira o valor solicitado e o saldo do motorista antes de pagar.</small>
+          </div>
+          <input class="search" data-search="withdrawalsTable" placeholder="Buscar saque...">
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Motorista</th>
+                <th>Valor</th>
+                <th>Saldo atual</th>
+                <th>Validação</th>
+                <th>PIX</th>
+                <th>Solicitado</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody id="withdrawalsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="register" class="panel">
+      <div class="register-grid">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Cadastrar usuário</h3>
+              <small>Conta de passageiro / usuário comum.</small>
+            </div>
+            <span class="register-icon"><i class="fa-solid fa-user"></i></span>
+          </div>
+
+          <form id="userForm" class="form-grid">
+            <div class="field"><label>Nome</label><input id="uName" required></div>
+            <div class="field"><label>E-mail</label><input id="uEmail" type="email" required></div>
+            <div class="field"><label>Senha</label><input id="uPassword" type="password" minlength="6" required></div>
+            <div class="field"><label>WhatsApp</label><input id="uWhatsapp" inputmode="numeric" required></div>
+            <div class="field"><label>CPF</label><input id="uDocument" inputmode="numeric" required></div>
+            <div class="field"><label>Cidade</label><select id="uCity" required><option value="">Selecione</option><option>Uruçuí</option><option>Benedito Leite</option></select></div>
+            <div class="field wide"><label>Logradouro</label><input id="uStreet" required></div>
+            <div class="field"><label>Número</label><input id="uNumber" required></div>
+            <div class="field"><label>Ponto de referência</label><input id="uReference" required></div>
+            <button class="btn primary wide" type="submit"><i class="fa-solid fa-user-plus"></i> Cadastrar usuário</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Cadastrar motorista</h3>
+              <small>Motorista inicia Bronze, OFFLINE e com taxa ativa.</small>
+            </div>
+            <span class="register-icon green"><i class="fa-solid fa-motorcycle"></i></span>
+          </div>
+
+          <div class="rule-note">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>O Apps Script atual cadastra o motorista com <strong>DescontoAutomático ATIVO</strong>. A taxa configurada é aplicada pelo backend.</span>
+          </div>
+
+          <form id="driverForm" class="form-grid">
+            <div class="field"><label>Nome</label><input id="dName" required></div>
+            <div class="field"><label>E-mail</label><input id="dEmail" type="email" required></div>
+            <div class="field"><label>Senha</label><input id="dPassword" type="password" minlength="6" required></div>
+            <div class="field"><label>WhatsApp</label><input id="dWhatsapp" inputmode="numeric" required></div>
+            <div class="field"><label>CPF</label><input id="dCpf" inputmode="numeric" required></div>
+            <div class="field"><label>Placa da moto</label><input id="dPlate" maxlength="12" required></div>
+            <div class="field wide">
+              <label>Turno</label>
+              <select id="dShift">
+                <option value="MANHA">Manhã</option>
+                <option value="TARDE">Tarde</option>
+                <option value="NOITE">Noite</option>
+                <option value="MANHA,TARDE">Manhã + Tarde</option>
+                <option value="MANHA,NOITE">Manhã + Noite</option>
+                <option value="TARDE,NOITE">Tarde + Noite</option>
+                <option value="MANHA,TARDE,NOITE" selected>Todos os turnos</option>
+              </select>
+            </div>
+            <button class="btn primary wide" type="submit"><i class="fa-solid fa-motorcycle"></i> Cadastrar motorista</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+</section>
+
+<div id="dailySummaryModal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <small>RESUMO DE VIAGENS</small>
+        <h3>Resumo diário do usuário</h3>
+      </div>
+      <button id="closeDailySummary" class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>Usuário</label>
+        <select id="dailySummaryUser"></select>
+      </div>
+      <div class="field">
+        <label>Data</label>
+        <input id="dailySummaryDate" type="date">
+      </div>
+    </div>
+
+    <button id="generateDailySummary" class="btn primary full"><i class="fa-solid fa-calendar-day"></i> Gerar resumo</button>
+
+    <div id="dailySummaryStats" class="summary-stats hide">
+      <div><small>Viagens</small><strong id="dailySummaryCount">0</strong></div>
+      <div><small>Total</small><strong id="dailySummaryTotal">R$ 0,00</strong></div>
+      <div><small>Pago</small><strong id="dailySummaryPaid">R$ 0,00</strong></div>
+      <div><small>Pendente</small><strong id="dailySummaryPending">R$ 0,00</strong></div>
+    </div>
+
+    <pre id="dailySummaryPreview" class="summary-preview">Selecione um usuário e uma data.</pre>
+
+    <div class="actions modal-actions">
+      <button id="copyDailySummary" class="btn secondary"><i class="fa-solid fa-copy"></i> Copiar</button>
+      <button id="whatsappDailySummary" class="btn success"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<div id="globalLoading" class="global-loading">
+  <div class="global-loading-box">
+    <div class="loading-road">
+      <i class="fa-solid fa-motorcycle loading-bike"></i>
+    </div>
+    <h3 id="loadingTitle">Carregando...</h3>
+    <p id="loadingText">Aguarde enquanto processamos as informações.</p>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
