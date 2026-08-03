@@ -2,52 +2,83 @@
 const API_URL="https://script.google.com/macros/s/AKfycbx7x5n_KUMED7mIaaXAUMsrNRuGPnOkDH_NFaBRh-Mbts-6JONjojB_0c1-g82SXEoD/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:"",requestId:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
 
-  const controller=new AbortController();
-  const timeoutMs=Number(options.timeout||10000);
-  const timeout=setTimeout(()=>controller.abort(),timeoutMs);
   const payload={action,...data};
   if(state.token)payload.token=state.token;
 
-  try{
-    const r=await fetch(API_URL,{
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify(payload),
-      signal:controller.signal,
-      cache:"no-store",
-      keepalive:false
-    });
+  const safeRetryActions=new Set([
+    "dashboard",
+    "calculateFreight",
+    "login",
+    "driverLogin",
+    "driverStatus"
+  ]);
 
-    if(!r.ok)throw new Error("Não foi possível concluir a operação agora.");
+  const run=async(timeoutMs)=>{
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeoutMs);
+    try{
+      const r=await fetch(API_URL,{
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body:JSON.stringify(payload),
+        signal:controller.signal,
+        cache:"no-store",
+        redirect:"follow"
+      });
 
-    const j=await r.json();
+      if(!r.ok)throw new Error("HTTP_"+r.status);
 
-    if(!j.ok){
-      if(/sessão expirada|não autorizado/i.test(j.error||"")){
-        clearInterval(state.dashboardTimer);
-        sessionStorage.removeItem("pl_session");
-        state.user=null;
-        state.token="";
-        show("loginView");
+      const text=await r.text();
+      let j;
+      try{j=JSON.parse(text)}catch(_){
+        throw new Error("Resposta inválida do servidor.");
       }
-      throw new Error(j.error||"Erro.");
+
+      if(!j.ok){
+        if(/sessão expirada|não autorizado/i.test(j.error||"")){
+          clearInterval(state.dashboardTimer);
+          sessionStorage.removeItem("pl_session");
+          state.user=null;
+          state.token="";
+          show("loginView");
+        }
+        throw new Error(j.error||"Erro.");
+      }
+
+      return j;
+    }finally{
+      clearTimeout(timer);
+    }
+  };
+
+  const firstTimeout=Number(options.timeout||18000);
+
+  try{
+    return await run(firstTimeout);
+  }catch(e){
+    const message=String(e&&e.message||"");
+    const transient=e.name==="AbortError"||/fetch|network|failed to fetch|HTTP_5\d\d/i.test(message);
+    const canRetry=!options.noRetry&&safeRetryActions.has(String(action))&&transient;
+
+    // Somente leituras/consultas podem repetir. createTrip e demais gravações NUNCA repetem.
+    if(canRetry){
+      try{
+        await new Promise(r=>setTimeout(r,250));
+        return await run(Math.max(firstTimeout,18000));
+      }catch(secondError){
+        e=secondError;
+      }
     }
 
-    return j;
-  }catch(e){
-    const transient=e.name==="AbortError"||/fetch|conexão|network|failed to fetch/i.test(String(e&&e.message||""));
-
-    // Não faz uma segunda requisição automática que dobra o tempo de espera.
-    // Chamadas em segundo plano falham silenciosamente e tentam de novo no próximo ciclo.
-    if(transient){
-      const err=new Error("Não foi possível concluir agora. Tente novamente.");
+    const finalMessage=String(e&&e.message||"");
+    const finalTransient=e&&e.name==="AbortError"||/fetch|network|failed to fetch|HTTP_5\d\d/i.test(finalMessage);
+    if(finalTransient){
+      const err=new Error("Servidor temporariamente indisponível. Tente novamente.");
       err.code="TRANSIENT_NETWORK";
       throw err;
     }
 
     throw e;
-  }finally{
-    clearTimeout(timeout);
   }
 }function show(id){
   ["loginView","accountTypeView","registerView","appView"].forEach(x=>$(x).classList.add("hide"));
@@ -339,7 +370,7 @@ function ensureDriverRatingModal(){
       await api("rateDriver",{
         code:state.ratingTripCode,
         rating:state.ratingValue
-      },{timeout:8000});
+      },{timeout:12000});
 
       localStorage.setItem(
         "pl_rated_trip_"+state.ratingTripCode,
@@ -505,7 +536,7 @@ async function dashboard(silent=false){
   if(state.dashboardBusy)return;
   state.dashboardBusy=true;
   try{
-    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:5000});
+    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:12000});
     if(j.unchanged)return;
     state.revision=String(j.revision||state.revision||"");
     const newTrips=j.trips||[];
@@ -1024,7 +1055,7 @@ $("removeQuickLogin").onclick=()=>{
         originNeighborhood:state.request.originNeighborhood,
         destinationNeighborhood:state.request.destinationNeighborhood,
         returnTrip:state.request.returnTrip
-      },{timeout:6000});
+      },{timeout:12000});
       state.request.freights=j.freights||[];
       state.freightCache[key]={time:Date.now(),freights:state.request.freights};
     }
@@ -1092,7 +1123,7 @@ $("removeQuickLogin").onclick=()=>{
         requestId:state.request.requestId
       }
     },{
-      timeout:10000
+      timeout:20000
     });
 
     state.request.code=j.trip.code;
@@ -1377,7 +1408,7 @@ calculateSimulation.onclick=async()=>{
       originNeighborhood:simOriginNeighborhood.value,
       destinationNeighborhood:simDestinationNeighborhood.value,
       returnTrip:false
-    },{timeout:6000});
+    },{timeout:12000});
 
     simulationLoading.classList.remove("on");
     calculateSimulation.disabled=false;
