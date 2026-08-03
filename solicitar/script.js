@@ -3,7 +3,7 @@ const API_URL="https://script.google.com/macros/s/AKfycbx7x5n_KUMED7mIaaXAUMsrNR
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
 
   const controller=new AbortController();
-  const timeoutMs=Number(options.timeout||12000);
+  const timeoutMs=Number(options.timeout||10000);
   const timeout=setTimeout(()=>controller.abort(),timeoutMs);
   const payload={action,...data};
   if(state.token)payload.token=state.token;
@@ -339,7 +339,7 @@ function ensureDriverRatingModal(){
       await api("rateDriver",{
         code:state.ratingTripCode,
         rating:state.ratingValue
-      },{timeout:15000});
+      },{timeout:8000});
 
       localStorage.setItem(
         "pl_rated_trip_"+state.ratingTripCode,
@@ -494,18 +494,18 @@ function startDashboardPolling(){
     if(state.user && !state.dashboardBusy && !document.hidden && navigator.onLine){
       dashboard(true);
     }
-  },7000);
+  },6000);
 }
 document.addEventListener("visibilitychange",()=>{
   if(!document.hidden && state.user)dashboard(true);
 });
-window.addEventListener("online",()=>{if(state.user){toast("Conexão restabelecida.");dashboard(true)}});
+window.addEventListener("online",()=>{if(state.user&&!state.dashboardBusy)dashboard(true)});
 window.addEventListener("offline",()=>toast("Você está sem internet. As informações serão atualizadas ao reconectar."));
 async function dashboard(silent=false){
   if(state.dashboardBusy)return;
   state.dashboardBusy=true;
   try{
-    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:6000});
+    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:5000});
     if(j.unchanged)return;
     state.revision=String(j.revision||state.revision||"");
     const newTrips=j.trips||[];
@@ -1017,14 +1017,14 @@ $("removeQuickLogin").onclick=()=>{
     state.freightCache=state.freightCache||{};
     const cached=state.freightCache[key];
 
-    if(cached&&(Date.now()-cached.time)<15000){
+    if(cached&&(Date.now()-cached.time)<30000){
       state.request.freights=cached.freights;
     }else{
       const j=await api("calculateFreight",{
         originNeighborhood:state.request.originNeighborhood,
         destinationNeighborhood:state.request.destinationNeighborhood,
         returnTrip:state.request.returnTrip
-      },{timeout:7000});
+      },{timeout:6000});
       state.request.freights=j.freights||[];
       state.freightCache[key]={time:Date.now(),freights:state.request.freights};
     }
@@ -1092,7 +1092,7 @@ $("removeQuickLogin").onclick=()=>{
         requestId:state.request.requestId
       }
     },{
-      timeout:12000
+      timeout:10000
     });
 
     state.request.code=j.trip.code;
@@ -1108,7 +1108,7 @@ $("removeQuickLogin").onclick=()=>{
     playPositiveConfirmation();
     successNotify();
 
-    state.revision="";
+    state.revision="";state.freightCache={};
     setTimeout(()=>dashboard(true),100);
 
   }catch(x){
@@ -1377,7 +1377,7 @@ calculateSimulation.onclick=async()=>{
       originNeighborhood:simOriginNeighborhood.value,
       destinationNeighborhood:simDestinationNeighborhood.value,
       returnTrip:false
-    },{timeout:7000});
+    },{timeout:6000});
 
     simulationLoading.classList.remove("on");
     calculateSimulation.disabled=false;
