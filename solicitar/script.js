@@ -1,5 +1,5 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbzAcHjZTbgbzLgnc2GrYRyjw8GwL2PskbhCmUujCoM7XUxyU_rUG_B2QIHpQzYDkSpO/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbwlceO57jhKD-9PvgtIgIt-MtzpMlc97sL_Ks4tpQVvDqefN7mMSxPnFpEpW4-f1omX/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),options.timeout||30000);
@@ -26,16 +26,22 @@ const API_URL="https://script.google.com/macros/s/AKfycbzAcHjZTbgbzLgnc2GrYRyjw8
     }
     return j;
   }catch(e){
-    if(e.name==="AbortError")throw new Error("A conexão demorou demais. Tente novamente.");
     const nonRepeatable=["createTrip","cancelUserTrip","rateDriver","logout"].includes(String(action));
-    if(
-      !options.noRetry &&
-      !nonRepeatable &&
-      /fetch|conexão|network/i.test(String(e.message))
-    ){
+    const transient=e.name==="AbortError"||/fetch|conexão|network|failed to fetch/i.test(String(e&&e.message||""));
+
+    // Nunca exibe ao cliente aviso de timeout/conexão demorada.
+    // Para chamadas seguras, tenta mais uma vez silenciosamente.
+    if(!options.noRetry&&!nonRepeatable&&transient){
       await new Promise(r=>setTimeout(r,700));
-      return api(action,data,{...options,noRetry:true});
+      return api(action,data,{...options,noRetry:true,timeout:Math.max(Number(options.timeout||30000),30000)});
     }
+
+    if(transient){
+      const err=new Error("Não foi possível concluir a operação agora. Tente novamente.");
+      err.code="TRANSIENT_NETWORK";
+      throw err;
+    }
+
     throw e;
   }finally{clearTimeout(timeout)}
 }function show(id){
@@ -1064,10 +1070,12 @@ $("removeQuickLogin").onclick=()=>{
 
     const msg=String(x&&x.message||"");
 
-    if(/conexão demorou demais/i.test(msg)){
-      toast("A solicitação está demorando para confirmar. Verifique em Minhas entregas antes de tentar novamente.");
+    // Se houver falha transitória ao confirmar, atualiza Minhas entregas
+    // silenciosamente para evitar pedido duplicado, sem mostrar aviso de timeout.
+    if(x&&x.code==="TRANSIENT_NETWORK"){
       state.revision="";
       setTimeout(()=>dashboard(true),300);
+      toast("Não foi possível confirmar agora. Confira Minhas entregas antes de tentar novamente.");
       return;
     }
 
