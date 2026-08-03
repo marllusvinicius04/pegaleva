@@ -1,85 +1,43 @@
 
-const API_URL="https://script.google.com/macros/s/AKfycbx7x5n_KUMED7mIaaXAUMsrNRuGPnOkDH_NFaBRh-Mbts-6JONjojB_0c1-g82SXEoD/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:"",requestId:""}};async function api(action,data={},options={}){
+const API_URL="https://script.google.com/macros/s/AKfycbwrT-m8azYkwwTLpKE9maPI-aIS84IcKCiet8O6AM_LaLHYXymHkfSBNg7tXCVgYsNi/exec";const ADMIN_WHATSAPP="5589994029572";const PARTNER_PLAN_URL="COLE_AQUI_O_LINK_DA_PAGINA_DO_PLANO";const $=id=>document.getElementById(id);const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});const bairros=["Fogoso","Malvinas","Vaquejada","Centro","Aeroporto","Aeroporto I","Aeroporto II","Novo Horizonte","Novo Horizonte I","Novo Horizonte II","Areia","Esperança","Água Branca","Alto Bonito","São Francisco","Babilônia","Canaã","Bela Vista","Portal dos Cerrados","Cerrados Park","Vista Bela","Benedito Leite"];const state={user:null,token:"",revision:"",trips:[],tripStatusMap:{},dashboardTimer:null,dashboardBusy:false,firstDashboard:true,ratingTripCode:"",ratingValue:0,request:{origin:null,destination:null,originNeighborhood:"",destinationNeighborhood:"",receiverName:"",receiverWhatsapp:"",contentType:"",returnTrip:false,freights:[],selectedFreight:null,code:""}};async function api(action,data={},options={}){
   if(!API_URL.startsWith("https://script.google.com/"))throw new Error("Cole a URL do Apps Script no HTML.");
-
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),options.timeout||30000);
   const payload={action,...data};
   if(state.token)payload.token=state.token;
-
-  const safeRetryActions=new Set([
-    "dashboard",
-    "calculateFreight",
-    "login",
-    "driverLogin",
-    "driverStatus"
-  ]);
-
-  const run=async(timeoutMs)=>{
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),timeoutMs);
-    try{
-      const r=await fetch(API_URL,{
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body:JSON.stringify(payload),
-        signal:controller.signal,
-        cache:"no-store",
-        redirect:"follow"
-      });
-
-      if(!r.ok)throw new Error("HTTP_"+r.status);
-
-      const text=await r.text();
-      let j;
-      try{j=JSON.parse(text)}catch(_){
-        throw new Error("Resposta inválida do servidor.");
-      }
-
-      if(!j.ok){
-        if(/sessão expirada|não autorizado/i.test(j.error||"")){
-          clearInterval(state.dashboardTimer);
-          sessionStorage.removeItem("pl_session");
-          state.user=null;
-          state.token="";
-          show("loginView");
-        }
-        throw new Error(j.error||"Erro.");
-      }
-
-      return j;
-    }finally{
-      clearTimeout(timer);
-    }
-  };
-
-  const firstTimeout=Number(options.timeout||18000);
-
   try{
-    return await run(firstTimeout);
-  }catch(e){
-    const message=String(e&&e.message||"");
-    const transient=e.name==="AbortError"||/fetch|network|failed to fetch|HTTP_5\d\d/i.test(message);
-    const canRetry=!options.noRetry&&safeRetryActions.has(String(action))&&transient;
-
-    // Somente leituras/consultas podem repetir. createTrip e demais gravações NUNCA repetem.
-    if(canRetry){
-      try{
-        await new Promise(r=>setTimeout(r,250));
-        return await run(Math.max(firstTimeout,18000));
-      }catch(secondError){
-        e=secondError;
+    const r=await fetch(API_URL,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(payload),
+      signal:controller.signal,
+      cache:"no-store"
+    });
+    if(!r.ok)throw new Error("Falha de conexão com o servidor.");
+    const j=await r.json();
+    if(!j.ok){
+      if(/sessão expirada|não autorizado/i.test(j.error||"")){
+        clearInterval(state.dashboardTimer);
+        sessionStorage.removeItem("pl_session");
+        state.user=null;state.token="";
+        show("loginView");
       }
+      throw new Error(j.error||"Erro.");
     }
-
-    const finalMessage=String(e&&e.message||"");
-    const finalTransient=e&&e.name==="AbortError"||/fetch|network|failed to fetch|HTTP_5\d\d/i.test(finalMessage);
-    if(finalTransient){
-      const err=new Error("Servidor temporariamente indisponível. Tente novamente.");
-      err.code="TRANSIENT_NETWORK";
-      throw err;
+    return j;
+  }catch(e){
+    if(e.name==="AbortError")throw new Error("A conexão demorou demais. Tente novamente.");
+    const nonRepeatable=["createTrip","cancelUserTrip","rateDriver","logout"].includes(String(action));
+    if(
+      !options.noRetry &&
+      !nonRepeatable &&
+      /fetch|conexão|network/i.test(String(e.message))
+    ){
+      await new Promise(r=>setTimeout(r,700));
+      return api(action,data,{...options,noRetry:true});
     }
-
     throw e;
-  }
+  }finally{clearTimeout(timeout)}
 }function show(id){
   ["loginView","accountTypeView","registerView","appView"].forEach(x=>$(x).classList.add("hide"));
   $(id).classList.remove("hide");
@@ -370,7 +328,7 @@ function ensureDriverRatingModal(){
       await api("rateDriver",{
         code:state.ratingTripCode,
         rating:state.ratingValue
-      },{timeout:12000});
+      },{timeout:15000});
 
       localStorage.setItem(
         "pl_rated_trip_"+state.ratingTripCode,
@@ -525,18 +483,18 @@ function startDashboardPolling(){
     if(state.user && !state.dashboardBusy && !document.hidden && navigator.onLine){
       dashboard(true);
     }
-  },6000);
+  },2000);
 }
 document.addEventListener("visibilitychange",()=>{
   if(!document.hidden && state.user)dashboard(true);
 });
-window.addEventListener("online",()=>{if(state.user&&!state.dashboardBusy)dashboard(true)});
+window.addEventListener("online",()=>{if(state.user){toast("Conexão restabelecida.");dashboard(true)}});
 window.addEventListener("offline",()=>toast("Você está sem internet. As informações serão atualizadas ao reconectar."));
 async function dashboard(silent=false){
   if(state.dashboardBusy)return;
   state.dashboardBusy=true;
   try{
-    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:12000});
+    const j=await api("dashboard",{sinceRevision:state.revision},{timeout:8000,noRetry:!!silent});
     if(j.unchanged)return;
     state.revision=String(j.revision||state.revision||"");
     const newTrips=j.trips||[];
@@ -1035,39 +993,7 @@ $("removeQuickLogin").onclick=()=>{
     state.request.returnTrip=b.dataset.ret==="true";
     document.querySelectorAll("[data-ret]").forEach(x=>x.classList.toggle("active",x===b))
   })
-}if(step===4){wizardTitle.textContent="Calculando frete";wizardContent.innerHTML=`<div class="loading"><div class="road"><i class="fa-solid fa-motorcycle bike"></i></div><p>Calculando opções...</p></div>`;nextStep.classList.add("hide");calc()}if(step===5){wizardTitle.textContent="Escolha o frete";nextStep.classList.remove("hide");nextStep.textContent="Solicitar entrega";wizardContent.innerHTML=state.request.freights.map(f=>`<div class="freight" data-f="${f.type}"><div><strong>${f.label}</strong><strong>${money.format(f.value)}</strong></div><span class="freight-badge">${f.type==="ECONOMICO"?"Melhor preço":"Entrega Padrão"}</span></div>`).join("");document.querySelectorAll("[data-f]").forEach(x=>x.onclick=()=>{state.request.selectedFreight=state.request.freights.find(f=>f.type===x.dataset.f);document.querySelectorAll("[data-f]").forEach(y=>y.classList.toggle("selected",y===x))})}}async function calc(){
-  try{
-    const key=[
-      state.request.originNeighborhood,
-      state.request.destinationNeighborhood,
-      state.request.returnTrip?"1":"0",
-      String(state.user&&state.user.plan||"GRATUITO"),
-      String(state.user&&state.user.deliveries||0)
-    ].join("|");
-
-    state.freightCache=state.freightCache||{};
-    const cached=state.freightCache[key];
-
-    if(cached&&(Date.now()-cached.time)<30000){
-      state.request.freights=cached.freights;
-    }else{
-      const j=await api("calculateFreight",{
-        originNeighborhood:state.request.originNeighborhood,
-        destinationNeighborhood:state.request.destinationNeighborhood,
-        returnTrip:state.request.returnTrip
-      },{timeout:12000});
-      state.request.freights=j.freights||[];
-      state.freightCache[key]={time:Date.now(),freights:state.request.freights};
-    }
-
-    state.request.selectedFreight=state.request.freights[0]||null;
-    requestAnimationFrame(()=>{step=5;render()});
-  }catch(x){
-    toast(x.message);
-    step=3;
-    render();
-  }
-}function valid(){if(step===0){state.request.originNeighborhood=bO.value;state.request.destinationNeighborhood=bD.value;return bO.value&&bD.value}if(step===1){state.request.receiverName=rName.value.trim();state.request.receiverWhatsapp=rWa.value.replace(/\D/g,"");return state.request.receiverName&&state.request.receiverWhatsapp.length>=10}if(step===2)return state.request.contentType;if(step===5)return state.request.selectedFreight;return true}function nextWizard(){
+}if(step===4){wizardTitle.textContent="Calculando frete";wizardContent.innerHTML=`<div class="loading"><div class="road"><i class="fa-solid fa-motorcycle bike"></i></div><p>Calculando opções...</p></div>`;nextStep.classList.add("hide");calc()}if(step===5){wizardTitle.textContent="Escolha o frete";nextStep.classList.remove("hide");nextStep.textContent="Solicitar entrega";wizardContent.innerHTML=state.request.freights.map(f=>`<div class="freight" data-f="${f.type}"><div><strong>${f.label}</strong><strong>${money.format(f.value)}</strong></div><span class="freight-badge">${f.type==="ECONOMICO"?"Melhor preço":"Entrega Padrão"}</span></div>`).join("");document.querySelectorAll("[data-f]").forEach(x=>x.onclick=()=>{state.request.selectedFreight=state.request.freights.find(f=>f.type===x.dataset.f);document.querySelectorAll("[data-f]").forEach(y=>y.classList.toggle("selected",y===x))})}}async function calc(){try{const j=await api("calculateFreight",{originNeighborhood:state.request.originNeighborhood,destinationNeighborhood:state.request.destinationNeighborhood,returnTrip:state.request.returnTrip});state.request.freights=j.freights;state.request.selectedFreight=j.freights[0];setTimeout(()=>{step=5;render()},1000)}catch(x){toast(x.message);step=3;render()}}function valid(){if(step===0){state.request.originNeighborhood=bO.value;state.request.destinationNeighborhood=bD.value;return bO.value&&bD.value}if(step===1){state.request.receiverName=rName.value.trim();state.request.receiverWhatsapp=rWa.value.replace(/\D/g,"");return state.request.receiverName&&state.request.receiverWhatsapp.length>=10}if(step===2)return state.request.contentType;if(step===5)return state.request.selectedFreight;return true}function nextWizard(){
   if(!valid())return toast("Complete esta etapa.");
   if(step===5)return submit();
 
@@ -1081,7 +1007,7 @@ $("removeQuickLogin").onclick=()=>{
     $("wizardMotoLoading").classList.remove("on");
     $("nextStep").disabled=false;
     $("backStep").disabled=false;
-  },20);
+  },650);
 }nextStep.onclick=nextWizard;backStep.onclick=()=>{
   if(step>0){
     $("wizardMotoLoading").classList.add("on");
@@ -1093,19 +1019,11 @@ $("removeQuickLogin").onclick=()=>{
       $("wizardMotoLoading").classList.remove("on");
       $("nextStep").disabled=false;
       $("backStep").disabled=false;
-    },20);
+    },450);
   }
 };async function submit(){
   closeL("wizardSheet");
   openL("loadingModal");
-
-  // Uma chave por clique/solicitação permite repetir a chamada com segurança
-  // se a resposta se perder depois de a planilha já ter salvo a corrida.
-  if(!state.request.requestId){
-    state.request.requestId=(window.crypto&&crypto.randomUUID)
-      ?crypto.randomUUID()
-      :(Date.now().toString(36)+Math.random().toString(36).slice(2));
-  }
 
   try{
     const j=await api("createTrip",{
@@ -1119,15 +1037,14 @@ $("removeQuickLogin").onclick=()=>{
         receiverWhatsapp:state.request.receiverWhatsapp,
         contentType:state.request.contentType,
         returnTrip:state.request.returnTrip,
-        freightType:state.request.selectedFreight.type,
-        requestId:state.request.requestId
+        freightType:state.request.selectedFreight.type
       }
     },{
-      timeout:20000
+      timeout:40000,
+      noRetry:true
     });
 
     state.request.code=j.trip.code;
-    state.request.requestId="";
 
     closeL("loadingModal");
 
@@ -1139,7 +1056,7 @@ $("removeQuickLogin").onclick=()=>{
     playPositiveConfirmation();
     successNotify();
 
-    state.revision="";state.freightCache={};
+    state.revision="";
     setTimeout(()=>dashboard(true),100);
 
   }catch(x){
@@ -1147,12 +1064,10 @@ $("removeQuickLogin").onclick=()=>{
 
     const msg=String(x&&x.message||"");
 
-    // Se houver falha transitória ao confirmar, atualiza Minhas entregas
-    // silenciosamente para evitar pedido duplicado, sem mostrar aviso de timeout.
-    if(x&&x.code==="TRANSIENT_NETWORK"){
+    if(/conexão demorou demais/i.test(msg)){
+      toast("A solicitação está demorando para confirmar. Verifique em Minhas entregas antes de tentar novamente.");
       state.revision="";
-      setTimeout(()=>dashboard(true),150);
-      toast("A conexão oscilou. Confira Minhas entregas; se precisar tentar de novo, o sistema não duplicará o pedido.");
+      setTimeout(()=>dashboard(true),300);
       return;
     }
 
@@ -1408,11 +1323,12 @@ calculateSimulation.onclick=async()=>{
       originNeighborhood:simOriginNeighborhood.value,
       destinationNeighborhood:simDestinationNeighborhood.value,
       returnTrip:false
-    },{timeout:12000});
+    });
 
-    simulationLoading.classList.remove("on");
-    calculateSimulation.disabled=false;
-    simulationResults.innerHTML=j.freights.map(f=>`
+    setTimeout(()=>{
+      simulationLoading.classList.remove("on");
+      calculateSimulation.disabled=false;
+      simulationResults.innerHTML=j.freights.map(f=>`
         <div class="sim-result ${f.type==="NORMAL"?"normal":"economic"}">
           <div class="sim-result-top">
             <strong>${f.type==="NORMAL"?"Frete normal":"Frete econômico"}</strong>
@@ -1421,6 +1337,7 @@ calculateSimulation.onclick=async()=>{
           <small>${f.type==="NORMAL"?"Entrega Padrão":"Melhor preço"}</small>
         </div>
       `).join("");
+    },700);
   }catch(x){
     simulationLoading.classList.remove("on");
     calculateSimulation.disabled=false;
