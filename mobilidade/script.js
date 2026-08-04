@@ -1,7 +1,7 @@
 // Pega & Leva Mobilidade Urbana
 // IMPORTANTE: depois de publicar o novo Apps Script como Web App,
 // cole a URL /exec abaixo.
-const API_URL="https://script.google.com/macros/s/AKfycbwNYm9VuMGYIHwBHk04YFhTD4LRQVzVEMORFWAG54UYqG0JOQOSuxKZIKzDP6Pxik9ahA/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxMscE_PYKO_vBMpgWdhd_RZr0hnjaDc3IXb12StkEjz2PnPkjEnkNRawjwckZB8Bb38w/exec";
 
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
