@@ -620,118 +620,6 @@ function setAppMapInteractive(enabled){
   }
 }
 
-function hasUsefulRoad(address){
-  return !!String(
-    address?.road||
-    address?.street||
-    address?.pedestrian||
-    ""
-  ).trim();
-}
-
-function reverseAddressStreet(address){
-  return String(
-    address?.road||
-    address?.street||
-    address?.pedestrian||
-    address?.place||
-    ""
-  ).trim();
-}
-
-function mapDistanceMeters(lat1,lon1,lat2,lon2){
-  const R=6371000;
-  const toRad=v=>v*Math.PI/180;
-  const dLat=toRad(lat2-lat1);
-  const dLon=toRad(lon2-lon1);
-  const a=
-    Math.sin(dLat/2)**2+
-    Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-async function reverseGeocodeCandidate(lat,lon){
-  const r=await api("reverseGeocode",{lat,lon},{timeout:7000,noRetry:true});
-  return {
-    result:r,
-    lat,
-    lon,
-    address:r?.address||{},
-    displayName:String(r?.displayName||"").trim()
-  };
-}
-
-async function smartReverseGeocode(lat,lon){
-  // Primeiro tenta exatamente onde o pino está.
-  try{
-    const exact=await reverseGeocodeCandidate(lat,lon);
-    if(hasUsefulRoad(exact.address))return exact;
-  }catch(e){}
-
-  // Se caiu sobre casa/lote sem rua, consulta os pontos próximos EM PARALELO.
-  const meters=14;
-  const latDelta=meters/111320;
-  const lngDelta=meters/(111320*Math.max(.2,Math.cos(lat*Math.PI/180)));
-
-  const offsets=[
-    [ latDelta,0],[-latDelta,0],
-    [0, lngDelta],[0,-lngDelta],
-    [ latDelta*.72, lngDelta*.72],
-    [ latDelta*.72,-lngDelta*.72],
-    [-latDelta*.72, lngDelta*.72],
-    [-latDelta*.72,-lngDelta*.72]
-  ];
-
-  const results=(await Promise.all(
-    offsets.map(([dLat,dLng])=>
-      reverseGeocodeCandidate(lat+dLat,lon+dLng).catch(()=>null)
-    )
-  )).filter(Boolean);
-
-  const useful=results.filter(c=>hasUsefulRoad(c.address));
-
-  if(useful.length){
-    useful.sort((a,b)=>
-      mapDistanceMeters(lat,lon,a.lat,a.lon)-
-      mapDistanceMeters(lat,lon,b.lat,b.lon)
-    );
-    return useful[0];
-  }
-
-  // Último fallback: um raio um pouco maior, só 4 consultas e também em paralelo.
-  const meters2=26;
-  const latDelta2=meters2/111320;
-  const lngDelta2=meters2/(111320*Math.max(.2,Math.cos(lat*Math.PI/180)));
-
-  const results2=(await Promise.all([
-    [ latDelta2,0],[-latDelta2,0],
-    [0, lngDelta2],[0,-lngDelta2]
-  ].map(([dLat,dLng])=>
-    reverseGeocodeCandidate(lat+dLat,lon+dLng).catch(()=>null)
-  ))).filter(Boolean);
-
-  const useful2=results2.filter(c=>hasUsefulRoad(c.address));
-
-  if(useful2.length){
-    useful2.sort((a,b)=>
-      mapDistanceMeters(lat,lon,a.lat,a.lon)-
-      mapDistanceMeters(lat,lon,b.lat,b.lon)
-    );
-    return useful2[0];
-  }
-
-  const all=[...results,...results2];
-  if(all.length){
-    all.sort((a,b)=>
-      mapDistanceMeters(lat,lon,a.lat,a.lon)-
-      mapDistanceMeters(lat,lon,b.lat,b.lon)
-    );
-    return all[0];
-  }
-
-  throw new Error("Não consegui identificar a rua desse ponto.");
-}
-
 function showAppMapBackground(showMap){
   ensureAppBackgroundMap();
   if(appMapWrap)appMapWrap.style.display=showMap?"block":"none";
@@ -768,7 +656,7 @@ function ensureMapPickerOverlay(){
           Escolha no mapa
         </strong>
         <small style="display:block;color:#64748b;margin-top:2px">
-          Arraste o mapa até sua casa/local. O sistema encontra a rua mais próxima automaticamente.
+          Arraste o mapa até sua casa/local e deixe o pino exatamente no ponto.
         </small>
       </div>
     </div>
@@ -790,7 +678,7 @@ function ensureMapPickerOverlay(){
         ">Centralize o pino no endereço</div>
 
         <button id="confirmMapPicker" class="btn primary full" type="button">
-          <i class="fa-solid fa-location-crosshairs"></i> Confirmar este local
+          <i class="fa-solid fa-location-crosshairs"></i> Usar este ponto
         </button>
 
         <div style="text-align:center;color:#64748b;font-size:9px;margin-top:7px">
@@ -859,38 +747,24 @@ function closeMapPicker(){
 async function confirmMapLocation(){
   if(!appMap||!mapPickerTarget)return;
 
-  const btn=$("confirmMapPicker");
   const center=appMap.getCenter();
   const target=mapPickerTarget;
 
-  btn.disabled=true;
-  const previous=btn.innerHTML;
-  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Identificando rua...';
+  state.addressTarget=target;
+  closeMapPicker();
 
-  try{
-    const located=await smartReverseGeocode(center.lat,center.lng);
-    const result=located.result||{};
-    const address=located.address||{};
-    const street=reverseAddressStreet(address);
-
-    state.addressTarget=target;
-    closeMapPicker();
-
-    openMapAddressDetails(target,{
-      lat:center.lat,
-      lng:center.lng,
-      street:street,
-      city:String(address.city||address.town||address.village||"Uruçuí").trim()||"Uruçuí",
-      neighborhood:String(address.neighbourhood||address.suburb||address.quarter||"").trim(),
-      postalCode:String(address.postcode||"").trim(),
-      displayName:String(located.displayName||result?.displayName||"").trim()
-    });
-  }catch(e){
-    toast(e.message||"Não foi possível identificar a rua. Tente novamente.");
-  }finally{
-    btn.disabled=false;
-    btn.innerHTML=previous;
-  }
+  // O mapa define o ponto EXATO por latitude/longitude.
+  // O logradouro é informado manualmente para não depender de
+  // geocodificação externa incompleta em algumas ruas de Uruçuí.
+  openMapAddressDetails(target,{
+    lat:center.lat,
+    lng:center.lng,
+    street:"",
+    city:"Uruçuí",
+    neighborhood:"",
+    postalCode:"",
+    displayName:""
+  });
 }
 
 let mapAddressDetailsModal=null;
@@ -921,10 +795,18 @@ function ensureMapAddressDetailsModal(){
         </button>
       </div>
 
+      <div style="
+        margin-bottom:13px;padding:10px 12px;border-radius:13px;
+        background:#eef4ff;color:#334155;font-size:12px;line-height:1.4
+      ">
+        <i class="fa-solid fa-location-crosshairs" style="color:#0646c8;margin-right:5px"></i>
+        O ponto exato já foi marcado no mapa. Agora complete os dados do endereço.
+      </div>
+
       <form id="mapAddressDetailsForm">
         <div class="field">
           <label>Logradouro / Rua</label>
-          <input id="pickedStreet" type="text" maxlength="180" required placeholder="Rua identificada no mapa">
+          <input id="pickedStreet" type="text" maxlength="180" required placeholder="Ex.: Rua São José">
         </div>
 
         <div class="field">
