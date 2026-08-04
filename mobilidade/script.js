@@ -1,7 +1,7 @@
 // Pega & Leva Mobilidade Urbana
 // IMPORTANTE: depois de publicar o novo Apps Script como Web App,
 // cole a URL /exec abaixo.
-const API_URL="https://script.google.com/macros/s/AKfycbxphwK1oQ7jnB6dy4Ikh8V72EUONipy4KrfgOfmk0YV4dWE1nGJJi7lTF6Bhbbr_-J1_Q/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxgj5_2ZOhV2fFfx6_Knyz9WbDvLt962qpi3Ur6SQ0njBXlsHIfbhkXyIX2DSEXypK9-g/exec";
 
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
@@ -174,6 +174,9 @@ function clientStatusLabel(status,paymentStatus){
   if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "Motorista finalizando uma corrida próxima";
   if(s==="ESTOU INDO")return "Motorista indo até você";
   if(s==="FINALIZADA")return "Viagem finalizada";
+  if(s==="CANCELADA PELO USUARIO")return "Viagem cancelada";
+  if(s==="CANCELADA PELO ENTREGADOR")return "Motorista cancelou a viagem";
+  if(s==="CANCELADA")return "Viagem cancelada";
   return status||"Status atualizado";
 }
 function clientStatusIcon(status){
@@ -347,6 +350,7 @@ async function dashboard(silent=false){
     compareTripUpdates(newTrips);
     state.trips=newTrips;
     state.user=j.user||state.user;
+    renderMainActiveTrip();
 
     $("tripNotification").textContent=String(
       state.trips.filter(t=>String(t.status||"").toUpperCase()!=="FINALIZADA").length
@@ -393,6 +397,7 @@ function openApp(user,token){
 
   show("appView");
   labels();
+  renderMainActiveTrip();
   dashboard();
   startDashboardPolling();
 }
@@ -516,430 +521,171 @@ document.querySelectorAll("[data-toggle-password]").forEach(btn=>{
 });
 bindWhatsappMask($("regWhatsapp"));
 
-// LOCALIZAÇÕES COM BUSCA AUTOMÁTICA - PHOTON / OPENSTREETMAP
-// Sem API key. Usa o endpoint público do Photon com debounce e limite de resultados.
-let addressSearchTimer=null;
-let addressSearchSequence=0;
-let addressSearchModal=null;
+// LOCALIZAÇÕES MANUAIS
+let manualAddressModal=null;
 
-function ensureAddressSearchModal(){
-  if(addressSearchModal)return addressSearchModal;
+function ensureManualAddressModal(){
+  if(manualAddressModal)return manualAddressModal;
 
-  addressSearchModal=document.createElement("div");
-  addressSearchModal.id="addressSearchModal";
-  addressSearchModal.style.cssText=[
-    "position:fixed",
-    "inset:0",
-    "z-index:2100",
-    "display:none",
-    "align-items:flex-start",
-    "justify-content:center",
-    "padding:16px",
-    "background:rgba(15,23,42,.62)",
-    "overflow:auto"
-  ].join(";");
-
-  addressSearchModal.innerHTML=`
-    <div style="
-      width:min(100%,540px);
-      margin-top:max(16px,5vh);
-      background:#fff;
-      border-radius:24px;
-      box-shadow:0 24px 70px rgba(15,23,42,.28);
-      overflow:hidden
-    ">
-      <div style="
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:12px;
-        padding:18px 18px 12px
-      ">
+  manualAddressModal=document.createElement("div");
+  manualAddressModal.id="manualAddressModal";
+  manualAddressModal.style.cssText="position:fixed;inset:0;z-index:2100;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.62);overflow:auto";
+  manualAddressModal.innerHTML=`
+    <div style="width:min(100%,520px);background:#fff;border-radius:24px;padding:20px;box-shadow:0 24px 70px rgba(15,23,42,.28)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
         <div>
           <small style="display:block;color:#64748b;font-weight:900;margin-bottom:3px">PEGA & LEVA</small>
-          <strong id="addressSearchTitle" style="font-size:20px;color:#0f172a">Buscar endereço</strong>
+          <strong id="manualAddressTitle" style="font-size:20px;color:#0f172a">Informar endereço</strong>
         </div>
-        <button id="closeAddressSearch" type="button" aria-label="Fechar" style="
-          width:40px;height:40px;border:0;border-radius:50%;background:#f1f5f9;
-          color:#0f172a;cursor:pointer;font-size:18px
-        ">
+        <button id="closeManualAddress" type="button" style="width:40px;height:40px;border:0;border-radius:50%;background:#f1f5f9;cursor:pointer">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <div style="padding:8px 18px 20px">
-        <div style="
-          display:flex;align-items:center;gap:10px;
-          border:1px solid #dbe3ef;border-radius:16px;padding:0 14px;
-          background:#fff
-        ">
-          <i class="fa-solid fa-magnifying-glass" style="color:#64748b"></i>
-          <input
-            id="addressSearchInput"
-            type="search"
-            autocomplete="off"
-            placeholder="Digite rua, avenida ou local..."
-            style="
-              width:100%;height:54px;border:0;outline:0;background:transparent;
-              font:inherit;font-size:16px;color:#0f172a
-            "
-          >
+      <form id="manualAddressForm">
+        <div class="field">
+          <label>Bairro</label>
+          <select id="manualNeighborhood" required>
+            <option value="">Selecione o bairro</option>
+            ${bairros.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join("")}
+          </select>
         </div>
 
-        <div id="addressSearchHint" style="
-          padding:10px 2px 5px;color:#64748b;font-size:13px;line-height:1.4
-        ">
-          Digite pelo menos 3 letras. Toque no endereço correto quando aparecer.
+        <div class="field">
+          <label>Logradouro / Rua</label>
+          <input id="manualStreet" type="text" maxlength="180" placeholder="Ex.: Rua São José" required>
         </div>
 
-        <div id="addressSearchLoading" style="
-          display:none;align-items:center;justify-content:center;gap:8px;
-          padding:16px;color:#64748b;font-weight:800
-        ">
-          <i class="fa-solid fa-spinner fa-spin"></i> Buscando...
+        <div class="field">
+          <label>Número</label>
+          <input id="manualNumber" type="text" maxlength="30" placeholder="Ex.: 120 ou S/N" required>
         </div>
 
-        <div id="addressSearchResults" style="margin-top:6px"></div>
-
-        <div id="addressSearchError" style="
-          display:none;margin-top:10px;padding:12px 13px;border-radius:14px;
-          background:#fef2f2;color:#b91c1c;font-size:13px;font-weight:800
-        "></div>
-
-        <div style="
-          margin-top:14px;padding:10px 12px;border-radius:13px;background:#f8fafc;
-          color:#64748b;font-size:11px;text-align:center
-        ">
-          Dados de endereço: OpenStreetMap • busca por Photon
+        <div class="field">
+          <label>Ponto de referência</label>
+          <input id="manualReference" type="text" maxlength="180" placeholder="Ex.: Próximo ao mercado..." required>
         </div>
-      </div>
-    </div>
-  `;
 
-  document.body.appendChild(addressSearchModal);
+        <button class="btn primary full" type="submit">
+          <i class="fa-solid fa-circle-check"></i> Confirmar endereço
+        </button>
+      </form>
+    </div>`;
 
-  $("closeAddressSearch").onclick=closeAddressSearchModal;
-  addressSearchModal.onclick=e=>{
-    if(e.target===addressSearchModal)closeAddressSearchModal();
+  document.body.appendChild(manualAddressModal);
+
+  $("closeManualAddress").onclick=closeManualAddressModal;
+  manualAddressModal.onclick=e=>{
+    if(e.target===manualAddressModal)closeManualAddressModal();
   };
 
-  $("addressSearchInput").addEventListener("input",()=>{
-    clearTimeout(addressSearchTimer);
-    addressSearchTimer=setTimeout(runAddressSearch,420);
-  });
+  $("manualAddressForm").onsubmit=e=>{
+    e.preventDefault();
 
-  return addressSearchModal;
-}
+    const neighborhood=$("manualNeighborhood").value;
+    const street=$("manualStreet").value.trim();
+    const number=$("manualNumber").value.trim();
+    const reference=$("manualReference").value.trim();
 
-function closeAddressSearchModal(){
-  clearTimeout(addressSearchTimer);
-  if(addressSearchModal)addressSearchModal.style.display="none";
-  document.body.style.overflow="";
-}
-
-function photonFeatureToAddress(feature){
-  const p=feature?.properties||{};
-  const c=feature?.geometry?.coordinates||[];
-
-  const street=String(
-    p.street||
-    p.name||
-    p.locality||
-    p.district||
-    "Local selecionado"
-  ).trim();
-
-  const number=String(p.housenumber||"S/N").trim();
-
-  const neighborhood=String(
-    p.district||
-    p.locality||
-    p.suburb||
-    p.neighbourhood||
-    ""
-  ).trim();
-
-  const city=String(
-    p.city||
-    p.town||
-    p.village||
-    p.county||
-    ""
-  ).trim();
-
-  const stateName=String(p.state||"").trim();
-  const postalCode=String(p.postcode||"").trim();
-
-  const parts=[
-    p.name && p.name!==p.street ? p.name : "",
-    p.street,
-    p.housenumber,
-    neighborhood,
-    city,
-    stateName
-  ].filter(Boolean);
-
-  const formattedAddress=[...new Set(parts.map(x=>String(x).trim()).filter(Boolean))].join(", ");
-
-  return {
-    street,
-    number,
-    reference:String(p.name||"").trim(),
-    city,
-    neighborhood,
-    state:stateName,
-    stateCode:"",
-    postalCode,
-    formattedAddress:formattedAddress||[street,number,city].filter(Boolean).join(", "),
-    placeId:String(
-      p.osm_type&&p.osm_id
-        ?`${p.osm_type}-${p.osm_id}`
-        :""
-    ),
-    lat:Number.isFinite(Number(c[1]))?Number(c[1]):null,
-    lng:Number.isFinite(Number(c[0]))?Number(c[0]):null
-  };
-}
-
-function addressResultLabel(feature){
-  const a=photonFeatureToAddress(feature);
-  const p=feature?.properties||{};
-
-  const title=[
-    p.name,
-    p.street,
-    p.housenumber
-  ].filter(Boolean).join(", ") || a.street;
-
-  const subtitle=[
-    a.neighborhood,
-    a.city,
-    a.state
-  ].filter(Boolean).join(" • ");
-
-  return {title,subtitle,address:a};
-}
-
-function renderAddressResults(features){
-  const box=$("addressSearchResults");
-
-  if(!features.length){
-    box.innerHTML=`
-      <div style="
-        padding:18px 12px;text-align:center;color:#64748b;
-        border:1px dashed #cbd5e1;border-radius:14px
-      ">
-        Nenhum endereço encontrado. Tente informar rua + cidade.
-      </div>`;
-    return;
-  }
-
-  box.innerHTML=features.map((feature,index)=>{
-    const r=addressResultLabel(feature);
-    return `
-      <button type="button" data-address-result="${index}" style="
-        width:100%;border:0;border-bottom:1px solid #eef2f7;background:#fff;
-        padding:14px 8px;text-align:left;cursor:pointer;
-        display:flex;align-items:flex-start;gap:12px
-      ">
-        <span style="
-          width:38px;height:38px;border-radius:50%;background:#eef4ff;color:#0646c8;
-          display:grid;place-items:center;flex:0 0 38px
-        ">
-          <i class="fa-solid fa-location-dot"></i>
-        </span>
-        <span style="min-width:0">
-          <strong style="
-            display:block;color:#0f172a;font-size:14px;line-height:1.35
-          ">${esc(r.title)}</strong>
-          <small style="
-            display:block;color:#64748b;margin-top:4px;line-height:1.35
-          ">${esc(r.subtitle||r.address.formattedAddress)}</small>
-        </span>
-      </button>`;
-  }).join("");
-
-  box.querySelectorAll("[data-address-result]").forEach(btn=>{
-    btn.onclick=()=>{
-      const feature=features[Number(btn.dataset.addressResult)];
-      if(!feature)return;
-
-      const selected=photonFeatureToAddress(feature);
-      const target=state.addressTarget;
-
-      state.request[target]=selected;
-
-      if(target==="origin"&&selected.neighborhood){
-        state.request.originNeighborhood=selected.neighborhood;
-      }
-      if(target==="destination"&&selected.neighborhood){
-        state.request.destinationNeighborhood=selected.neighborhood;
-      }
-
-      // Alteração de endereço invalida o ID da tentativa anterior.
-      state.request.requestId="";
-
-      labels();
-      closeAddressSearchModal();
-
-      toast(
-        target==="origin"
-          ?"Local de partida selecionado."
-          :"Destino selecionado."
-      );
-    };
-  });
-}
-
-async function runAddressSearch(){
-  const input=$("addressSearchInput");
-  if(!input)return;
-
-  const query=String(input.value||"").trim();
-  const results=$("addressSearchResults");
-  const error=$("addressSearchError");
-  const loading=$("addressSearchLoading");
-  const seq=++addressSearchSequence;
-
-  error.style.display="none";
-  error.textContent="";
-
-  if(query.length<3){
-    results.innerHTML="";
-    loading.style.display="none";
-    return;
-  }
-
-  loading.style.display="flex";
-  results.innerHTML="";
-
-  try{
-    let lat=null,lon=null;
-
-    const position=await new Promise(resolve=>{
-      if(!navigator.geolocation)return resolve(null);
-
-      navigator.geolocation.getCurrentPosition(
-        p=>resolve(p),
-        ()=>resolve(null),
-        {enableHighAccuracy:false,timeout:1200,maximumAge:300000}
-      );
-    });
-
-    if(seq!==addressSearchSequence)return;
-
-    if(position){
-      lat=Number(position.coords.latitude);
-      lon=Number(position.coords.longitude);
+    if(!neighborhood||!street||!number||!reference){
+      return toast("Preencha bairro, rua, número e ponto de referência.");
     }
 
-    const data=await api("searchAddress",{
-      query,
-      lat:Number.isFinite(lat)?lat:null,
-      lon:Number.isFinite(lon)?lon:null
-    },{timeout:12000,noRetry:true});
+    const city=neighborhood==="Benedito Leite"?"Benedito Leite":"Uruçuí";
+    const data={
+      street,
+      number,
+      reference,
+      city,
+      neighborhood,
+      formattedAddress:`${street}, ${number} • ${neighborhood} • ${city}`
+    };
 
-    if(seq!==addressSearchSequence)return;
+    const target=state.addressTarget;
+    state.request[target]=data;
 
-    const features=Array.isArray(data?.features)?data.features:[];
-    renderAddressResults(features.slice(0,8));
+    if(target==="origin")state.request.originNeighborhood=neighborhood;
+    if(target==="destination")state.request.destinationNeighborhood=neighborhood;
 
-  }catch(e){
-    if(seq!==addressSearchSequence)return;
+    state.request.requestId="";
+    labels();
+    closeManualAddressModal();
 
-    error.textContent=e.message||"Não foi possível buscar endereços agora.";
-    error.style.display="block";
-  }finally{
-    if(seq===addressSearchSequence)loading.style.display="none";
-  }
+    toast(target==="origin"?"Origem confirmada.":"Destino confirmado.");
+  };
+
+  return manualAddressModal;
 }
 
-function openAddressSearch(type){
+function openManualAddress(type){
   state.addressTarget=type;
+  const modal=ensureManualAddressModal();
+  const current=state.request[type];
 
-  const modal=ensureAddressSearchModal();
+  $("manualAddressTitle").textContent=
+    type==="origin"?"Endereço de origem":"Endereço de destino";
 
-  $("addressSearchTitle").textContent=
+  $("manualNeighborhood").value=
     type==="origin"
-      ?"Onde o motorista busca você?"
-      :"Para onde você vai?";
+      ?state.request.originNeighborhood||""
+      :state.request.destinationNeighborhood||"";
 
-  $("addressSearchInput").value="";
-  $("addressSearchResults").innerHTML="";
-  $("addressSearchError").style.display="none";
-  $("addressSearchLoading").style.display="none";
+  $("manualStreet").value=current?.street||"";
+  $("manualNumber").value=current?.number||"";
+  $("manualReference").value=current?.reference||"";
 
   modal.style.display="flex";
   document.body.style.overflow="hidden";
-
-  setTimeout(()=>$("addressSearchInput")?.focus(),100);
+  setTimeout(()=>$("manualNeighborhood")?.focus(),80);
 }
 
-// Não existe mais "usar endereço cadastrado".
-// Origem e destino abrem diretamente a pesquisa.
-$("originTrigger").onclick=()=>openAddressSearch("origin");
-$("destinationTrigger").onclick=()=>openAddressSearch("destination");
+function closeManualAddressModal(){
+  if(manualAddressModal)manualAddressModal.style.display="none";
+  document.body.style.overflow="";
+}
+
+$("originTrigger").onclick=()=>openManualAddress("origin");
+$("destinationTrigger").onclick=()=>openManualAddress("destination");
 
 // SOLICITAÇÃO DE VIAGEM
 let wizardStep=0;
+
 function wizardProgress(){
-  $("steps").innerHTML=Array.from({length:3},(_,i)=>`<span class="${i<=wizardStep?"on":""}"></span>`).join("");
+  $("steps").innerHTML=Array.from({length:2},(_,i)=>`<span class="${i<=wizardStep?"on":""}"></span>`).join("");
 }
+
 function startWizard(){
   if(!state.request.origin||!state.request.destination){
-    return toast("Escolha o ponto de partida e o destino.");
+    return toast("Informe a origem e o destino.");
   }
+  if(!state.request.originNeighborhood||!state.request.destinationNeighborhood){
+    return toast("Confirme o bairro da origem e do destino.");
+  }
+
   wizardStep=0;
   renderWizard();
   openL("wizardSheet");
+  calculateRideOptions();
 }
 $("continueRequest").onclick=startWizard;
 
-function cityNeighborhoodOptions(city){
-  if(city==="Benedito Leite")return ["Benedito Leite"];
-  return bairros.filter(b=>b!=="Benedito Leite");
-}
 function renderWizard(){
   $("wizardMotoLoading").classList.remove("on");
   wizardProgress();
   $("backStep").style.visibility=wizardStep===0?"hidden":"visible";
 
   if(wizardStep===0){
-    $("wizardTitle").textContent="Confirme os bairros";
-    const o=cityNeighborhoodOptions(state.request.origin.city);
-    const d=cityNeighborhoodOptions(state.request.destination.city);
-
-    $("wizardContent").innerHTML=`
-      <div class="field">
-        <label>Bairro de partida</label>
-        <select id="mobOriginNeighborhood">
-          <option value="">Selecione</option>
-          ${o.map(b=>`<option ${String(b).toLowerCase()===String(state.request.originNeighborhood||"").toLowerCase()?"selected":""}>${b}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Bairro de destino</label>
-        <select id="mobDestinationNeighborhood">
-          <option value="">Selecione</option>
-          ${d.map(b=>`<option ${String(b).toLowerCase()===String(state.request.destinationNeighborhood||"").toLowerCase()?"selected":""}>${b}</option>`).join("")}
-        </select>
-      </div>`;
-    $("nextStep").textContent="Calcular valores";
-    $("nextStep").disabled=false;
-  }
-
-  if(wizardStep===1){
-    $("wizardTitle").textContent="Calculando viagem";
+    $("wizardTitle").textContent="Calculando sua viagem";
     $("wizardContent").innerHTML=`
       <div class="loading">
         <div class="road"><i class="fa-solid fa-motorcycle bike"></i></div>
-        <p>Buscando as opções disponíveis...</p>
+        <p>Calculando as opções disponíveis...</p>
       </div>`;
+    $("nextStep").textContent="Aguarde...";
     $("nextStep").disabled=true;
-    calculateRideOptions();
   }
 
-  if(wizardStep===2){
+  if(wizardStep===1){
     $("wizardTitle").textContent="Escolha sua opção";
     $("nextStep").textContent="Solicitar viagem";
     $("nextStep").disabled=false;
@@ -961,6 +707,7 @@ function renderWizard(){
     });
   }
 }
+
 async function calculateRideOptions(){
   try{
     const j=await api("calculateFreight",{
@@ -970,35 +717,29 @@ async function calculateRideOptions(){
 
     state.request.freights=j.freights||[];
     state.request.selectedFreight=state.request.freights[0]||null;
-    wizardStep=2;
-    renderWizard();
-  }catch(e){
-    toast(e.message);
-    wizardStep=0;
-    renderWizard();
-  }
-}
-$("nextStep").onclick=async()=>{
-  if(wizardStep===0){
-    const o=$("mobOriginNeighborhood")?.value;
-    const d=$("mobDestinationNeighborhood")?.value;
-    if(!o||!d)return toast("Selecione os dois bairros.");
-    state.request.originNeighborhood=o;
-    state.request.destinationNeighborhood=d;
+
+    if(!state.request.freights.length){
+      throw new Error("Nenhuma opção disponível para esses bairros.");
+    }
+
     wizardStep=1;
     renderWizard();
-    return;
+  }catch(e){
+    closeL("wizardSheet");
+    toast(e.message||"Não foi possível calcular a viagem.");
   }
+}
 
-  if(wizardStep===2){
-    if(!state.request.selectedFreight)return toast("Escolha uma opção de viagem.");
-    await submitRide();
-  }
+$("nextStep").onclick=async()=>{
+  if(wizardStep!==1)return;
+  if(!state.request.selectedFreight)return toast("Escolha uma opção de viagem.");
+  await submitRide();
 };
+
 $("backStep").onclick=()=>{
-  if(wizardStep<=0)return;
-  wizardStep=0;
-  renderWizard();
+  if(wizardStep===1){
+    closeL("wizardSheet");
+  }
 };
 
 function newRequestId(){
@@ -1034,9 +775,6 @@ async function submitRide(){
     try{
       j=await api("createTrip",{trip:tripPayload},{timeout:40000,noRetry:true});
     }catch(firstError){
-      // createTrip é idempotente no backend por requestId.
-      // Se a resposta se perder após a gravação, esta segunda chamada
-      // apenas recupera a mesma corrida, sem duplicar.
       if(/conexão demorou demais|falha de conexão|fetch|network/i.test(String(firstError.message||firstError))){
         await new Promise(r=>setTimeout(r,900));
         j=await api("createTrip",{trip:tripPayload},{timeout:25000,noRetry:true});
@@ -1048,38 +786,188 @@ async function submitRide(){
     if(!j?.trip?.code)throw new Error("Servidor não confirmou o código da viagem.");
 
     state.request.code=j.trip.code;
-    closeL("loadingModal");
-    $("successCode").textContent=`Código da viagem: ${j.trip.code}`;
-    openL("successModal");
-    playPositiveConfirmation();
-    successNotify();
-
-    // A próxima solicitação recebe outro identificador.
     state.request.requestId="";
+    closeL("loadingModal");
+
+    const provisional={
+      ...j.trip,
+      createdAt:new Date().toISOString(),
+      status:j.trip.status||"AGUARDANDO ENTREGADOR",
+      driverName:"",
+      driverPlate:"",
+      driverVehicle:"Moto",
+      driverPhotoUrl:""
+    };
+
+    state.trips=[
+      provisional,
+      ...state.trips.filter(t=>String(t.code)!==String(provisional.code))
+    ];
+
+    renderMainActiveTrip();
+    playPositiveConfirmation();
+    toast("Viagem solicitada. Estamos buscando um motoca para você!");
+
     state.revision="";
-    setTimeout(()=>dashboard(true),100);
+    setTimeout(()=>dashboard(true),150);
   }catch(e){
     closeL("loadingModal");
 
     if(/conexão demorou demais|falha de conexão|fetch|network/i.test(String(e.message||e))){
-      toast("Não recebi a confirmação do servidor. Atualizando Minhas viagens para conferir antes de permitir outra solicitação.");
+      toast("Conferindo se a viagem foi criada...");
       state.revision="";
       setTimeout(()=>dashboard(true),250);
       return;
     }
 
-    // Erro funcional confirmado pelo servidor: pode gerar um novo ID na próxima tentativa.
     state.request.requestId="";
     toast(e.message||"Não foi possível solicitar a viagem.");
   }finally{
     state.request.submitting=false;
   }
 }
-$("successViewTrips").onclick=()=>{
-  closeL("successModal");
-  renderTrips();
-  openL("tripsSheet");
-};
+
+
+// ACOMPANHAMENTO DA CORRIDA NA TELA PRINCIPAL
+let mainRideTracker=null;
+
+function isClientTripTerminal(status){
+  const s=String(status||"").toUpperCase();
+  return ["FINALIZADA","CANCELADA","CANCELADA PELO USUARIO","CANCELADA PELO ENTREGADOR"].includes(s);
+}
+
+function currentMainTrip(){
+  return (state.trips||[])
+    .filter(t=>!isClientTripTerminal(t.status))
+    .sort((a,b)=>(new Date(b.createdAt||0).getTime()||0)-(new Date(a.createdAt||0).getTime()||0))[0]||null;
+}
+
+function ensureMainRideTracker(){
+  if(mainRideTracker)return mainRideTracker;
+
+  const style=document.createElement("style");
+  style.textContent=`
+    @keyframes plRideMove{0%{transform:translateX(-16px)}50%{transform:translateX(16px)}100%{transform:translateX(-16px)}}
+    @keyframes plRidePulse{0%,100%{opacity:.45;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
+  `;
+  document.head.appendChild(style);
+
+  mainRideTracker=document.createElement("div");
+  mainRideTracker.id="mainRideTracker";
+  mainRideTracker.style.display="none";
+
+  const anchor=$("continueRequest");
+  anchor?.parentNode?.insertBefore(mainRideTracker,anchor);
+
+  return mainRideTracker;
+}
+
+function setRequestControlsVisible(visible){
+  ["originTrigger","destinationTrigger","continueRequest"].forEach(id=>{
+    const el=$(id);
+    if(el)el.style.display=visible?"":"none";
+  });
+}
+
+function clientEtaText(status){
+  const s=String(status||"").toUpperCase();
+  if(s==="ACEITA")return "Previsão de chegada: 10–15 min";
+  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "Previsão: 15–25 min";
+  if(s==="ESTOU INDO")return "Previsão: 5–10 min";
+  return "Atualizando previsão...";
+}
+
+function renderMainActiveTrip(){
+  const tracker=ensureMainRideTracker();
+  if(!tracker)return;
+
+  const trip=currentMainTrip();
+
+  if(!trip){
+    tracker.style.display="none";
+    tracker.innerHTML="";
+    setRequestControlsVisible(true);
+    return;
+  }
+
+  setRequestControlsVisible(false);
+  tracker.style.display="block";
+
+  const status=String(trip.status||"").toUpperCase();
+  const hasDriver=!!String(trip.driverName||"").trim();
+
+  if(!hasDriver||status==="AGUARDANDO ENTREGADOR"){
+    tracker.innerHTML=`
+      <section style="margin:14px 0;padding:24px 18px;border-radius:24px;background:#fff;border:1px solid #e2e8f0;text-align:center;box-shadow:0 12px 30px rgba(15,23,42,.08)">
+        <div style="height:74px;display:grid;place-items:center;overflow:hidden">
+          <div style="animation:plRideMove 1.15s ease-in-out infinite;font-size:42px;color:#0646c8">
+            <i class="fa-solid fa-motorcycle"></i>
+          </div>
+        </div>
+        <h2 style="margin:5px 0 7px;color:#0f172a;font-size:21px">Buscando um motoca pra você...</h2>
+        <p style="margin:0;color:#64748b;line-height:1.45">Sua solicitação já está disponível para os motoristas próximos.</p>
+
+        <div style="margin:17px 0;padding:13px;border-radius:15px;background:#f8fafc;text-align:left">
+          <strong style="display:block;color:#0f172a">${esc(trip.originNeighborhood||state.request.originNeighborhood)} → ${esc(trip.destinationNeighborhood||state.request.destinationNeighborhood)}</strong>
+          <small style="color:#64748b">Viagem ${esc(trip.code||state.request.code)}</small>
+        </div>
+
+        <button class="btn secondary full" type="button" data-main-cancel="${esc(trip.code)}">
+          <i class="fa-solid fa-xmark"></i> Cancelar solicitação
+        </button>
+      </section>`;
+  }else{
+    tracker.innerHTML=`
+      <section style="margin:14px 0;padding:20px 18px;border-radius:24px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.08)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
+          <div>
+            <small style="display:block;color:#16a34a;font-weight:900;margin-bottom:3px">
+              <i class="fa-solid fa-circle-check"></i> MOTORISTA ENCONTRADO
+            </small>
+            <strong style="font-size:19px;color:#0f172a">${esc(clientStatusLabel(trip.status,trip.paymentStatus))}</strong>
+          </div>
+          <span style="padding:7px 10px;border-radius:999px;background:#eef4ff;color:#0646c8;font-size:12px;font-weight:900">
+            ${esc(trip.code)}
+          </span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:13px;padding:14px;border-radius:18px;background:#f8fafc">
+          ${driverAvatar(trip.driverPhotoUrl,trip.driverName,66)}
+          <div style="min-width:0">
+            <strong style="display:block;font-size:18px;color:#0f172a">${esc(trip.driverName)}</strong>
+            <span style="display:block;margin-top:4px;color:#475569;font-size:13px">
+              <i class="fa-solid fa-motorcycle"></i>
+              ${esc(trip.driverVehicle||"Moto")} • ${esc(trip.driverPlate||"Placa não informada")}
+            </span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px">
+          <div style="padding:12px;border-radius:15px;background:#eef4ff">
+            <small style="display:block;color:#64748b">Chegada</small>
+            <strong style="display:block;margin-top:3px;color:#0646c8">${esc(clientEtaText(trip.status))}</strong>
+          </div>
+          <div style="padding:12px;border-radius:15px;background:#f8fafc">
+            <small style="display:block;color:#64748b">Veículo</small>
+            <strong style="display:block;margin-top:3px;color:#0f172a">${esc(trip.driverPlate||"A confirmar")}</strong>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;padding:13px;border-radius:15px;background:#f8fafc">
+          ${tripStatusDescription(trip)}
+        </div>
+
+        <button class="btn secondary full" style="margin-top:14px" type="button" data-main-cancel="${esc(trip.code)}">
+          <i class="fa-solid fa-xmark"></i> Cancelar viagem
+        </button>
+      </section>`;
+  }
+
+  tracker.querySelector("[data-main-cancel]")?.addEventListener("click",async e=>{
+    await cancelRide(e.currentTarget.dataset.mainCancel);
+  });
+}
+
 
 // SIMULADOR
 function fillSimulatorNeighborhoods(){
@@ -1143,6 +1031,12 @@ function tripStatusDescription(t){
   if(s==="FINALIZADA"){
     return `<strong>Viagem finalizada</strong><span>Obrigado por viajar com a Pega & Leva.</span>`;
   }
+  if(s==="CANCELADA PELO USUARIO"||s==="CANCELADA"){
+    return `<strong>Viagem cancelada</strong><span>A solicitação foi encerrada.</span>`;
+  }
+  if(s==="CANCELADA PELO ENTREGADOR"){
+    return `<strong>Motorista cancelou</strong><span>A corrida foi encerrada.</span>`;
+  }
 
   return `<strong>${esc(t.status||"Atualizando")}</strong>`;
 }
@@ -1151,7 +1045,7 @@ function renderTrips(){
   const trips=state.trips||[];
 
   $("tripsList").innerHTML=trips.length?trips.map(t=>{
-    const active=String(t.status||"").toUpperCase()!=="FINALIZADA";
+    const active=!isClientTripTerminal(t.status);
     const hasDriver=!!String(t.driverName||"").trim();
 
     return `
@@ -1181,9 +1075,9 @@ function renderTrips(){
             </div>
           </div>`:""}
 
-        ${active&&!hasDriver?`
+        ${active?`
           <button class="btn secondary full" style="margin-top:12px" onclick="cancelRide('${esc(t.code)}')">
-            <i class="fa-solid fa-xmark"></i> Cancelar solicitação
+            <i class="fa-solid fa-xmark"></i> Cancelar viagem
           </button>`:""}
 
         ${!active&&!tripWasRated(t)?`
@@ -1198,14 +1092,15 @@ function openRatingByCode(code){
   if(trip)openRatingModal(trip);
 }
 async function cancelRide(code){
-  if(!confirm("Cancelar esta solicitação de viagem?"))return;
+  if(!confirm("Cancelar esta viagem?"))return;
 
   try{
     await api("cancelUserTrip",{code},{timeout:15000,noRetry:true});
-    toast("Solicitação cancelada.");
+    toast("Viagem cancelada.");
     state.revision="";
     await dashboard();
-    renderTrips();
+    renderMainActiveTrip();
+    if(document.querySelector("#tripsSheet.on"))renderTrips();
   }catch(e){
     toast(e.message);
   }
@@ -1246,6 +1141,7 @@ async function performUserLogout(){
   state.user=null;
   state.token="";
   state.trips=[];
+  state.request.code="";
   show("loginView");
 }
 
