@@ -1,7 +1,7 @@
 // Pega & Leva Mobilidade Urbana
 // IMPORTANTE: depois de publicar o novo Apps Script como Web App,
 // cole a URL /exec abaixo.
-const API_URL="https://script.google.com/macros/s/AKfycbxMscE_PYKO_vBMpgWdhd_RZr0hnjaDc3IXb12StkEjz2PnPkjEnkNRawjwckZB8Bb38w/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxphwK1oQ7jnB6dy4Ikh8V72EUONipy4KrfgOfmk0YV4dWE1nGJJi7lTF6Bhbbr_-J1_Q/exec";
 
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
@@ -518,9 +518,8 @@ bindWhatsappMask($("regWhatsapp"));
 
 // LOCALIZAÇÕES COM BUSCA AUTOMÁTICA - PHOTON / OPENSTREETMAP
 // Sem API key. Usa o endpoint público do Photon com debounce e limite de resultados.
-const ADDRESS_SEARCH_URL="https://photon.komoot.io/api/";
 let addressSearchTimer=null;
-let addressSearchController=null;
+let addressSearchSequence=0;
 let addressSearchModal=null;
 
 function ensureAddressSearchModal(){
@@ -634,10 +633,6 @@ function ensureAddressSearchModal(){
 
 function closeAddressSearchModal(){
   clearTimeout(addressSearchTimer);
-  if(addressSearchController){
-    try{addressSearchController.abort()}catch(e){}
-    addressSearchController=null;
-  }
   if(addressSearchModal)addressSearchModal.style.display="none";
   document.body.style.overflow="";
 }
@@ -804,6 +799,7 @@ async function runAddressSearch(){
   const results=$("addressSearchResults");
   const error=$("addressSearchError");
   const loading=$("addressSearchLoading");
+  const seq=++addressSearchSequence;
 
   error.style.display="none";
   error.textContent="";
@@ -814,73 +810,47 @@ async function runAddressSearch(){
     return;
   }
 
-  if(addressSearchController){
-    try{addressSearchController.abort()}catch(e){}
-  }
-
-  addressSearchController=new AbortController();
-
   loading.style.display="flex";
   results.innerHTML="";
 
   try{
-    const params=new URLSearchParams({
-      q:query,
-      limit:"8",
-      lang:"pt"
-    });
+    let lat=null,lon=null;
 
-    // Quando o navegador autorizar localização, o Photon apenas prioriza
-    // resultados próximos; a localização não é obrigatória para a busca.
     const position=await new Promise(resolve=>{
       if(!navigator.geolocation)return resolve(null);
 
       navigator.geolocation.getCurrentPosition(
         p=>resolve(p),
         ()=>resolve(null),
-        {enableHighAccuracy:false,timeout:1800,maximumAge:300000}
+        {enableHighAccuracy:false,timeout:1200,maximumAge:300000}
       );
     });
 
+    if(seq!==addressSearchSequence)return;
+
     if(position){
-      params.set("lat",String(position.coords.latitude));
-      params.set("lon",String(position.coords.longitude));
+      lat=Number(position.coords.latitude);
+      lon=Number(position.coords.longitude);
     }
 
-    const response=await fetch(
-      ADDRESS_SEARCH_URL+"?"+params.toString(),
-      {
-        method:"GET",
-        headers:{"Accept":"application/json"},
-        signal:addressSearchController.signal,
-        cache:"no-store"
-      }
-    );
+    const data=await api("searchAddress",{
+      query,
+      lat:Number.isFinite(lat)?lat:null,
+      lon:Number.isFinite(lon)?lon:null
+    },{timeout:12000,noRetry:true});
 
-    if(!response.ok)throw new Error("A busca de endereços está temporariamente indisponível.");
+    if(seq!==addressSearchSequence)return;
 
-    const data=await response.json();
-    let features=Array.isArray(data?.features)?data.features:[];
-
-    // Prioriza Brasil e evita mostrar resultados claramente estrangeiros.
-    const br=features.filter(f=>{
-      const p=f?.properties||{};
-      const country=String(p.country||"").toLowerCase();
-      const code=String(p.countrycode||p.country_code||"").toLowerCase();
-      return code==="br"||country==="brasil"||country==="brazil";
-    });
-
-    if(br.length)features=br;
-
+    const features=Array.isArray(data?.features)?data.features:[];
     renderAddressResults(features.slice(0,8));
 
   }catch(e){
-    if(e?.name==="AbortError")return;
+    if(seq!==addressSearchSequence)return;
 
     error.textContent=e.message||"Não foi possível buscar endereços agora.";
     error.style.display="block";
   }finally{
-    loading.style.display="none";
+    if(seq===addressSearchSequence)loading.style.display="none";
   }
 }
 
