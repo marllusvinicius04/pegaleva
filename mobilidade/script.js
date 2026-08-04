@@ -155,7 +155,8 @@ function esc(v){
 
 function addr(a){
   if(!a)return "Escolher local";
-  return `${a.street}, ${a.number} • ${a.city}`;
+  if(a.formattedAddress)return a.formattedAddress;
+  return [a.street,a.number,a.city].filter(Boolean).join(", ");
 }
 function labels(){
   $("originLabel").textContent=state.request.origin
@@ -515,68 +516,399 @@ document.querySelectorAll("[data-toggle-password]").forEach(btn=>{
 });
 bindWhatsappMask($("regWhatsapp"));
 
-// LOCALIZAÇÕES
-function openLocationChoice(type){
-  state.addressTarget=type;
-  $("choiceTitle").textContent=type==="origin"?"Onde o motorista busca você?":"Para onde você vai?";
+// LOCALIZAÇÕES COM BUSCA AUTOMÁTICA - PHOTON / OPENSTREETMAP
+// Sem API key. Usa o endpoint público do Photon com debounce e limite de resultados.
+const ADDRESS_SEARCH_URL="https://photon.komoot.io/api/";
+let addressSearchTimer=null;
+let addressSearchController=null;
+let addressSearchModal=null;
 
-  const options=type==="origin"
-    ?[
-      ["Usar meu endereço cadastrado","registered","fa-house"],
-      ["Informar outro local","manual","fa-location-dot"]
-    ]
-    :[
-      ["Informar destino","manual","fa-flag-checkered"]
-    ];
+function ensureAddressSearchModal(){
+  if(addressSearchModal)return addressSearchModal;
 
-  $("choiceOptions").innerHTML=options.map(x=>`
-    <button class="pick" data-mode="${x[1]}">
-      <i class="fa-solid ${x[2]}"></i> ${x[0]}
-    </button>`).join("");
+  addressSearchModal=document.createElement("div");
+  addressSearchModal.id="addressSearchModal";
+  addressSearchModal.style.cssText=[
+    "position:fixed",
+    "inset:0",
+    "z-index:2100",
+    "display:none",
+    "align-items:flex-start",
+    "justify-content:center",
+    "padding:16px",
+    "background:rgba(15,23,42,.62)",
+    "overflow:auto"
+  ].join(";");
 
-  $("choiceOptions").querySelectorAll("[data-mode]").forEach(btn=>{
-    btn.onclick=()=>chooseLocation(type,btn.dataset.mode);
+  addressSearchModal.innerHTML=`
+    <div style="
+      width:min(100%,540px);
+      margin-top:max(16px,5vh);
+      background:#fff;
+      border-radius:24px;
+      box-shadow:0 24px 70px rgba(15,23,42,.28);
+      overflow:hidden
+    ">
+      <div style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        padding:18px 18px 12px
+      ">
+        <div>
+          <small style="display:block;color:#64748b;font-weight:900;margin-bottom:3px">PEGA & LEVA</small>
+          <strong id="addressSearchTitle" style="font-size:20px;color:#0f172a">Buscar endereço</strong>
+        </div>
+        <button id="closeAddressSearch" type="button" aria-label="Fechar" style="
+          width:40px;height:40px;border:0;border-radius:50%;background:#f1f5f9;
+          color:#0f172a;cursor:pointer;font-size:18px
+        ">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div style="padding:8px 18px 20px">
+        <div style="
+          display:flex;align-items:center;gap:10px;
+          border:1px solid #dbe3ef;border-radius:16px;padding:0 14px;
+          background:#fff
+        ">
+          <i class="fa-solid fa-magnifying-glass" style="color:#64748b"></i>
+          <input
+            id="addressSearchInput"
+            type="search"
+            autocomplete="off"
+            placeholder="Digite rua, avenida ou local..."
+            style="
+              width:100%;height:54px;border:0;outline:0;background:transparent;
+              font:inherit;font-size:16px;color:#0f172a
+            "
+          >
+        </div>
+
+        <div id="addressSearchHint" style="
+          padding:10px 2px 5px;color:#64748b;font-size:13px;line-height:1.4
+        ">
+          Digite pelo menos 3 letras. Toque no endereço correto quando aparecer.
+        </div>
+
+        <div id="addressSearchLoading" style="
+          display:none;align-items:center;justify-content:center;gap:8px;
+          padding:16px;color:#64748b;font-weight:800
+        ">
+          <i class="fa-solid fa-spinner fa-spin"></i> Buscando...
+        </div>
+
+        <div id="addressSearchResults" style="margin-top:6px"></div>
+
+        <div id="addressSearchError" style="
+          display:none;margin-top:10px;padding:12px 13px;border-radius:14px;
+          background:#fef2f2;color:#b91c1c;font-size:13px;font-weight:800
+        "></div>
+
+        <div style="
+          margin-top:14px;padding:10px 12px;border-radius:13px;background:#f8fafc;
+          color:#64748b;font-size:11px;text-align:center
+        ">
+          Dados de endereço: OpenStreetMap • busca por Photon
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(addressSearchModal);
+
+  $("closeAddressSearch").onclick=closeAddressSearchModal;
+  addressSearchModal.onclick=e=>{
+    if(e.target===addressSearchModal)closeAddressSearchModal();
+  };
+
+  $("addressSearchInput").addEventListener("input",()=>{
+    clearTimeout(addressSearchTimer);
+    addressSearchTimer=setTimeout(runAddressSearch,420);
   });
 
-  openL("choiceSheet");
+  return addressSearchModal;
 }
-function chooseLocation(type,mode){
-  closeL("choiceSheet");
 
-  if(mode==="registered"){
-    state.request.origin={
-      street:state.user.street,
-      number:state.user.number,
-      reference:state.user.reference,
-      city:state.user.city
-    };
-    labels();
+function closeAddressSearchModal(){
+  clearTimeout(addressSearchTimer);
+  if(addressSearchController){
+    try{addressSearchController.abort()}catch(e){}
+    addressSearchController=null;
+  }
+  if(addressSearchModal)addressSearchModal.style.display="none";
+  document.body.style.overflow="";
+}
+
+function photonFeatureToAddress(feature){
+  const p=feature?.properties||{};
+  const c=feature?.geometry?.coordinates||[];
+
+  const street=String(
+    p.street||
+    p.name||
+    p.locality||
+    p.district||
+    "Local selecionado"
+  ).trim();
+
+  const number=String(p.housenumber||"S/N").trim();
+
+  const neighborhood=String(
+    p.district||
+    p.locality||
+    p.suburb||
+    p.neighbourhood||
+    ""
+  ).trim();
+
+  const city=String(
+    p.city||
+    p.town||
+    p.village||
+    p.county||
+    ""
+  ).trim();
+
+  const stateName=String(p.state||"").trim();
+  const postalCode=String(p.postcode||"").trim();
+
+  const parts=[
+    p.name && p.name!==p.street ? p.name : "",
+    p.street,
+    p.housenumber,
+    neighborhood,
+    city,
+    stateName
+  ].filter(Boolean);
+
+  const formattedAddress=[...new Set(parts.map(x=>String(x).trim()).filter(Boolean))].join(", ");
+
+  return {
+    street,
+    number,
+    reference:String(p.name||"").trim(),
+    city,
+    neighborhood,
+    state:stateName,
+    stateCode:"",
+    postalCode,
+    formattedAddress:formattedAddress||[street,number,city].filter(Boolean).join(", "),
+    placeId:String(
+      p.osm_type&&p.osm_id
+        ?`${p.osm_type}-${p.osm_id}`
+        :""
+    ),
+    lat:Number.isFinite(Number(c[1]))?Number(c[1]):null,
+    lng:Number.isFinite(Number(c[0]))?Number(c[0]):null
+  };
+}
+
+function addressResultLabel(feature){
+  const a=photonFeatureToAddress(feature);
+  const p=feature?.properties||{};
+
+  const title=[
+    p.name,
+    p.street,
+    p.housenumber
+  ].filter(Boolean).join(", ") || a.street;
+
+  const subtitle=[
+    a.neighborhood,
+    a.city,
+    a.state
+  ].filter(Boolean).join(" • ");
+
+  return {title,subtitle,address:a};
+}
+
+function renderAddressResults(features){
+  const box=$("addressSearchResults");
+
+  if(!features.length){
+    box.innerHTML=`
+      <div style="
+        padding:18px 12px;text-align:center;color:#64748b;
+        border:1px dashed #cbd5e1;border-radius:14px
+      ">
+        Nenhum endereço encontrado. Tente informar rua + cidade.
+      </div>`;
     return;
   }
 
-  state.addressTarget=type;
-  $("addressTitle").textContent=type==="origin"?"Informar ponto de partida":"Informar destino";
-  $("addressForm").reset();
-  openL("addressSheet");
+  box.innerHTML=features.map((feature,index)=>{
+    const r=addressResultLabel(feature);
+    return `
+      <button type="button" data-address-result="${index}" style="
+        width:100%;border:0;border-bottom:1px solid #eef2f7;background:#fff;
+        padding:14px 8px;text-align:left;cursor:pointer;
+        display:flex;align-items:flex-start;gap:12px
+      ">
+        <span style="
+          width:38px;height:38px;border-radius:50%;background:#eef4ff;color:#0646c8;
+          display:grid;place-items:center;flex:0 0 38px
+        ">
+          <i class="fa-solid fa-location-dot"></i>
+        </span>
+        <span style="min-width:0">
+          <strong style="
+            display:block;color:#0f172a;font-size:14px;line-height:1.35
+          ">${esc(r.title)}</strong>
+          <small style="
+            display:block;color:#64748b;margin-top:4px;line-height:1.35
+          ">${esc(r.subtitle||r.address.formattedAddress)}</small>
+        </span>
+      </button>`;
+  }).join("");
+
+  box.querySelectorAll("[data-address-result]").forEach(btn=>{
+    btn.onclick=()=>{
+      const feature=features[Number(btn.dataset.addressResult)];
+      if(!feature)return;
+
+      const selected=photonFeatureToAddress(feature);
+      const target=state.addressTarget;
+
+      state.request[target]=selected;
+
+      if(target==="origin"&&selected.neighborhood){
+        state.request.originNeighborhood=selected.neighborhood;
+      }
+      if(target==="destination"&&selected.neighborhood){
+        state.request.destinationNeighborhood=selected.neighborhood;
+      }
+
+      // Alteração de endereço invalida o ID da tentativa anterior.
+      state.request.requestId="";
+
+      labels();
+      closeAddressSearchModal();
+
+      toast(
+        target==="origin"
+          ?"Local de partida selecionado."
+          :"Destino selecionado."
+      );
+    };
+  });
 }
-$("originTrigger").onclick=()=>openLocationChoice("origin");
-$("destinationTrigger").onclick=()=>openLocationChoice("destination");
-$("addressForm").onsubmit=e=>{
-  e.preventDefault();
 
-  const data={
-    street:$("addressStreet").value.trim(),
-    number:$("addressNumber").value.trim(),
-    reference:$("addressReference").value.trim(),
-    city:$("addressCity").value
-  };
+async function runAddressSearch(){
+  const input=$("addressSearchInput");
+  if(!input)return;
 
-  if(!data.street||!data.number||!data.reference)return toast("Preencha todos os dados.");
+  const query=String(input.value||"").trim();
+  const results=$("addressSearchResults");
+  const error=$("addressSearchError");
+  const loading=$("addressSearchLoading");
 
-  state.request[state.addressTarget]=data;
-  labels();
-  closeL("addressSheet");
-};
+  error.style.display="none";
+  error.textContent="";
+
+  if(query.length<3){
+    results.innerHTML="";
+    loading.style.display="none";
+    return;
+  }
+
+  if(addressSearchController){
+    try{addressSearchController.abort()}catch(e){}
+  }
+
+  addressSearchController=new AbortController();
+
+  loading.style.display="flex";
+  results.innerHTML="";
+
+  try{
+    const params=new URLSearchParams({
+      q:query,
+      limit:"8",
+      lang:"pt"
+    });
+
+    // Quando o navegador autorizar localização, o Photon apenas prioriza
+    // resultados próximos; a localização não é obrigatória para a busca.
+    const position=await new Promise(resolve=>{
+      if(!navigator.geolocation)return resolve(null);
+
+      navigator.geolocation.getCurrentPosition(
+        p=>resolve(p),
+        ()=>resolve(null),
+        {enableHighAccuracy:false,timeout:1800,maximumAge:300000}
+      );
+    });
+
+    if(position){
+      params.set("lat",String(position.coords.latitude));
+      params.set("lon",String(position.coords.longitude));
+    }
+
+    const response=await fetch(
+      ADDRESS_SEARCH_URL+"?"+params.toString(),
+      {
+        method:"GET",
+        headers:{"Accept":"application/json"},
+        signal:addressSearchController.signal,
+        cache:"no-store"
+      }
+    );
+
+    if(!response.ok)throw new Error("A busca de endereços está temporariamente indisponível.");
+
+    const data=await response.json();
+    let features=Array.isArray(data?.features)?data.features:[];
+
+    // Prioriza Brasil e evita mostrar resultados claramente estrangeiros.
+    const br=features.filter(f=>{
+      const p=f?.properties||{};
+      const country=String(p.country||"").toLowerCase();
+      const code=String(p.countrycode||p.country_code||"").toLowerCase();
+      return code==="br"||country==="brasil"||country==="brazil";
+    });
+
+    if(br.length)features=br;
+
+    renderAddressResults(features.slice(0,8));
+
+  }catch(e){
+    if(e?.name==="AbortError")return;
+
+    error.textContent=e.message||"Não foi possível buscar endereços agora.";
+    error.style.display="block";
+  }finally{
+    loading.style.display="none";
+  }
+}
+
+function openAddressSearch(type){
+  state.addressTarget=type;
+
+  const modal=ensureAddressSearchModal();
+
+  $("addressSearchTitle").textContent=
+    type==="origin"
+      ?"Onde o motorista busca você?"
+      :"Para onde você vai?";
+
+  $("addressSearchInput").value="";
+  $("addressSearchResults").innerHTML="";
+  $("addressSearchError").style.display="none";
+  $("addressSearchLoading").style.display="none";
+
+  modal.style.display="flex";
+  document.body.style.overflow="hidden";
+
+  setTimeout(()=>$("addressSearchInput")?.focus(),100);
+}
+
+// Não existe mais "usar endereço cadastrado".
+// Origem e destino abrem diretamente a pesquisa.
+$("originTrigger").onclick=()=>openAddressSearch("origin");
+$("destinationTrigger").onclick=()=>openAddressSearch("destination");
 
 // SOLICITAÇÃO DE VIAGEM
 let wizardStep=0;
@@ -612,14 +944,14 @@ function renderWizard(){
         <label>Bairro de partida</label>
         <select id="mobOriginNeighborhood">
           <option value="">Selecione</option>
-          ${o.map(b=>`<option>${b}</option>`).join("")}
+          ${o.map(b=>`<option ${String(b).toLowerCase()===String(state.request.originNeighborhood||"").toLowerCase()?"selected":""}>${b}</option>`).join("")}
         </select>
       </div>
       <div class="field">
         <label>Bairro de destino</label>
         <select id="mobDestinationNeighborhood">
           <option value="">Selecione</option>
-          ${d.map(b=>`<option>${b}</option>`).join("")}
+          ${d.map(b=>`<option ${String(b).toLowerCase()===String(state.request.destinationNeighborhood||"").toLowerCase()?"selected":""}>${b}</option>`).join("")}
         </select>
       </div>`;
     $("nextStep").textContent="Calcular valores";
