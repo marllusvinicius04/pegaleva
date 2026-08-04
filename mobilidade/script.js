@@ -1,7 +1,7 @@
 // Pega & Leva Mobilidade Urbana
 // IMPORTANTE: depois de publicar o novo Apps Script como Web App,
 // cole a URL /exec abaixo.
-const API_URL="https://script.google.com/macros/s/AKfycbwS-MhjZ40iMq-Hb0DkRkEb_BexXKm9k_UP9cZb4jO4bFl2Glt10xBgmDnonJ1YyqM8/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbyQZNA2fCp3msLO0S0ECAtoVPGSzFBK4ARQt49VGvmtrPwx_lIwWgqgCpvldLtq_icJOQ/exec";
 
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
@@ -99,6 +99,7 @@ function show(id){
   ["loginView","registerView","appView"].forEach(x=>$(x)?.classList.add("hide"));
   $(id)?.classList.remove("hide");
   if($("floatingTrips"))$("floatingTrips").style.display=id==="appView"?"block":"none";
+  if(appMapWrap)showAppMapBackground(id==="appView");
 }
 function openL(id){$(id)?.classList.add("on")}
 function closeL(id){$(id)?.classList.remove("on")}
@@ -397,26 +398,29 @@ function openApp(user,token){
 
   show("appView");
   labels();
-  initUrucuiMap();
+  initAppBackgroundMap();
   renderMainActiveTrip();
   dashboard();
   startDashboardPolling();
 }
 
 
-// MAPA INTERATIVO DE URUÇUÍ
-let urucuiMap=null;
-let urucuiMotoMarkers=[];
-let urucuiMotoTimer=null;
-let leafletLoadPromise=null;
+// MAPA DE FUNDO + SELEÇÃO DE ORIGEM/DESTINO
+let appMap=null;
+let appMapWrap=null;
+let leafletPromise=null;
+let mapPickerMode=false;
+let mapPickerTarget="";
+let mapPickerPanel=null;
+let mapPickerPin=null;
 
 const URUCUI_CENTER={lat:-7.22944,lng:-44.55611};
 
 function loadLeaflet(){
   if(window.L)return Promise.resolve(window.L);
-  if(leafletLoadPromise)return leafletLoadPromise;
+  if(leafletPromise)return leafletPromise;
 
-  leafletLoadPromise=new Promise((resolve,reject)=>{
+  leafletPromise=new Promise((resolve,reject)=>{
     if(!document.querySelector('link[data-pl-leaflet]')){
       const css=document.createElement("link");
       css.rel="stylesheet";
@@ -426,10 +430,11 @@ function loadLeaflet(){
       document.head.appendChild(css);
     }
 
-    const existing=document.querySelector('script[data-pl-leaflet]');
-    if(existing){
-      existing.addEventListener("load",()=>resolve(window.L),{once:true});
-      existing.addEventListener("error",()=>reject(new Error("Não foi possível carregar o mapa.")),{once:true});
+    const old=document.querySelector('script[data-pl-leaflet]');
+    if(old){
+      if(window.L)return resolve(window.L);
+      old.addEventListener("load",()=>resolve(window.L),{once:true});
+      old.addEventListener("error",()=>reject(new Error("Não foi possível carregar o mapa.")),{once:true});
       return;
     }
 
@@ -443,199 +448,449 @@ function loadLeaflet(){
     document.head.appendChild(script);
   });
 
-  return leafletLoadPromise;
+  return leafletPromise;
 }
 
-function ensureUrucuiMapBox(){
-  let wrap=$("urucuiMapWrap");
-  if(wrap)return wrap;
+function injectAppMapStyles(){
+  if($("plMapBackgroundStyles"))return;
 
-  wrap=document.createElement("section");
-  wrap.id="urucuiMapWrap";
-  wrap.style.cssText=`
-    margin:12px 0 14px;
-    border-radius:20px;
-    overflow:hidden;
-    background:#eef2f7;
-    border:1px solid #e2e8f0;
-    box-shadow:0 8px 22px rgba(15,23,42,.07);
-    position:relative;
+  const style=document.createElement("style");
+  style.id="plMapBackgroundStyles";
+  style.textContent=`
+    #appView{
+      position:relative !important;
+      background:transparent !important;
+      min-height:100vh;
+      isolation:isolate;
+    }
+
+    #plAppMapBackground{
+      position:fixed;
+      inset:0;
+      z-index:0;
+      display:none;
+      background:#dce5e9;
+    }
+
+    #plAppMapBackground .leaflet-container{
+      width:100%;
+      height:100%;
+      background:#dce5e9;
+    }
+
+    #appView > *:not(#plAppMapBackground){
+      position:relative;
+      z-index:2;
+    }
+
+    #appView .card,
+    #appView .request-card,
+    #appView .panel,
+    #appView header,
+    #appView .header{
+      backdrop-filter:blur(9px);
+      -webkit-backdrop-filter:blur(9px);
+    }
+
+    body.pl-map-picking{
+      overflow:hidden !important;
+    }
+
+    body.pl-map-picking #appView > *:not(#plAppMapBackground):not(#mapPickerOverlay){
+      pointer-events:none !important;
+      opacity:.12 !important;
+    }
+
+    body.pl-map-picking #plAppMapBackground{
+      z-index:4000 !important;
+      display:block !important;
+    }
+
+    body.pl-map-picking #mapPickerOverlay{
+      z-index:4100 !important;
+    }
+
+    .pl-center-pin{
+      position:fixed;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-100%);
+      z-index:4200;
+      pointer-events:none;
+      filter:drop-shadow(0 5px 5px rgba(15,23,42,.28));
+      font-size:42px;
+      color:#0646c8;
+    }
+
+    .pl-center-pin::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:100%;
+      width:12px;
+      height:5px;
+      transform:translate(-50%,-2px);
+      border-radius:50%;
+      background:rgba(15,23,42,.24);
+      filter:blur(2px);
+    }
   `;
-
-  wrap.innerHTML=`
-    <div style="
-      position:absolute;z-index:500;top:10px;left:10px;
-      display:flex;align-items:center;gap:7px;
-      background:rgba(255,255,255,.94);
-      backdrop-filter:blur(8px);
-      padding:7px 9px;border-radius:999px;
-      box-shadow:0 4px 12px rgba(15,23,42,.10);
-      pointer-events:none
-    ">
-      <span style="
-        width:8px;height:8px;border-radius:50%;
-        background:#16a34a;
-        box-shadow:0 0 0 4px rgba(22,163,74,.13)
-      "></span>
-      <strong style="font-size:11px;color:#0f172a">Motocas na região</strong>
-    </div>
-
-    <div id="urucuiLiveMap" style="width:100%;height:195px"></div>
-
-    <div style="
-      position:absolute;z-index:500;bottom:8px;left:10px;
-      background:rgba(15,23,42,.72);color:#fff;
-      padding:4px 7px;border-radius:8px;font-size:9px;
-      pointer-events:none
-    ">
-      posições ilustrativas
-    </div>
-  `;
-
-  const welcome=$("welcomeCity")||$("welcomeName");
-  const anchor=welcome?.parentElement;
-
-  if(anchor?.parentNode){
-    anchor.parentNode.insertBefore(wrap,anchor.nextSibling);
-  }else{
-    const app=$("appView");
-    app?.prepend(wrap);
-  }
-
-  return wrap;
+  document.head.appendChild(style);
 }
 
-function motoLeafletIcon(){
-  return L.divIcon({
-    className:"",
-    html:`
-      <div style="
-        width:34px;height:34px;border-radius:50%;
-        background:#0646c8;color:#fff;
-        border:3px solid #fff;
-        box-shadow:0 4px 12px rgba(15,23,42,.22);
-        display:grid;place-items:center;
-        font-size:14px;
-        transform:translateZ(0)
-      ">
-        <i class="fa-solid fa-motorcycle"></i>
-      </div>
-    `,
-    iconSize:[34,34],
-    iconAnchor:[17,17]
-  });
+function ensureAppBackgroundMap(){
+  injectAppMapStyles();
+
+  if(appMapWrap)return appMapWrap;
+
+  appMapWrap=document.createElement("div");
+  appMapWrap.id="plAppMapBackground";
+  appMapWrap.innerHTML='<div id="plAppMapCanvas"></div>';
+
+  const app=$("appView");
+  app?.prepend(appMapWrap);
+
+  return appMapWrap;
 }
 
-function randomMotoPosition(index){
-  const points=[
-    [-7.2298,-44.5560],
-    [-7.2268,-44.5518],
-    [-7.2332,-44.5606],
-    [-7.2249,-44.5597],
-    [-7.2350,-44.5530],
-    [-7.2308,-44.5489],
-    [-7.2218,-44.5548],
-    [-7.2371,-44.5586]
-  ];
+async function initAppBackgroundMap(){
+  ensureAppBackgroundMap();
 
-  const p=points[index%points.length];
-  return {lat:p[0],lng:p[1]};
-}
-
-function startMotoMovement(){
-  clearInterval(urucuiMotoTimer);
-
-  urucuiMotoTimer=setInterval(()=>{
-    if(!urucuiMap||document.hidden)return;
-
-    urucuiMotoMarkers.forEach((item,index)=>{
-      const current=item.marker.getLatLng();
-
-      const latStep=(Math.random()-.5)*0.00055;
-      const lngStep=(Math.random()-.5)*0.00065;
-
-      const target={
-        lat:Math.max(-7.241,Math.min(-7.218,current.lat+latStep)),
-        lng:Math.max(-44.565,Math.min(-44.546,current.lng+lngStep))
-      };
-
-      item.marker.setLatLng(target);
-
-      if(item.pulse){
-        item.pulse.setLatLng(target);
-      }
-    });
-  },2400);
-}
-
-async function initUrucuiMap(){
-  if(urucuiMap){
-    setTimeout(()=>urucuiMap.invalidateSize(),120);
+  if(appMap){
+    appMapWrap.style.display="block";
+    setTimeout(()=>appMap.invalidateSize(),100);
     return;
   }
-
-  const wrap=ensureUrucuiMapBox();
 
   try{
     await loadLeaflet();
 
-    const el=$("urucuiLiveMap");
-    if(!el)return;
-
-    urucuiMap=L.map(el,{
+    appMap=L.map("plAppMapCanvas",{
       center:[URUCUI_CENTER.lat,URUCUI_CENTER.lng],
-      zoom:14,
-      zoomControl:true,
+      zoom:15,
+      zoomControl:false,
+      attributionControl:true,
       dragging:true,
-      scrollWheelZoom:false,
-      doubleClickZoom:true,
       touchZoom:true,
-      attributionControl:true
+      doubleClickZoom:true,
+      scrollWheelZoom:false
     });
 
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
       maxZoom:19,
-      attribution:'&copy; OpenStreetMap'
-    }).addTo(urucuiMap);
+      attribution:'&copy; OpenStreetMap contributors'
+    }).addTo(appMap);
 
-    const icon=motoLeafletIcon();
+    // Controle de zoom discreto no canto inferior direito.
+    L.control.zoom({position:"bottomright"}).addTo(appMap);
 
-    for(let i=0;i<7;i++){
-      const pos=randomMotoPosition(i);
+    appMapWrap.style.display="block";
+    setTimeout(()=>appMap.invalidateSize(),150);
+  }catch(e){
+    console.error("Falha ao carregar mapa:",e);
+  }
+}
 
-      const pulse=L.circleMarker([pos.lat,pos.lng],{
-        radius:13,
-        stroke:false,
-        fillOpacity:.13
-      }).addTo(urucuiMap);
+function showAppMapBackground(showMap){
+  ensureAppBackgroundMap();
+  if(appMapWrap)appMapWrap.style.display=showMap?"block":"none";
+  if(showMap&&appMap)setTimeout(()=>appMap.invalidateSize(),80);
+}
 
-      const marker=L.marker([pos.lat,pos.lng],{
-        icon,
-        keyboard:false,
-        riseOnHover:true
-      })
-      .addTo(urucuiMap)
-      .bindTooltip("Motoca online na região",{
-        direction:"top",
-        offset:[0,-14]
-      });
+function ensureMapPickerOverlay(){
+  if(mapPickerPanel)return mapPickerPanel;
 
-      urucuiMotoMarkers.push({marker,pulse});
+  mapPickerPanel=document.createElement("div");
+  mapPickerPanel.id="mapPickerOverlay";
+  mapPickerPanel.style.cssText="position:fixed;inset:0;z-index:4100;display:none;pointer-events:none";
+
+  mapPickerPanel.innerHTML=`
+    <div style="
+      position:absolute;top:max(14px,env(safe-area-inset-top));left:14px;right:14px;
+      display:flex;align-items:center;gap:10px;pointer-events:auto
+    ">
+      <button id="cancelMapPicker" type="button" style="
+        width:44px;height:44px;border:0;border-radius:50%;background:#fff;color:#0f172a;
+        box-shadow:0 5px 18px rgba(15,23,42,.18);font-size:18px;cursor:pointer
+      ">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+
+      <div style="
+        flex:1;background:rgba(255,255,255,.96);border-radius:16px;padding:10px 12px;
+        box-shadow:0 5px 18px rgba(15,23,42,.16)
+      ">
+        <strong id="mapPickerTitle" style="display:block;color:#0f172a;font-size:14px">
+          Escolha no mapa
+        </strong>
+        <small style="display:block;color:#64748b;margin-top:2px">
+          Arraste o mapa e deixe o pino exatamente no local.
+        </small>
+      </div>
+    </div>
+
+    <div id="mapPickerPin" class="pl-center-pin">
+      <i class="fa-solid fa-location-dot"></i>
+    </div>
+
+    <div style="
+      position:absolute;left:14px;right:14px;bottom:max(16px,env(safe-area-inset-bottom));
+      pointer-events:auto
+    ">
+      <div style="
+        background:rgba(255,255,255,.96);border-radius:18px;padding:12px;
+        box-shadow:0 8px 28px rgba(15,23,42,.20)
+      ">
+        <div id="mapPickerCoordinates" style="
+          text-align:center;color:#64748b;font-size:11px;margin-bottom:8px
+        ">Centralize o pino no endereço</div>
+
+        <button id="confirmMapPicker" class="btn primary full" type="button">
+          <i class="fa-solid fa-location-crosshairs"></i> Confirmar este local
+        </button>
+
+        <div style="text-align:center;color:#64748b;font-size:9px;margin-top:7px">
+          Mapa © OpenStreetMap contributors
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(mapPickerPanel);
+
+  $("cancelMapPicker").onclick=closeMapPicker;
+  $("confirmMapPicker").onclick=confirmMapLocation;
+
+  return mapPickerPanel;
+}
+
+function updateMapPickerCoordinates(){
+  if(!mapPickerMode||!appMap)return;
+  const c=appMap.getCenter();
+  const el=$("mapPickerCoordinates");
+  if(el)el.textContent=`${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
+}
+
+async function openMapPicker(type){
+  mapPickerTarget=type;
+  mapPickerMode=true;
+
+  await initAppBackgroundMap();
+  ensureMapPickerOverlay();
+
+  const current=state.request[type];
+  if(Number.isFinite(current?.lat)&&Number.isFinite(current?.lng)){
+    appMap.setView([current.lat,current.lng],17,{animate:false});
+  }else{
+    appMap.setView([URUCUI_CENTER.lat,URUCUI_CENTER.lng],15,{animate:false});
+  }
+
+  $("mapPickerTitle").textContent=
+    type==="origin"
+      ?"Onde você está?"
+      :"Onde você quer ir?";
+
+  mapPickerPanel.style.display="block";
+  document.body.classList.add("pl-map-picking");
+
+  appMap.dragging.enable();
+  appMap.touchZoom.enable();
+  appMap.doubleClickZoom.enable();
+
+  appMap.off("move",updateMapPickerCoordinates);
+  appMap.on("move",updateMapPickerCoordinates);
+
+  setTimeout(()=>{
+    appMap.invalidateSize();
+    updateMapPickerCoordinates();
+  },100);
+}
+
+function closeMapPicker(){
+  mapPickerMode=false;
+  mapPickerTarget="";
+  document.body.classList.remove("pl-map-picking");
+  if(mapPickerPanel)mapPickerPanel.style.display="none";
+}
+
+async function confirmMapLocation(){
+  if(!appMap||!mapPickerTarget)return;
+
+  const btn=$("confirmMapPicker");
+  const center=appMap.getCenter();
+  const target=mapPickerTarget;
+
+  btn.disabled=true;
+  const previous=btn.innerHTML;
+  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Identificando rua...';
+
+  try{
+    const result=await api("reverseGeocode",{
+      lat:center.lat,
+      lon:center.lng
+    },{timeout:15000,noRetry:true});
+
+    const address=result?.address||{};
+    const street=String(address.road||address.street||address.pedestrian||address.place||"").trim();
+
+    state.addressTarget=target;
+    closeMapPicker();
+
+    openMapAddressDetails(target,{
+      lat:center.lat,
+      lng:center.lng,
+      street:street,
+      city:String(address.city||address.town||address.village||"Uruçuí").trim()||"Uruçuí",
+      neighborhood:String(address.neighbourhood||address.suburb||address.quarter||"").trim(),
+      postalCode:String(address.postcode||"").trim(),
+      displayName:String(result?.displayName||"").trim()
+    });
+  }catch(e){
+    toast(e.message||"Não foi possível identificar a rua. Tente novamente.");
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=previous;
+  }
+}
+
+let mapAddressDetailsModal=null;
+
+function ensureMapAddressDetailsModal(){
+  if(mapAddressDetailsModal)return mapAddressDetailsModal;
+
+  mapAddressDetailsModal=document.createElement("div");
+  mapAddressDetailsModal.id="mapAddressDetailsModal";
+  mapAddressDetailsModal.style.cssText="position:fixed;inset:0;z-index:4300;display:none;align-items:flex-end;justify-content:center;background:rgba(15,23,42,.50);padding:12px";
+
+  mapAddressDetailsModal.innerHTML=`
+    <div style="
+      width:min(100%,520px);background:#fff;border-radius:24px 24px 18px 18px;
+      padding:18px;box-shadow:0 -10px 35px rgba(15,23,42,.18)
+    ">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px">
+        <div>
+          <small style="display:block;color:#64748b;font-weight:900">LOCAL SELECIONADO</small>
+          <strong id="mapAddressDetailsTitle" style="display:block;margin-top:2px;color:#0f172a;font-size:18px">
+            Complete o endereço
+          </strong>
+        </div>
+        <button id="closeMapAddressDetails" type="button" style="
+          width:38px;height:38px;border:0;border-radius:50%;background:#f1f5f9;cursor:pointer
+        ">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="mapAddressDetailsForm">
+        <div class="field">
+          <label>Logradouro / Rua</label>
+          <input id="pickedStreet" type="text" maxlength="180" required placeholder="Rua identificada no mapa">
+        </div>
+
+        <div class="field">
+          <label>Bairro</label>
+          <select id="pickedNeighborhood" required>
+            <option value="">Selecione o bairro</option>
+            ${bairros.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join("")}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Número</label>
+          <input id="pickedNumber" type="text" maxlength="30" required placeholder="Ex.: 120 ou S/N">
+        </div>
+
+        <div class="field">
+          <label>Ponto de referência</label>
+          <input id="pickedReference" type="text" maxlength="180" required placeholder="Ex.: Próximo ao mercado">
+        </div>
+
+        <button class="btn primary full" type="submit">
+          <i class="fa-solid fa-circle-check"></i> Confirmar endereço
+        </button>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(mapAddressDetailsModal);
+
+  $("closeMapAddressDetails").onclick=()=>{mapAddressDetailsModal.style.display="none"};
+  mapAddressDetailsModal.onclick=e=>{
+    if(e.target===mapAddressDetailsModal)mapAddressDetailsModal.style.display="none";
+  };
+
+  $("mapAddressDetailsForm").onsubmit=e=>{
+    e.preventDefault();
+
+    const pending=mapAddressDetailsModal._pending||{};
+    const street=$("pickedStreet").value.trim();
+    const neighborhood=$("pickedNeighborhood").value;
+    const number=$("pickedNumber").value.trim();
+    const reference=$("pickedReference").value.trim();
+
+    if(!street||!neighborhood||!number||!reference){
+      return toast("Preencha rua, bairro, número e ponto de referência.");
     }
 
-    startMotoMovement();
+    const city=neighborhood==="Benedito Leite"?"Benedito Leite":"Uruçuí";
 
-    setTimeout(()=>urucuiMap.invalidateSize(),180);
-  }catch(e){
-    wrap.innerHTML=`
-      <div style="height:150px;display:grid;place-items:center;padding:18px;text-align:center;color:#64748b">
-        <div>
-          <i class="fa-solid fa-map-location-dot" style="font-size:26px;color:#0646c8"></i>
-          <strong style="display:block;margin-top:8px;color:#0f172a">Mapa indisponível</strong>
-          <small>Verifique sua conexão e atualize a página.</small>
-        </div>
-      </div>`;
-  }
+    const data={
+      street,
+      neighborhood,
+      number,
+      reference,
+      city,
+      lat:pending.lat,
+      lng:pending.lng,
+      postalCode:pending.postalCode||"",
+      formattedAddress:`${street}, ${number} • ${neighborhood} • ${city}`
+    };
+
+    const target=mapAddressDetailsModal._target;
+    state.request[target]=data;
+
+    if(target==="origin")state.request.originNeighborhood=neighborhood;
+    if(target==="destination")state.request.destinationNeighborhood=neighborhood;
+
+    state.request.requestId="";
+    labels();
+    mapAddressDetailsModal.style.display="none";
+
+    if(target==="origin"){
+      toast("Origem confirmada. Agora escolha o destino.");
+      setTimeout(()=>openMapPicker("destination"),180);
+    }else{
+      toast("Destino confirmado. Buscando ofertas...");
+      setTimeout(()=>startWizard(),180);
+    }
+  };
+
+  return mapAddressDetailsModal;
+}
+
+function openMapAddressDetails(type,data){
+  const modal=ensureMapAddressDetailsModal();
+  modal._target=type;
+  modal._pending=data||{};
+
+  $("mapAddressDetailsTitle").textContent=
+    type==="origin"?"Complete sua origem":"Complete seu destino";
+
+  $("pickedStreet").value=data?.street||"";
+  $("pickedNumber").value="";
+  $("pickedReference").value="";
+
+  const detected=String(data?.neighborhood||"").toLowerCase();
+  const match=bairros.find(b=>String(b).toLowerCase()===detected);
+  $("pickedNeighborhood").value=match||"";
+
+  modal.style.display="flex";
+  document.body.style.overflow="hidden";
+
+  setTimeout(()=>{
+    if(!$("pickedStreet").value)$("pickedStreet").focus();
+    else $("pickedNeighborhood").focus();
+  },100);
 }
 
 
@@ -758,144 +1013,9 @@ document.querySelectorAll("[data-toggle-password]").forEach(btn=>{
 });
 bindWhatsappMask($("regWhatsapp"));
 
-// LOCALIZAÇÕES MANUAIS
-let manualAddressModal=null;
-
-function ensureManualAddressModal(){
-  if(manualAddressModal)return manualAddressModal;
-
-  manualAddressModal=document.createElement("div");
-  manualAddressModal.id="manualAddressModal";
-  manualAddressModal.style.cssText="position:fixed;inset:0;z-index:2100;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.62);overflow:auto";
-  manualAddressModal.innerHTML=`
-    <div style="width:min(100%,520px);background:#fff;border-radius:24px;padding:20px;box-shadow:0 24px 70px rgba(15,23,42,.28)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
-        <div>
-          <small style="display:block;color:#64748b;font-weight:900;margin-bottom:3px">PEGA & LEVA</small>
-          <strong id="manualAddressTitle" style="font-size:20px;color:#0f172a">Informar endereço</strong>
-        </div>
-        <button id="closeManualAddress" type="button" style="width:40px;height:40px;border:0;border-radius:50%;background:#f1f5f9;cursor:pointer">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <form id="manualAddressForm">
-        <div class="field">
-          <label>Bairro</label>
-          <select id="manualNeighborhood" required>
-            <option value="">Selecione o bairro</option>
-            ${bairros.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join("")}
-          </select>
-        </div>
-
-        <div class="field">
-          <label>Logradouro / Rua</label>
-          <input id="manualStreet" type="text" maxlength="180" placeholder="Ex.: Rua São José" required>
-        </div>
-
-        <div class="field">
-          <label>Número</label>
-          <input id="manualNumber" type="text" maxlength="30" placeholder="Ex.: 120 ou S/N" required>
-        </div>
-
-        <div class="field">
-          <label>Ponto de referência</label>
-          <input id="manualReference" type="text" maxlength="180" placeholder="Ex.: Próximo ao mercado..." required>
-        </div>
-
-        <button class="btn primary full" type="submit">
-          <i class="fa-solid fa-circle-check"></i> Confirmar endereço
-        </button>
-      </form>
-    </div>`;
-
-  document.body.appendChild(manualAddressModal);
-
-  $("closeManualAddress").onclick=closeManualAddressModal;
-  manualAddressModal.onclick=e=>{
-    if(e.target===manualAddressModal)closeManualAddressModal();
-  };
-
-  $("manualAddressForm").onsubmit=e=>{
-    e.preventDefault();
-
-    const neighborhood=$("manualNeighborhood").value;
-    const street=$("manualStreet").value.trim();
-    const number=$("manualNumber").value.trim();
-    const reference=$("manualReference").value.trim();
-
-    if(!neighborhood||!street||!number||!reference){
-      return toast("Preencha bairro, rua, número e ponto de referência.");
-    }
-
-    const city=neighborhood==="Benedito Leite"?"Benedito Leite":"Uruçuí";
-    const data={
-      street,
-      number,
-      reference,
-      city,
-      neighborhood,
-      formattedAddress:`${street}, ${number} • ${neighborhood} • ${city}`
-    };
-
-    const target=state.addressTarget;
-    state.request[target]=data;
-
-    if(target==="origin")state.request.originNeighborhood=neighborhood;
-    if(target==="destination")state.request.destinationNeighborhood=neighborhood;
-
-    state.request.requestId="";
-    labels();
-    closeManualAddressModal();
-
-    if(target==="origin"){
-      toast("Origem confirmada. Agora informe o destino.");
-      setTimeout(()=>openManualAddress("destination"),140);
-    }else{
-      toast("Destino confirmado. Buscando ofertas para sua viagem...");
-      setTimeout(()=>startWizard(),140);
-    }
-  };
-
-  return manualAddressModal;
-}
-
-function openManualAddress(type){
-  state.addressTarget=type;
-
-  // Ao reiniciar pela origem, não reaproveita uma rota antiga sem querer.
-  if(type==="origin"&&!currentMainTrip()){
-    state.request.freights=[];
-    state.request.selectedFreight=null;
-  }
-
-  const modal=ensureManualAddressModal();
-  const current=state.request[type];
-
-  $("manualAddressTitle").textContent=
-    type==="origin"?"Endereço de origem":"Endereço de destino";
-
-  $("manualNeighborhood").value=
-    type==="origin"
-      ?state.request.originNeighborhood||""
-      :state.request.destinationNeighborhood||"";
-
-  $("manualStreet").value=current?.street||"";
-  $("manualNumber").value=current?.number||"";
-  $("manualReference").value=current?.reference||"";
-
-  modal.style.display="flex";
-  document.body.style.overflow="hidden";
-  setTimeout(()=>$("manualNeighborhood")?.focus(),80);
-}
-
-function closeManualAddressModal(){
-  if(manualAddressModal)manualAddressModal.style.display="none";
-  document.body.style.overflow="";
-}
-
-$("originTrigger").onclick=()=>openManualAddress("origin");
-$("destinationTrigger").onclick=()=>openManualAddress("destination");
+// LOCALIZAÇÕES PELO MAPA
+$("originTrigger").onclick=()=>openMapPicker("origin");
+$("destinationTrigger").onclick=()=>openMapPicker("destination");
 
 // SOLICITAÇÃO DE VIAGEM
 let wizardStep=0;
@@ -918,8 +1038,8 @@ function startWizard(){
   calculateRideOptions();
 }
 $("continueRequest").onclick=()=>{
-  if(!state.request.origin)return openManualAddress("origin");
-  if(!state.request.destination)return openManualAddress("destination");
+  if(!state.request.origin)return openMapPicker("origin");
+  if(!state.request.destination)return openMapPicker("destination");
   startWizard();
 };
 
@@ -1408,12 +1528,12 @@ $("accountLogoutBtn").onclick=async()=>{
 async function performUserLogout(){
   try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
   clearInterval(state.dashboardTimer);
-  clearInterval(urucuiMotoTimer);
   sessionStorage.removeItem("pl_mob_session");
   state.user=null;
   state.token="";
   state.trips=[];
   state.request.code="";
+  closeMapPicker();
   show("loginView");
 }
 
