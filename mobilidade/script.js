@@ -1,7 +1,7 @@
 // Pega & Leva Mobilidade Urbana
 // IMPORTANTE: depois de publicar o novo Apps Script como Web App,
 // cole a URL /exec abaixo.
-const API_URL="https://script.google.com/macros/s/AKfycbw7iwtvlegLD8jxTSYLOzUZrl-IZivNHij2IowTMcdRIV2RScsNZhao5wqwUtZMiYY8lw/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbwNYm9VuMGYIHwBHk04YFhTD4LRQVzVEMORFWAG54UYqG0JOQOSuxKZIKzDP6Pxik9ahA/exec";
 
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
@@ -33,7 +33,9 @@ const state={
     destinationNeighborhood:"",
     freights:[],
     selectedFreight:null,
-    code:""
+    code:"",
+    requestId:"",
+    submitting:false
   }
 };
 
@@ -697,19 +699,51 @@ $("backStep").onclick=()=>{
   renderWizard();
 };
 
+function newRequestId(){
+  try{
+    if(window.crypto?.randomUUID)return window.crypto.randomUUID();
+  }catch(e){}
+  return "REQ-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,12);
+}
+
+function buildTripPayload(){
+  if(!state.request.requestId)state.request.requestId=newRequestId();
+  return {
+    requestId:state.request.requestId,
+    origin:state.request.origin,
+    destination:state.request.destination,
+    originNeighborhood:state.request.originNeighborhood,
+    destinationNeighborhood:state.request.destinationNeighborhood,
+    contentType:"PASSAGEIRO",
+    freightType:state.request.selectedFreight.type
+  };
+}
+
 async function submitRide(){
+  if(state.request.submitting)return;
+  state.request.submitting=true;
   closeL("wizardSheet");
   openL("loadingModal");
 
+  const tripPayload=buildTripPayload();
+
   try{
-    const j=await api("createTrip",{trip:{
-      origin:state.request.origin,
-      destination:state.request.destination,
-      originNeighborhood:state.request.originNeighborhood,
-      destinationNeighborhood:state.request.destinationNeighborhood,
-      contentType:"PASSAGEIRO",
-      freightType:state.request.selectedFreight.type
-    }},{timeout:40000,noRetry:true});
+    let j;
+    try{
+      j=await api("createTrip",{trip:tripPayload},{timeout:40000,noRetry:true});
+    }catch(firstError){
+      // createTrip é idempotente no backend por requestId.
+      // Se a resposta se perder após a gravação, esta segunda chamada
+      // apenas recupera a mesma corrida, sem duplicar.
+      if(/conexão demorou demais|falha de conexão|fetch|network/i.test(String(firstError.message||firstError))){
+        await new Promise(r=>setTimeout(r,900));
+        j=await api("createTrip",{trip:tripPayload},{timeout:25000,noRetry:true});
+      }else{
+        throw firstError;
+      }
+    }
+
+    if(!j?.trip?.code)throw new Error("Servidor não confirmou o código da viagem.");
 
     state.request.code=j.trip.code;
     closeL("loadingModal");
@@ -718,19 +752,25 @@ async function submitRide(){
     playPositiveConfirmation();
     successNotify();
 
+    // A próxima solicitação recebe outro identificador.
+    state.request.requestId="";
     state.revision="";
     setTimeout(()=>dashboard(true),100);
   }catch(e){
     closeL("loadingModal");
 
-    if(/conexão demorou demais/i.test(String(e.message))){
-      toast("A viagem pode ter sido registrada. Confira em Minhas viagens antes de solicitar novamente.");
+    if(/conexão demorou demais|falha de conexão|fetch|network/i.test(String(e.message||e))){
+      toast("Não recebi a confirmação do servidor. Atualizando Minhas viagens para conferir antes de permitir outra solicitação.");
       state.revision="";
       setTimeout(()=>dashboard(true),250);
       return;
     }
 
+    // Erro funcional confirmado pelo servidor: pode gerar um novo ID na próxima tentativa.
+    state.request.requestId="";
     toast(e.message||"Não foi possível solicitar a viagem.");
+  }finally{
+    state.request.submitting=false;
   }
 }
 $("successViewTrips").onclick=()=>{
