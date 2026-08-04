@@ -1,7 +1,7 @@
 // Pega & Leva Mobilidade Urbana
 // IMPORTANTE: depois de publicar o novo Apps Script como Web App,
 // cole a URL /exec abaixo.
-const API_URL="https://script.google.com/macros/s/AKfycbyQZNA2fCp3msLO0S0ECAtoVPGSzFBK4ARQt49VGvmtrPwx_lIwWgqgCpvldLtq_icJOQ/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbwS-MhjZ40iMq-Hb0DkRkEb_BexXKm9k_UP9cZb4jO4bFl2Glt10xBgmDnonJ1YyqM8/exec";
 
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
@@ -470,6 +470,8 @@ function injectAppMapStyles(){
       z-index:0;
       display:none;
       background:#dce5e9;
+      pointer-events:none;
+      user-select:none;
     }
 
     #plAppMapBackground .leaflet-container{
@@ -504,6 +506,8 @@ function injectAppMapStyles(){
     body.pl-map-picking #plAppMapBackground{
       z-index:4000 !important;
       display:block !important;
+      pointer-events:auto !important;
+      user-select:auto !important;
     }
 
     body.pl-map-picking #mapPickerOverlay{
@@ -567,13 +571,15 @@ async function initAppBackgroundMap(){
 
     appMap=L.map("plAppMapCanvas",{
       center:[URUCUI_CENTER.lat,URUCUI_CENTER.lng],
-      zoom:15,
+      zoom:16,
       zoomControl:false,
       attributionControl:true,
-      dragging:true,
-      touchZoom:true,
-      doubleClickZoom:true,
-      scrollWheelZoom:false
+      dragging:false,
+      touchZoom:false,
+      doubleClickZoom:false,
+      scrollWheelZoom:false,
+      boxZoom:false,
+      keyboard:false
     });
 
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
@@ -585,16 +591,145 @@ async function initAppBackgroundMap(){
     L.control.zoom({position:"bottomright"}).addTo(appMap);
 
     appMapWrap.style.display="block";
+    setAppMapInteractive(false);
     setTimeout(()=>appMap.invalidateSize(),150);
   }catch(e){
     console.error("Falha ao carregar mapa:",e);
   }
 }
 
+
+function setAppMapInteractive(enabled){
+  if(!appMap||!appMapWrap)return;
+
+  if(enabled){
+    appMap.dragging.enable();
+    appMap.touchZoom.enable();
+    appMap.doubleClickZoom.enable();
+    appMap.boxZoom?.enable?.();
+    appMap.keyboard?.enable?.();
+    appMapWrap.style.pointerEvents="auto";
+  }else{
+    appMap.dragging.disable();
+    appMap.touchZoom.disable();
+    appMap.doubleClickZoom.disable();
+    appMap.scrollWheelZoom.disable();
+    appMap.boxZoom?.disable?.();
+    appMap.keyboard?.disable?.();
+    appMapWrap.style.pointerEvents="none";
+  }
+}
+
+function hasUsefulRoad(address){
+  return !!String(
+    address?.road||
+    address?.street||
+    address?.pedestrian||
+    ""
+  ).trim();
+}
+
+function reverseAddressStreet(address){
+  return String(
+    address?.road||
+    address?.street||
+    address?.pedestrian||
+    address?.place||
+    ""
+  ).trim();
+}
+
+function mapDistanceMeters(lat1,lon1,lat2,lon2){
+  const R=6371000;
+  const toRad=v=>v*Math.PI/180;
+  const dLat=toRad(lat2-lat1);
+  const dLon=toRad(lon2-lon1);
+  const a=
+    Math.sin(dLat/2)**2+
+    Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+async function reverseGeocodeCandidate(lat,lon){
+  const r=await api("reverseGeocode",{lat,lon},{timeout:12000,noRetry:true});
+  return {
+    result:r,
+    lat,
+    lon,
+    address:r?.address||{},
+    displayName:String(r?.displayName||"").trim()
+  };
+}
+
+async function smartReverseGeocode(lat,lon){
+  // Primeiro tenta exatamente onde o pino está.
+  let exact=null;
+  try{
+    exact=await reverseGeocodeCandidate(lat,lon);
+    if(hasUsefulRoad(exact.address))return exact;
+  }catch(e){}
+
+  // Se caiu no meio de um lote/casa sem rua identificada,
+  // procura automaticamente ao redor em anéis de ~8m, 16m e 28m.
+  const rings=[8,16,28];
+  const candidates=[];
+
+  if(exact)candidates.push(exact);
+
+  for(const meters of rings){
+    const latDelta=meters/111320;
+    const lngDelta=meters/(111320*Math.max(.2,Math.cos(lat*Math.PI/180)));
+
+    const offsets=[
+      [ latDelta,0],[-latDelta,0],[0,lngDelta],[0,-lngDelta],
+      [ latDelta*.72, lngDelta*.72],
+      [ latDelta*.72,-lngDelta*.72],
+      [-latDelta*.72, lngDelta*.72],
+      [-latDelta*.72,-lngDelta*.72]
+    ];
+
+    for(const [dLat,dLng] of offsets){
+      try{
+        const c=await reverseGeocodeCandidate(lat+dLat,lon+dLng);
+        candidates.push(c);
+      }catch(e){}
+    }
+
+    const useful=candidates.filter(c=>hasUsefulRoad(c.address));
+    if(useful.length){
+      useful.sort((a,b)=>{
+        const da=mapDistanceMeters(lat,lon,a.lat,a.lon);
+        const db=mapDistanceMeters(lat,lon,b.lat,b.lon);
+
+        // Prioriza rua real, depois proximidade do pino.
+        const sa=reverseAddressStreet(a.address)?0:1;
+        const sb=reverseAddressStreet(b.address)?0:1;
+        return sa-sb || da-db;
+      });
+      return useful[0];
+    }
+  }
+
+  // Ainda não encontrou rua: devolve o melhor resultado exato/mais próximo.
+  if(candidates.length){
+    candidates.sort((a,b)=>
+      mapDistanceMeters(lat,lon,a.lat,a.lon)-
+      mapDistanceMeters(lat,lon,b.lat,b.lon)
+    );
+    return candidates[0];
+  }
+
+  throw new Error("Não consegui identificar a rua desse ponto.");
+}
+
+
 function showAppMapBackground(showMap){
   ensureAppBackgroundMap();
   if(appMapWrap)appMapWrap.style.display=showMap?"block":"none";
-  if(showMap&&appMap)setTimeout(()=>appMap.invalidateSize(),80);
+  if(showMap&&appMap){
+    setAppMapInteractive(false);
+    setTimeout(()=>appMap.invalidateSize(),80);
+  }
 }
 
 function ensureMapPickerOverlay(){
@@ -624,7 +759,7 @@ function ensureMapPickerOverlay(){
           Escolha no mapa
         </strong>
         <small style="display:block;color:#64748b;margin-top:2px">
-          Arraste o mapa e deixe o pino exatamente no local.
+          Arraste o mapa até sua casa/local. O sistema encontra a rua mais próxima automaticamente.
         </small>
       </div>
     </div>
@@ -680,9 +815,9 @@ async function openMapPicker(type){
 
   const current=state.request[type];
   if(Number.isFinite(current?.lat)&&Number.isFinite(current?.lng)){
-    appMap.setView([current.lat,current.lng],17,{animate:false});
+    appMap.setView([current.lat,current.lng],18,{animate:false});
   }else{
-    appMap.setView([URUCUI_CENTER.lat,URUCUI_CENTER.lng],15,{animate:false});
+    appMap.setView([URUCUI_CENTER.lat,URUCUI_CENTER.lng],17,{animate:false});
   }
 
   $("mapPickerTitle").textContent=
@@ -693,9 +828,7 @@ async function openMapPicker(type){
   mapPickerPanel.style.display="block";
   document.body.classList.add("pl-map-picking");
 
-  appMap.dragging.enable();
-  appMap.touchZoom.enable();
-  appMap.doubleClickZoom.enable();
+  setAppMapInteractive(true);
 
   appMap.off("move",updateMapPickerCoordinates);
   appMap.on("move",updateMapPickerCoordinates);
@@ -711,6 +844,7 @@ function closeMapPicker(){
   mapPickerTarget="";
   document.body.classList.remove("pl-map-picking");
   if(mapPickerPanel)mapPickerPanel.style.display="none";
+  setAppMapInteractive(false);
 }
 
 async function confirmMapLocation(){
@@ -725,13 +859,10 @@ async function confirmMapLocation(){
   btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Identificando rua...';
 
   try{
-    const result=await api("reverseGeocode",{
-      lat:center.lat,
-      lon:center.lng
-    },{timeout:15000,noRetry:true});
-
-    const address=result?.address||{};
-    const street=String(address.road||address.street||address.pedestrian||address.place||"").trim();
+    const located=await smartReverseGeocode(center.lat,center.lng);
+    const result=located.result||{};
+    const address=located.address||{};
+    const street=reverseAddressStreet(address);
 
     state.addressTarget=target;
     closeMapPicker();
@@ -743,7 +874,7 @@ async function confirmMapLocation(){
       city:String(address.city||address.town||address.village||"Uruçuí").trim()||"Uruçuí",
       neighborhood:String(address.neighbourhood||address.suburb||address.quarter||"").trim(),
       postalCode:String(address.postcode||"").trim(),
-      displayName:String(result?.displayName||"").trim()
+      displayName:String(located.displayName||result?.displayName||"").trim()
     });
   }catch(e){
     toast(e.message||"Não foi possível identificar a rua. Tente novamente.");
