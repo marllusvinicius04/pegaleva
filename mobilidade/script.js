@@ -397,10 +397,247 @@ function openApp(user,token){
 
   show("appView");
   labels();
+  initUrucuiMap();
   renderMainActiveTrip();
   dashboard();
   startDashboardPolling();
 }
+
+
+// MAPA INTERATIVO DE URUÇUÍ
+let urucuiMap=null;
+let urucuiMotoMarkers=[];
+let urucuiMotoTimer=null;
+let leafletLoadPromise=null;
+
+const URUCUI_CENTER={lat:-7.22944,lng:-44.55611};
+
+function loadLeaflet(){
+  if(window.L)return Promise.resolve(window.L);
+  if(leafletLoadPromise)return leafletLoadPromise;
+
+  leafletLoadPromise=new Promise((resolve,reject)=>{
+    if(!document.querySelector('link[data-pl-leaflet]')){
+      const css=document.createElement("link");
+      css.rel="stylesheet";
+      css.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      css.crossOrigin="";
+      css.dataset.plLeaflet="1";
+      document.head.appendChild(css);
+    }
+
+    const existing=document.querySelector('script[data-pl-leaflet]');
+    if(existing){
+      existing.addEventListener("load",()=>resolve(window.L),{once:true});
+      existing.addEventListener("error",()=>reject(new Error("Não foi possível carregar o mapa.")),{once:true});
+      return;
+    }
+
+    const script=document.createElement("script");
+    script.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.async=true;
+    script.crossOrigin="";
+    script.dataset.plLeaflet="1";
+    script.onload=()=>resolve(window.L);
+    script.onerror=()=>reject(new Error("Não foi possível carregar o mapa."));
+    document.head.appendChild(script);
+  });
+
+  return leafletLoadPromise;
+}
+
+function ensureUrucuiMapBox(){
+  let wrap=$("urucuiMapWrap");
+  if(wrap)return wrap;
+
+  wrap=document.createElement("section");
+  wrap.id="urucuiMapWrap";
+  wrap.style.cssText=`
+    margin:12px 0 14px;
+    border-radius:20px;
+    overflow:hidden;
+    background:#eef2f7;
+    border:1px solid #e2e8f0;
+    box-shadow:0 8px 22px rgba(15,23,42,.07);
+    position:relative;
+  `;
+
+  wrap.innerHTML=`
+    <div style="
+      position:absolute;z-index:500;top:10px;left:10px;
+      display:flex;align-items:center;gap:7px;
+      background:rgba(255,255,255,.94);
+      backdrop-filter:blur(8px);
+      padding:7px 9px;border-radius:999px;
+      box-shadow:0 4px 12px rgba(15,23,42,.10);
+      pointer-events:none
+    ">
+      <span style="
+        width:8px;height:8px;border-radius:50%;
+        background:#16a34a;
+        box-shadow:0 0 0 4px rgba(22,163,74,.13)
+      "></span>
+      <strong style="font-size:11px;color:#0f172a">Motocas na região</strong>
+    </div>
+
+    <div id="urucuiLiveMap" style="width:100%;height:195px"></div>
+
+    <div style="
+      position:absolute;z-index:500;bottom:8px;left:10px;
+      background:rgba(15,23,42,.72);color:#fff;
+      padding:4px 7px;border-radius:8px;font-size:9px;
+      pointer-events:none
+    ">
+      posições ilustrativas
+    </div>
+  `;
+
+  const welcome=$("welcomeCity")||$("welcomeName");
+  const anchor=welcome?.parentElement;
+
+  if(anchor?.parentNode){
+    anchor.parentNode.insertBefore(wrap,anchor.nextSibling);
+  }else{
+    const app=$("appView");
+    app?.prepend(wrap);
+  }
+
+  return wrap;
+}
+
+function motoLeafletIcon(){
+  return L.divIcon({
+    className:"",
+    html:`
+      <div style="
+        width:34px;height:34px;border-radius:50%;
+        background:#0646c8;color:#fff;
+        border:3px solid #fff;
+        box-shadow:0 4px 12px rgba(15,23,42,.22);
+        display:grid;place-items:center;
+        font-size:14px;
+        transform:translateZ(0)
+      ">
+        <i class="fa-solid fa-motorcycle"></i>
+      </div>
+    `,
+    iconSize:[34,34],
+    iconAnchor:[17,17]
+  });
+}
+
+function randomMotoPosition(index){
+  const points=[
+    [-7.2298,-44.5560],
+    [-7.2268,-44.5518],
+    [-7.2332,-44.5606],
+    [-7.2249,-44.5597],
+    [-7.2350,-44.5530],
+    [-7.2308,-44.5489],
+    [-7.2218,-44.5548],
+    [-7.2371,-44.5586]
+  ];
+
+  const p=points[index%points.length];
+  return {lat:p[0],lng:p[1]};
+}
+
+function startMotoMovement(){
+  clearInterval(urucuiMotoTimer);
+
+  urucuiMotoTimer=setInterval(()=>{
+    if(!urucuiMap||document.hidden)return;
+
+    urucuiMotoMarkers.forEach((item,index)=>{
+      const current=item.marker.getLatLng();
+
+      const latStep=(Math.random()-.5)*0.00055;
+      const lngStep=(Math.random()-.5)*0.00065;
+
+      const target={
+        lat:Math.max(-7.241,Math.min(-7.218,current.lat+latStep)),
+        lng:Math.max(-44.565,Math.min(-44.546,current.lng+lngStep))
+      };
+
+      item.marker.setLatLng(target);
+
+      if(item.pulse){
+        item.pulse.setLatLng(target);
+      }
+    });
+  },2400);
+}
+
+async function initUrucuiMap(){
+  if(urucuiMap){
+    setTimeout(()=>urucuiMap.invalidateSize(),120);
+    return;
+  }
+
+  const wrap=ensureUrucuiMapBox();
+
+  try{
+    await loadLeaflet();
+
+    const el=$("urucuiLiveMap");
+    if(!el)return;
+
+    urucuiMap=L.map(el,{
+      center:[URUCUI_CENTER.lat,URUCUI_CENTER.lng],
+      zoom:14,
+      zoomControl:true,
+      dragging:true,
+      scrollWheelZoom:false,
+      doubleClickZoom:true,
+      touchZoom:true,
+      attributionControl:true
+    });
+
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      maxZoom:19,
+      attribution:'&copy; OpenStreetMap'
+    }).addTo(urucuiMap);
+
+    const icon=motoLeafletIcon();
+
+    for(let i=0;i<7;i++){
+      const pos=randomMotoPosition(i);
+
+      const pulse=L.circleMarker([pos.lat,pos.lng],{
+        radius:13,
+        stroke:false,
+        fillOpacity:.13
+      }).addTo(urucuiMap);
+
+      const marker=L.marker([pos.lat,pos.lng],{
+        icon,
+        keyboard:false,
+        riseOnHover:true
+      })
+      .addTo(urucuiMap)
+      .bindTooltip("Motoca online na região",{
+        direction:"top",
+        offset:[0,-14]
+      });
+
+      urucuiMotoMarkers.push({marker,pulse});
+    }
+
+    startMotoMovement();
+
+    setTimeout(()=>urucuiMap.invalidateSize(),180);
+  }catch(e){
+    wrap.innerHTML=`
+      <div style="height:150px;display:grid;place-items:center;padding:18px;text-align:center;color:#64748b">
+        <div>
+          <i class="fa-solid fa-map-location-dot" style="font-size:26px;color:#0646c8"></i>
+          <strong style="display:block;margin-top:8px;color:#0f172a">Mapa indisponível</strong>
+          <small>Verifique sua conexão e atualize a página.</small>
+        </div>
+      </div>`;
+  }
+}
+
 
 // LOGIN / CADASTRO
 const QUICK_LOGIN_KEY="pl_mob_quick_account";
@@ -1171,6 +1408,7 @@ $("accountLogoutBtn").onclick=async()=>{
 async function performUserLogout(){
   try{await api("logout",{}, {timeout:5000,noRetry:true})}catch(e){}
   clearInterval(state.dashboardTimer);
+  clearInterval(urucuiMotoTimer);
   sessionStorage.removeItem("pl_mob_session");
   state.user=null;
   state.token="";
