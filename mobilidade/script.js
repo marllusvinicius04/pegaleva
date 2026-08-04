@@ -1,7 +1,7 @@
 // Pega & Leva Mobilidade Urbana
 // IMPORTANTE: depois de publicar o novo Apps Script como Web App,
 // cole a URL /exec abaixo.
-const API_URL="https://script.google.com/macros/s/AKfycbxgj5_2ZOhV2fFfx6_Knyz9WbDvLt962qpi3Ur6SQ0njBXlsHIfbhkXyIX2DSEXypK9-g/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbwS-MhjZ40iMq-Hb0DkRkEb_BexXKm9k_UP9cZb4jO4bFl2Glt10xBgmDnonJ1YyqM8/exec";
 
 const $=id=>document.getElementById(id);
 const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
@@ -611,7 +611,13 @@ function ensureManualAddressModal(){
     labels();
     closeManualAddressModal();
 
-    toast(target==="origin"?"Origem confirmada.":"Destino confirmado.");
+    if(target==="origin"){
+      toast("Origem confirmada. Agora informe o destino.");
+      setTimeout(()=>openManualAddress("destination"),140);
+    }else{
+      toast("Destino confirmado. Buscando ofertas para sua viagem...");
+      setTimeout(()=>startWizard(),140);
+    }
   };
 
   return manualAddressModal;
@@ -619,6 +625,13 @@ function ensureManualAddressModal(){
 
 function openManualAddress(type){
   state.addressTarget=type;
+
+  // Ao reiniciar pela origem, não reaproveita uma rota antiga sem querer.
+  if(type==="origin"&&!currentMainTrip()){
+    state.request.freights=[];
+    state.request.selectedFreight=null;
+  }
+
   const modal=ensureManualAddressModal();
   const current=state.request[type];
 
@@ -667,7 +680,11 @@ function startWizard(){
   openL("wizardSheet");
   calculateRideOptions();
 }
-$("continueRequest").onclick=startWizard;
+$("continueRequest").onclick=()=>{
+  if(!state.request.origin)return openManualAddress("origin");
+  if(!state.request.destination)return openManualAddress("destination");
+  startWizard();
+};
 
 function renderWizard(){
   $("wizardMotoLoading").classList.remove("on");
@@ -675,18 +692,18 @@ function renderWizard(){
   $("backStep").style.visibility=wizardStep===0?"hidden":"visible";
 
   if(wizardStep===0){
-    $("wizardTitle").textContent="Calculando sua viagem";
+    $("wizardTitle").textContent="Buscando ofertas para sua viagem";
     $("wizardContent").innerHTML=`
       <div class="loading">
         <div class="road"><i class="fa-solid fa-motorcycle bike"></i></div>
-        <p>Calculando as opções disponíveis...</p>
+        <p>Encontrando os melhores valores para sua viagem...</p>
       </div>`;
     $("nextStep").textContent="Aguarde...";
     $("nextStep").disabled=true;
   }
 
   if(wizardStep===1){
-    $("wizardTitle").textContent="Escolha sua opção";
+    $("wizardTitle").textContent="Ofertas para sua viagem";
     $("nextStep").textContent="Solicitar viagem";
     $("nextStep").disabled=false;
 
@@ -871,10 +888,10 @@ function setRequestControlsVisible(visible){
 
 function clientEtaText(status){
   const s=String(status||"").toUpperCase();
-  if(s==="ACEITA")return "Previsão de chegada: 10–15 min";
-  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "Previsão: 15–25 min";
-  if(s==="ESTOU INDO")return "Previsão: 5–10 min";
-  return "Atualizando previsão...";
+  if(s==="ACEITA")return "10–15 min";
+  if(s==="FINALIZANDO CORRIDA PRÓXIMA")return "15–25 min";
+  if(s==="ESTOU INDO")return "5–10 min";
+  return "Atualizando...";
 }
 
 function renderMainActiveTrip(){
@@ -898,68 +915,80 @@ function renderMainActiveTrip(){
 
   if(!hasDriver||status==="AGUARDANDO ENTREGADOR"){
     tracker.innerHTML=`
-      <section style="margin:14px 0;padding:24px 18px;border-radius:24px;background:#fff;border:1px solid #e2e8f0;text-align:center;box-shadow:0 12px 30px rgba(15,23,42,.08)">
-        <div style="height:74px;display:grid;place-items:center;overflow:hidden">
-          <div style="animation:plRideMove 1.15s ease-in-out infinite;font-size:42px;color:#0646c8">
-            <i class="fa-solid fa-motorcycle"></i>
+      <section style="
+        margin:10px 0;
+        padding:11px 12px;
+        border-radius:16px;
+        background:#fff;
+        border:1px solid #e2e8f0;
+        box-shadow:0 5px 16px rgba(15,23,42,.06)
+      ">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="
+            width:42px;height:42px;border-radius:13px;background:#eef4ff;color:#0646c8;
+            display:grid;place-items:center;flex:0 0 42px;overflow:hidden
+          ">
+            <i class="fa-solid fa-motorcycle" style="font-size:20px;animation:plRideMove 1.15s ease-in-out infinite"></i>
           </div>
-        </div>
-        <h2 style="margin:5px 0 7px;color:#0f172a;font-size:21px">Buscando um motoca pra você...</h2>
-        <p style="margin:0;color:#64748b;line-height:1.45">Sua solicitação já está disponível para os motoristas próximos.</p>
 
-        <div style="margin:17px 0;padding:13px;border-radius:15px;background:#f8fafc;text-align:left">
-          <strong style="display:block;color:#0f172a">${esc(trip.originNeighborhood||state.request.originNeighborhood)} → ${esc(trip.destinationNeighborhood||state.request.destinationNeighborhood)}</strong>
-          <small style="color:#64748b">Viagem ${esc(trip.code||state.request.code)}</small>
-        </div>
+          <div style="min-width:0;flex:1">
+            <strong style="display:block;color:#0f172a;font-size:14px;line-height:1.25">
+              Buscando um motoca pra você...
+            </strong>
+            <small style="display:block;color:#64748b;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${esc(trip.originNeighborhood||state.request.originNeighborhood)} → ${esc(trip.destinationNeighborhood||state.request.destinationNeighborhood)}
+            </small>
+          </div>
 
-        <button class="btn secondary full" type="button" data-main-cancel="${esc(trip.code)}">
-          <i class="fa-solid fa-xmark"></i> Cancelar solicitação
-        </button>
+          <button type="button" data-main-cancel="${esc(trip.code)}" style="
+            border:0;background:#fef2f2;color:#b91c1c;border-radius:11px;
+            padding:8px 10px;font-weight:800;cursor:pointer;white-space:nowrap
+          ">
+            Cancelar
+          </button>
+        </div>
       </section>`;
   }else{
     tracker.innerHTML=`
-      <section style="margin:14px 0;padding:20px 18px;border-radius:24px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.08)">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
-          <div>
-            <small style="display:block;color:#16a34a;font-weight:900;margin-bottom:3px">
-              <i class="fa-solid fa-circle-check"></i> MOTORISTA ENCONTRADO
-            </small>
-            <strong style="font-size:19px;color:#0f172a">${esc(clientStatusLabel(trip.status,trip.paymentStatus))}</strong>
-          </div>
-          <span style="padding:7px 10px;border-radius:999px;background:#eef4ff;color:#0646c8;font-size:12px;font-weight:900">
-            ${esc(trip.code)}
-          </span>
-        </div>
+      <section style="
+        margin:10px 0;
+        padding:11px 12px;
+        border-radius:16px;
+        background:#fff;
+        border:1px solid #e2e8f0;
+        box-shadow:0 5px 16px rgba(15,23,42,.06)
+      ">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${driverAvatar(trip.driverPhotoUrl,trip.driverName,46)}
 
-        <div style="display:flex;align-items:center;gap:13px;padding:14px;border-radius:18px;background:#f8fafc">
-          ${driverAvatar(trip.driverPhotoUrl,trip.driverName,66)}
-          <div style="min-width:0">
-            <strong style="display:block;font-size:18px;color:#0f172a">${esc(trip.driverName)}</strong>
-            <span style="display:block;margin-top:4px;color:#475569;font-size:13px">
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:6px;min-width:0">
+              <strong style="color:#0f172a;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                ${esc(trip.driverName)}
+              </strong>
+              <span style="
+                flex:0 0 auto;padding:3px 6px;border-radius:999px;
+                background:#ecfdf5;color:#15803d;font-size:9px;font-weight:900
+              ">ACEITOU</span>
+            </div>
+
+            <small style="display:block;color:#475569;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
               <i class="fa-solid fa-motorcycle"></i>
               ${esc(trip.driverVehicle||"Moto")} • ${esc(trip.driverPlate||"Placa não informada")}
-            </span>
-          </div>
-        </div>
+            </small>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px">
-          <div style="padding:12px;border-radius:15px;background:#eef4ff">
-            <small style="display:block;color:#64748b">Chegada</small>
-            <strong style="display:block;margin-top:3px;color:#0646c8">${esc(clientEtaText(trip.status))}</strong>
+            <small style="display:block;color:#0646c8;margin-top:3px;font-weight:800">
+              ${esc(clientStatusLabel(trip.status,trip.paymentStatus))} • ${esc(clientEtaText(trip.status))}
+            </small>
           </div>
-          <div style="padding:12px;border-radius:15px;background:#f8fafc">
-            <small style="display:block;color:#64748b">Veículo</small>
-            <strong style="display:block;margin-top:3px;color:#0f172a">${esc(trip.driverPlate||"A confirmar")}</strong>
-          </div>
-        </div>
 
-        <div style="margin-top:12px;padding:13px;border-radius:15px;background:#f8fafc">
-          ${tripStatusDescription(trip)}
+          <button type="button" data-main-cancel="${esc(trip.code)}" style="
+            border:0;background:#fef2f2;color:#b91c1c;border-radius:11px;
+            padding:8px 10px;font-weight:800;cursor:pointer;white-space:nowrap
+          ">
+            Cancelar
+          </button>
         </div>
-
-        <button class="btn secondary full" style="margin-top:14px" type="button" data-main-cancel="${esc(trip.code)}">
-          <i class="fa-solid fa-xmark"></i> Cancelar viagem
-        </button>
       </section>`;
   }
 
@@ -968,6 +997,11 @@ function renderMainActiveTrip(){
   });
 }
 
+
+function cityNeighborhoodOptions(city){
+  if(city==="Benedito Leite")return ["Benedito Leite"];
+  return bairros.filter(b=>b!=="Benedito Leite");
+}
 
 // SIMULADOR
 function fillSimulatorNeighborhoods(){
