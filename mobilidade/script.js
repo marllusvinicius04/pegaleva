@@ -651,7 +651,7 @@ function mapDistanceMeters(lat1,lon1,lat2,lon2){
 }
 
 async function reverseGeocodeCandidate(lat,lon){
-  const r=await api("reverseGeocode",{lat,lon},{timeout:12000,noRetry:true});
+  const r=await api("reverseGeocode",{lat,lon},{timeout:7000,noRetry:true});
   return {
     result:r,
     lat,
@@ -663,65 +663,74 @@ async function reverseGeocodeCandidate(lat,lon){
 
 async function smartReverseGeocode(lat,lon){
   // Primeiro tenta exatamente onde o pino está.
-  let exact=null;
   try{
-    exact=await reverseGeocodeCandidate(lat,lon);
+    const exact=await reverseGeocodeCandidate(lat,lon);
     if(hasUsefulRoad(exact.address))return exact;
   }catch(e){}
 
-  // Se caiu no meio de um lote/casa sem rua identificada,
-  // procura automaticamente ao redor em anéis de ~8m, 16m e 28m.
-  const rings=[8,16,28];
-  const candidates=[];
+  // Se caiu sobre casa/lote sem rua, consulta os pontos próximos EM PARALELO.
+  const meters=14;
+  const latDelta=meters/111320;
+  const lngDelta=meters/(111320*Math.max(.2,Math.cos(lat*Math.PI/180)));
 
-  if(exact)candidates.push(exact);
+  const offsets=[
+    [ latDelta,0],[-latDelta,0],
+    [0, lngDelta],[0,-lngDelta],
+    [ latDelta*.72, lngDelta*.72],
+    [ latDelta*.72,-lngDelta*.72],
+    [-latDelta*.72, lngDelta*.72],
+    [-latDelta*.72,-lngDelta*.72]
+  ];
 
-  for(const meters of rings){
-    const latDelta=meters/111320;
-    const lngDelta=meters/(111320*Math.max(.2,Math.cos(lat*Math.PI/180)));
+  const results=(await Promise.all(
+    offsets.map(([dLat,dLng])=>
+      reverseGeocodeCandidate(lat+dLat,lon+dLng).catch(()=>null)
+    )
+  )).filter(Boolean);
 
-    const offsets=[
-      [ latDelta,0],[-latDelta,0],[0,lngDelta],[0,-lngDelta],
-      [ latDelta*.72, lngDelta*.72],
-      [ latDelta*.72,-lngDelta*.72],
-      [-latDelta*.72, lngDelta*.72],
-      [-latDelta*.72,-lngDelta*.72]
-    ];
+  const useful=results.filter(c=>hasUsefulRoad(c.address));
 
-    for(const [dLat,dLng] of offsets){
-      try{
-        const c=await reverseGeocodeCandidate(lat+dLat,lon+dLng);
-        candidates.push(c);
-      }catch(e){}
-    }
-
-    const useful=candidates.filter(c=>hasUsefulRoad(c.address));
-    if(useful.length){
-      useful.sort((a,b)=>{
-        const da=mapDistanceMeters(lat,lon,a.lat,a.lon);
-        const db=mapDistanceMeters(lat,lon,b.lat,b.lon);
-
-        // Prioriza rua real, depois proximidade do pino.
-        const sa=reverseAddressStreet(a.address)?0:1;
-        const sb=reverseAddressStreet(b.address)?0:1;
-        return sa-sb || da-db;
-      });
-      return useful[0];
-    }
-  }
-
-  // Ainda não encontrou rua: devolve o melhor resultado exato/mais próximo.
-  if(candidates.length){
-    candidates.sort((a,b)=>
+  if(useful.length){
+    useful.sort((a,b)=>
       mapDistanceMeters(lat,lon,a.lat,a.lon)-
       mapDistanceMeters(lat,lon,b.lat,b.lon)
     );
-    return candidates[0];
+    return useful[0];
+  }
+
+  // Último fallback: um raio um pouco maior, só 4 consultas e também em paralelo.
+  const meters2=26;
+  const latDelta2=meters2/111320;
+  const lngDelta2=meters2/(111320*Math.max(.2,Math.cos(lat*Math.PI/180)));
+
+  const results2=(await Promise.all([
+    [ latDelta2,0],[-latDelta2,0],
+    [0, lngDelta2],[0,-lngDelta2]
+  ].map(([dLat,dLng])=>
+    reverseGeocodeCandidate(lat+dLat,lon+dLng).catch(()=>null)
+  ))).filter(Boolean);
+
+  const useful2=results2.filter(c=>hasUsefulRoad(c.address));
+
+  if(useful2.length){
+    useful2.sort((a,b)=>
+      mapDistanceMeters(lat,lon,a.lat,a.lon)-
+      mapDistanceMeters(lat,lon,b.lat,b.lon)
+    );
+    return useful2[0];
+  }
+
+  const all=[...results,...results2];
+  if(all.length){
+    all.sort((a,b)=>
+      mapDistanceMeters(lat,lon,a.lat,a.lon)-
+      mapDistanceMeters(lat,lon,b.lat,b.lon)
+    );
+    return all[0];
   }
 
   throw new Error("Não consegui identificar a rua desse ponto.");
 }
-
 
 function showAppMapBackground(showMap){
   ensureAppBackgroundMap();
