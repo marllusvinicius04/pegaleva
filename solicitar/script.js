@@ -1,5 +1,5 @@
 const API="https://script.google.com/macros/s/AKfycbxYv4UOTDPWrr7Kdpu-oZdgQqGyGc8ZX-0OOBk6vFrwENvlBcjyDrCNBhyF3MxvS_8GsA/exec";
-let motoca=null,online=false,pollTimer=null,lastOfferId=null,currentOffer=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",waitRideId=null,paymentRideId=null,paymentMethod=null,photoToOpen="",waitIntervals={},chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnreadByRide={},chatBusy=false,chatPendingRefresh=false,lastActiveStatuses={},activeRidesBusy=false,offerBusy=false,tripsBusy=false,paymentBusy=false,rideStateRestored=false;
+let motoca=null,online=false,pollTimer=null,lastOfferId=null,currentOffer=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",waitRideId=null,paymentRideId=null,paymentMethod=null,photoToOpen="",waitIntervals={},chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnreadByRide={},chatBusy=false,chatPendingRefresh=false,lastActiveStatuses={};
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 let balanceVisible=true,balanceRealValue=0;
 function renderBalanceVisibility(){
@@ -100,50 +100,12 @@ async function loadCities(){const r=await api("listarCidades");if(r.ok)$("cidade
 async function validateSession(){const r=await api("statusMotoca",{motocaId:motoca.id});if(!r.ok)return logout();motoca.status=r.status;motoca.online=r.online;if(r.fotoDataUrl)motoca.fotoDataUrl=r.fotoDataUrl;localStorage.setItem("motocas_motoca",JSON.stringify(motoca));handleStatus()}
 function handleStatus(){$("auth").classList.add("hidden");if(motoca.status!=="APROVADO")return showApproval();openApp()}
 function showApproval(){$("auth").classList.add("hidden");$("app").classList.add("hidden");$("approval").classList.remove("hidden");$("approvalText").textContent=motoca.status==="BLOQUEADO"?"Sua conta está bloqueada.":motoca.status==="REPROVADO"?"Seu cadastro não foi aprovado.":"Recebemos seu cadastro. Nossa equipe está revisando seus dados."}
-async function openApp(){
-  $("approval").classList.add("hidden");
-  $("app").classList.remove("hidden");
-  $("first").textContent=motoca.nome.split(" ")[0];
-  $("cityTop").textContent=motoca.cidade;
-  $("drawerName").textContent=motoca.nome||"Motoca";
-  $("drawerEmail").textContent=motoca.email||"";
-  online=!!motoca.online;
-  renderOnline();
-  rideStateRestored=false;
-  await loadBalance();
-  await loadActiveRides();
-  clearInterval(pollTimer);
-  pollTimer=setInterval(()=>{
-    loadActiveRides();
-    if(online)pollOffer();
-  },3000);
-}
+async function openApp(){$("approval").classList.add("hidden");$("app").classList.remove("hidden");$("first").textContent=motoca.nome.split(" ")[0];$("cityTop").textContent=motoca.cidade;$("drawerName").textContent=motoca.nome||"Motoca";$("drawerEmail").textContent=motoca.email||"";online=!!motoca.online;renderOnline();await loadBalance();await loadActiveRides();clearInterval(pollTimer);pollTimer=setInterval(async()=>{await loadActiveRides();if(online)await pollOffer()},3000)}
 function ensureAudio(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume()}
 async function toggleOnline(){ensureAudio();loading(true,online?"Ficando offline...":"Ficando online...");const r=await api("definirOnlineMotoca",{motocaId:motoca.id,online:!online});loading(false);if(!r.ok)return alert(r.message);online=!online;motoca.online=online;localStorage.setItem("motocas_motoca",JSON.stringify(motoca));renderOnline();if(online)pollOffer();else $("offerPopup").classList.remove("show")}
 function renderOnline(){$("rangeSwitch").classList.toggle("online",online);$("statusLabel").textContent=online?"ONLINE":"OFFLINE";$("statusLabel").style.color=online?"var(--ok)":"var(--danger)"}
 async function loadBalance(){const r=await api("resumoGanhosMotoca",{motocaId:motoca.id});if(!r.ok)return;balanceRealValue=Number(r.saldo)||0;renderBalanceVisibility();$("corridasCount").textContent=`${r.quantidade} corridas`;$("statTrips").textContent=r.quantidade;$("statMoney").textContent=money(r.saldo);$("statRating").textContent=(Number(r.mediaAvaliacao)||0).toFixed(1);$("grossValue").textContent=money(r.bruto);$("feeValue").textContent=money(r.taxa);$("netValue").textContent=money(r.saldo);$("withdrawName").textContent=motoca.nome||"";$("withdrawEmail").textContent=motoca.email||"";$("withdrawAmount").textContent=money(r.saldo)}
-async function pollOffer(){
-  if(offerBusy||!online||!motoca)return;
-  offerBusy=true;
-  try{
-    const r=await api("buscarCorridaDisponivel",{motocaId:motoca.id,cidade:motoca.cidade});
-    if(!r.ok||!r.corrida){
-      $("offerPopup").classList.remove("show");
-      return;
-    }
-    const c=r.corrida;
-    if(lastOfferId!==c.id){
-      lastOfferId=c.id;
-      currentOffer=c;
-      playIncoming();
-      $("offerBody").innerHTML=`<div class="route">${esc(c.origemBairro)} → ${esc(c.destinoBairro)}</div><p class="small">${esc(c.origemEndereco)}</p><div class="fare">${money(c.valor)}</div>`;
-      $("offerPopup").classList.add("show");
-      resetSwipe($("offerSwipe"));
-    }
-  }finally{
-    offerBusy=false;
-  }
-}
+async function pollOffer(){const r=await api("buscarCorridaDisponivel",{motocaId:motoca.id,cidade:motoca.cidade});if(!r.ok||!r.corrida)return $("offerPopup").classList.remove("show");const c=r.corrida;if(lastOfferId!==c.id){lastOfferId=c.id;currentOffer=c;playIncoming();$("offerBody").innerHTML=`<div class="route">${esc(c.origemBairro)} → ${esc(c.destinoBairro)}</div><p class="small">${esc(c.origemEndereco)}</p><div class="fare">${money(c.valor)}</div>`;$("offerPopup").classList.add("show");resetSwipe($("offerSwipe"))}}
 function playIncoming(){
   try{
     ensureAudio();
@@ -200,22 +162,13 @@ function getRideState(){
   try{return JSON.parse(localStorage.getItem(rideStateKey())||"null")}catch(e){return null}
 }
 function restoreRideState(rides){
-  if(rideStateRestored)return;
   const st=getRideState();
-  if(!st||!Array.isArray(rides)){
-    rideStateRestored=true;
-    return;
-  }
+  if(!st||!Array.isArray(rides))return;
   const ride=rides.find(c=>c.id===st.rideId);
-  if(!ride){
-    saveRideState(null);
-    rideStateRestored=true;
-    return;
-  }
-  rideStateRestored=true;
+  if(!ride){saveRideState(null);return}
+
   if(st.stage==="PAYMENT"&&(ride.status==="EM_CORRIDA"||ride.status==="AGUARDANDO_PAGAMENTO")){
     setTimeout(()=>openPayment(ride.id,true),180);
-    return;
   }
   if(st.stage==="PAYMENT_CONFIRM"&&ride.status==="AGUARDANDO_PAGAMENTO"){
     paymentRideId=ride.id;
@@ -230,37 +183,31 @@ function restoreRideState(rides){
 
 function initOfferSwipe(){makeSwipe($("offerSwipe"),async()=>{if(!currentOffer)return;loading(true,"Aceitando...");const r=await api("aceitarCorrida",{corridaId:currentOffer.id,motocaId:motoca.id});loading(false);if(!r.ok)return alert(r.message);$("offerPopup").classList.remove("show");lastOfferId=null;currentOffer=null;loadActiveRides()},async()=>{if(!currentOffer)return;await api("recusarCorrida",{corridaId:currentOffer.id,motocaId:motoca.id});$("offerPopup").classList.remove("show");lastOfferId=null;currentOffer=null})}
 async function loadActiveRides(){
-  if(activeRidesBusy||!motoca)return;
-  activeRidesBusy=true;
-  try{
-    const r=await api("listarCorridasAtivasMotoca",{motocaId:motoca.id});
-    if(!r.ok)return;
-    const box=$("activeCarousel");
-    const currentIds=new Set(r.corridas.map(c=>c.id));
-    Object.keys(lastActiveStatuses).forEach(id=>{
-      if(!currentIds.has(id)&&lastActiveStatuses[id]){
-        strongAlert("Viagem finalizada","Corrida concluída com sucesso.","finish");
-      }
-    });
-    if(!r.corridas.length){
-      box.innerHTML='<div class="small">Nenhuma corrida aceita.</div>';
-      lastActiveStatuses={};
-      if(!paymentBusy){
-        saveRideState(null);
-        rideStateRestored=true;
-      }
-      return;
+  const r=await api("listarCorridasAtivasMotoca",{motocaId:motoca.id});
+  if(!r.ok)return;
+
+  const box=$("activeCarousel");
+  const currentIds=new Set(r.corridas.map(c=>c.id));
+
+  Object.keys(lastActiveStatuses).forEach(id=>{
+    if(!currentIds.has(id)&&lastActiveStatuses[id]){
+      strongAlert("Viagem finalizada","Corrida concluída com sucesso.","finish");
     }
-    box.innerHTML=r.corridas.map((c,i)=>rideCard(c,i)).join("");
-    const novosStatus={};
-    r.corridas.forEach(c=>novosStatus[c.id]=c.status);
-    lastActiveStatuses=novosStatus;
-    startWaitDisplays(r.corridas);
-    setTimeout(()=>pollMotocaChatBadges(r.corridas),0);
-    restoreRideState(r.corridas);
-  }finally{
-    activeRidesBusy=false;
+  });
+
+  if(!r.corridas.length){
+    box.innerHTML='<div class="small">Nenhuma corrida aceita.</div>';
+    lastActiveStatuses={};
+    saveRideState(null);
+    return;
   }
+
+  box.innerHTML=r.corridas.map((c,i)=>rideCard(c,i)).join("");
+  r.corridas.forEach(c=>lastActiveStatuses[c.id]=c.status);
+
+  startWaitDisplays(r.corridas);
+  pollMotocaChatBadges(r.corridas);
+  restoreRideState(r.corridas);
 }
 function rideCard(c,i){const photo=c.passageiroFotoDataUrl?`<img src="${c.passageiroFotoDataUrl}">`:`<span>${esc((c.passageiroNome||"P")[0])}</span>`;const origin=mapsLink(c.origemNumero,c.origemLogradouro,c.cidade),dest=mapsLink(c.destinoNumero,c.destinoLogradouro,c.cidade);let action="";if(c.status==="ACEITA")action=`<button class="btn" onclick="setRideStatus('${c.id}','A_CAMINHO')">ESTOU A CAMINHO</button>`;if(c.status==="A_CAMINHO")action=`<button class="btn" onclick="setRideStatus('${c.id}','CHEGOU')">AVISAR QUE CHEGUEI</button>`;if(c.status==="CHEGOU")action=`<button class="btn" onclick="setRideStatus('${c.id}','EM_CORRIDA')"><i class="fa-solid fa-motorcycle"></i> INICIAR CORRIDA</button>`;if(c.status==="EM_CORRIDA")action=`<button class="ride-action-btn payment" onclick="openPayment(\'${c.id}\')"><i class="fa-solid fa-wallet"></i> IR PARA PAGAMENTO</button>`;if(c.status==="AGUARDANDO_PAGAMENTO"&&c.pagamentoStatus==="CONFIRMADO")action=`<button class="ride-action-btn finish" onclick="finalizeRide(\'${c.id}\')"><i class="fa-solid fa-circle-check"></i> FINALIZAR VIAGEM</button>`;else if(c.status==="AGUARDANDO_PAGAMENTO")action=`<button class="ride-action-btn payment" onclick="openPayment(\'${c.id}\')"><i class="fa-solid fa-wallet"></i> ABRIR PAGAMENTO</button>`;return `<article class="card ride-card"><div class="status">CORRIDA ${i+1} • ${esc(c.status)}</div><div class="person"><div class="avatar" onclick="openPhoto('${encodeURIComponent(c.passageiroFotoDataUrl||"")}')">${photo}</div><div><strong>${esc(c.passageiroNome)}</strong><div class="small">${esc(formatPhone(c.passageiroTelefone||""))}</div></div></div><div style="background:#f6f8f9;border-radius:16px;padding:12px;margin-top:10px">
 <div class="small">PICKUP</div>
@@ -549,41 +496,27 @@ async function askStartWait(id){
 function closeWaitConfirm(){$("waitConfirmModal").classList.add("hidden");waitRideId=null}
 async function confirmStartWait(){if(!waitRideId)return;loading(true,"Ativando espera...");const r=await api("iniciarEspera",{corridaId:waitRideId,motocaId:motoca.id});loading(false);if(!r.ok)return alert(r.message);closeWaitConfirm();loadActiveRides()}
 async function stopWait(id){if(waitIntervals[id]){clearInterval(waitIntervals[id]);delete waitIntervals[id]}loading(true,"Parando espera...");const r=await api("pararEspera",{corridaId:id,motocaId:motoca.id});loading(false);if(!r.ok)return alert(r.message);loadActiveRides()}
-async function setRideStatus(id,status){
-  loading(true,"Atualizando...");
-  const r=await api("atualizarStatusCorrida",{corridaId:id,motocaId:motoca.id,status});
+async function setRideStatus(id,status){loading(true,"Atualizando...");const r=await api("atualizarStatusCorrida",{corridaId:id,motocaId:motoca.id,status});loading(false);if(!r.ok)return alert(r.message);loadActiveRides()}
+async function openPayment(id,restoring=false){
+  const lista=await api("listarCorridasAtivasMotoca",{motocaId:motoca.id});
+  const c=lista.ok?lista.corridas.find(x=>x.id===id):null;
+
+  if(c&&c.status==="AGUARDANDO_PAGAMENTO"&&c.pagamentoStatus==="CONFIRMADO"){
+    saveRideState({rideId:id,stage:"READY_TO_FINISH"});
+    if(!restoring)strongAlert("Pagamento confirmado","Agora finalize a viagem.","finish");
+    return;
+  }
+
+  loading(true,"Preparando pagamento...");
+  const r=await api("prepararPagamento",{corridaId:id,motocaId:motoca.id});
   loading(false);
   if(!r.ok)return alert(r.message);
-  if(status!=="EM_CORRIDA")rideStateRestored=true;
-  loadActiveRides();
-}
-async function openPayment(id,restoring=false){
-  if(paymentBusy)return;
-  paymentBusy=true;
-  try{
-    const lista=await api("listarCorridasAtivasMotoca",{motocaId:motoca.id});
-    const c=lista.ok?lista.corridas.find(x=>x.id===id):null;
-    if(c&&c.status==="AGUARDANDO_PAGAMENTO"&&c.pagamentoStatus==="CONFIRMADO"){
-      saveRideState({rideId:id,stage:"READY_TO_FINISH"});
-      rideStateRestored=true;
-      $("paymentModal").classList.add("hidden");
-      $("confirmPaymentModal").classList.add("hidden");
-      if(!restoring)strongAlert("Pagamento confirmado","Agora finalize a viagem.","finish");
-      return;
-    }
-    if(!restoring)loading(true,"Preparando pagamento...");
-    const r=await api("prepararPagamento",{corridaId:id,motocaId:motoca.id});
-    if(!r.ok)return alert(r.message);
-    paymentRideId=id;
-    saveRideState({rideId:id,stage:"PAYMENT"});
-    rideStateRestored=true;
-    $("paymentTotal").textContent=money(r.total);
-    $("paymentModal").classList.remove("hidden");
-    renderPixQr(r.total);
-  }finally{
-    paymentBusy=false;
-    if(!restoring)loading(false);
-  }
+
+  paymentRideId=id;
+  saveRideState({rideId:id,stage:"PAYMENT"});
+  $("paymentTotal").textContent=money(r.total);
+  $("paymentModal").classList.remove("hidden");
+  renderPixQr(r.total);
 }
 function renderPixQr(amount){$("qrcode").innerHTML="";const payload=pixPayload("57293143000156","MARLLUS VINICIUS","URUCUI",Number(amount)||0);new QRCode($("qrcode"),{text:payload,width:190,height:190})}
 function confirmPaymentChoice(method){
@@ -594,82 +527,37 @@ function confirmPaymentChoice(method){
 }
 function closeConfirmPayment(){$("confirmPaymentModal").classList.add("hidden")}
 async function confirmPaymentNow(){
-  if(paymentBusy)return;
-  paymentBusy=true;
-  const rideId=paymentRideId;
-  const method=paymentMethod;
-  $("confirmPaymentModal").classList.add("hidden");
   loading(true,"Confirmando pagamento...");
-  try{
-    const r=await api("confirmarPagamentoCorrida",{corridaId:rideId,motocaId:motoca.id,metodo:method});
-    if(!r.ok){
-      $("confirmPaymentModal").classList.remove("hidden");
-      return alert(r.message);
-    }
-    $("paymentModal").classList.add("hidden");
-    saveRideState({rideId:rideId,stage:"READY_TO_FINISH"});
-    rideStateRestored=true;
-    strongAlert("Pagamento confirmado","Pagamento recebido. Finalize a viagem no botão verde.","finish");
-  }finally{
-    paymentBusy=false;
-    loading(false);
-  }
+  const r=await api("confirmarPagamentoCorrida",{corridaId:paymentRideId,motocaId:motoca.id,metodo:paymentMethod});
+  loading(false);
+  if(!r.ok)return alert(r.message);
+
+  $("confirmPaymentModal").classList.add("hidden");
+  $("paymentModal").classList.add("hidden");
+  saveRideState({rideId:paymentRideId,stage:"READY_TO_FINISH"});
   await loadActiveRides();
+  strongAlert("Pagamento confirmado","Pagamento recebido. Finalize a viagem no botão verde.","finish");
 }
 async function finalizeRide(id){
-  if(paymentBusy)return;
   if(!confirm("Confirmar finalização desta viagem?"))return;
-  paymentBusy=true;
   loading(true,"Finalizando...");
-  try{
-    const r=await api("finalizarCorrida",{corridaId:id,motocaId:motoca.id});
-    if(!r.ok)return alert(r.message);
-    delete lastActiveStatuses[id];
-    saveRideState(null);
-    rideStateRestored=true;
-    closeChat();
-    await loadBalance();
-    await loadActiveRides();
-    strongAlert("Viagem finalizada","Corrida concluída e saldo atualizado.","finish");
-  }finally{
-    paymentBusy=false;
-    loading(false);
-  }
+  const r=await api("finalizarCorrida",{corridaId:id,motocaId:motoca.id});
+  loading(false);
+  if(!r.ok)return alert(r.message);
+
+  saveRideState(null);
+  closeChat();
+  await loadBalance();
+  await loadActiveRides();
+  strongAlert("Viagem finalizada","Corrida concluída e saldo atualizado.","finish");
 }
 function pixPayload(key,name,city,amount){const f=(id,val)=>id+String(val.length).padStart(2,"0")+val;const merchant=f("00","BR.GOV.BCB.PIX")+f("01",key);let p=f("00","01")+f("26",merchant)+f("52","0000")+f("53","986")+f("54",amount.toFixed(2))+f("58","BR")+f("59",name.substring(0,25).toUpperCase())+f("60",city.substring(0,15).toUpperCase())+f("62",f("05","MOTOCAS"))+"6304";return p+crc16(p)}
 function crc16(str){let crc=0xFFFF;for(let i=0;i<str.length;i++){crc^=str.charCodeAt(i)<<8;for(let j=0;j<8;j++)crc=(crc&0x8000)?((crc<<1)^0x1021):(crc<<1);crc&=0xFFFF}return crc.toString(16).toUpperCase().padStart(4,"0")}
 function makeSwipe(el,onRight,onLeft,rightOnly=false){if(!el)return;const knob=el.querySelector(".swipe-knob");let start=0,dx=0,down=false;const reset=()=>{knob.style.transition=".2s";knob.style.left="50%";knob.style.transform="translateX(-50%)";setTimeout(()=>knob.style.transition="",220)};el.onpointerdown=e=>{down=true;start=e.clientX;el.setPointerCapture(e.pointerId)};el.onpointermove=e=>{if(!down)return;dx=e.clientX-start;const lim=el.clientWidth/2-knob.clientWidth/2-8;if(rightOnly)dx=Math.max(0,dx);dx=Math.max(-lim,Math.min(lim,dx));knob.style.left=`calc(50% + ${dx}px)`};el.onpointerup=async e=>{if(!down)return;down=false;const threshold=el.clientWidth*.28;if(dx>threshold&&onRight){await onRight()}else if(dx<-threshold&&onLeft&&!rightOnly){await onLeft()}reset();dx=0}}
 function resetSwipe(el){if(!el)return;const k=el.querySelector(".swipe-knob");k.style.left="50%";k.style.transform="translateX(-50%)"}
-function showView(v){
-  ["home","trips","earnings","profile"].forEach(x=>{
-    $(x+"View").classList.toggle("active",x===v);
-    $("nav"+cap(x)).classList.toggle("active",x===v);
-  });
-  if(v==="trips")loadTrips();
-  if(v==="earnings"){loadBalance();loadWithdrawals();}
-  if(v==="profile")loadProfile();
-}
+function showView(v){["home","trips","earnings","profile"].forEach(x=>{$(x+"View").classList.toggle("active",x===v);$("nav"+cap(x)).classList.toggle("active",x===v)});if(v==="trips")loadTrips();if(v==="earnings"){loadBalance();loadWithdrawals();}if(v==="profile")loadProfile()}
 function cap(s){return s[0].toUpperCase()+s.slice(1)}
-async function loadTrips(){
-  if(tripsBusy||!motoca)return;
-  tripsBusy=true;
-  const box=$("tripsList");
-  box.innerHTML='<div class="card"><div class="small"><i class="fa-solid fa-spinner fa-spin"></i> Carregando suas corridas...</div></div>';
-  try{
-    const r=await api("listarCorridasMotoca",{motocaId:motoca.id});
-    if(!r.ok){
-      box.innerHTML=`<div class="card"><div class="small" style="color:var(--danger)">${esc(r.message||"Não foi possível carregar suas corridas.")}</div></div>`;
-      return;
-    }
-    if(!Array.isArray(r.corridas)||!r.corridas.length){
-      box.innerHTML='<div class="card"><div class="small">Você ainda não possui corridas.</div></div>';
-      return;
-    }
-    box.innerHTML=r.corridas.map(c=>`<div class="card"><strong>${esc(c.origemBairro)} → ${esc(c.destinoBairro)}</strong><br><small>${esc(c.status)} • ${money((Number(c.valor)||0)+(Number(c.esperaValor)||0))}</small><br><small>Seu ganho: ${money(c.ganhoMotoca||0)}</small></div>`).join("");
-  }finally{
-    tripsBusy=false;
-  }
-}
+async function loadTrips(){const r=await api("listarCorridasMotoca",{motocaId:motoca.id});$("tripsList").innerHTML=r.ok?r.corridas.map(c=>`<div class="card"><strong>${esc(c.origemBairro)} → ${esc(c.destinoBairro)}</strong><br><small>${esc(c.status)} • ${money((Number(c.valor)||0)+(Number(c.esperaValor)||0))}</small><br><small>Seu ganho: ${money(c.ganhoMotoca||0)}</small></div>`).join(""):"Erro"}
 async function requestWithdraw(){loading(true,"Solicitando saque...");const r=await api("solicitarSaque",{motocaId:motoca.id,chavePix:val("withdrawPix")});loading(false);if(!r.ok)return msg("withdrawMsg",r.message,true);msg("withdrawMsg",r.message);await loadWithdrawals();await loadBalance()}
 async function loadWithdrawals(){const r=await api("listarSaquesMotoca",{motocaId:motoca.id});if(!r.ok)return;$("withdrawList").innerHTML=r.saques.map(s=>`<div class="card" style="padding:12px"><strong>${money(s.valor)}</strong><br><small class="small">${esc(s.status)} • ${esc(s.solicitadoEm)}</small></div>`).join("")}
 async function loadProfile(){const r=await api("obterPerfilMotoca",{motocaId:motoca.id});if(!r.ok)return alert(r.message);motoca={...motoca,...r.perfil};localStorage.setItem("motocas_motoca",JSON.stringify(motoca));$("profileName").value=motoca.nome||"";$("profileEmail").value=motoca.email||"";$("profilePhone").value=formatPhone(motoca.telefone||"");renderProfilePhoto(motoca.fotoDataUrl)}
@@ -695,11 +583,6 @@ function logout(){
   currentOffer=null;
   paymentRideId=null;
   waitRideId=null;
-  activeRidesBusy=false;
-  offerBusy=false;
-  tripsBusy=false;
-  paymentBusy=false;
-  rideStateRestored=false;
 
   if($("offerPopup"))$("offerPopup").classList.remove("show");
   if($("app"))$("app").classList.add("hidden");
