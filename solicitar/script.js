@@ -1,5 +1,5 @@
 const API="https://script.google.com/macros/s/AKfycbxYv4UOTDPWrr7Kdpu-oZdgQqGyGc8ZX-0OOBk6vFrwENvlBcjyDrCNBhyF3MxvS_8GsA/exec";
-let user=null,fare=null,step=1,pollTimer=null,lastStatus=null,activeRideId=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",ratingRideId=null,ratingValue=0,currentDriverPhoto="",reportRideId=null,reportMotocaId=null,chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnread=0,chatKnownCount=0,chatBusy=false,chatPendingRefresh=false;
+let user=null,fare=null,step=1,pollTimer=null,lastStatus=null,activeRideId=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",ratingRideId=null,ratingValue=0,currentDriverPhoto="",reportRideId=null,reportMotocaId=null,chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnread=0,chatKnownCount=0,chatBusy=false,chatPendingRefresh=false,ratingCheckBusy=false;
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 function loading(on,text="Carregando..."){$("loadingText").textContent=text;$("loading").classList.toggle("hidden",!on)}
 async function api(action,data={}){try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,data})});return await r.json()}catch(e){return{ok:false,message:"Falha de conexão."}}}
@@ -191,17 +191,84 @@ function resetSheet(){
 async function cancelActiveRide(){if(!activeRideId)return;if(!confirm("Deseja cancelar esta corrida?"))return;loading(true,"Cancelando...");const r=await api("cancelarCorridaPassageiro",{corridaId:activeRideId,passageiroId:user.id});loading(false);if(!r.ok)return alert(r.message);lastStatus=null;activeRideId=null;resetSheet()}
 function showView(v){["home","trips","profile"].forEach(x=>{$(x+"View").classList.toggle("active",x===v);$("nav"+cap(x)).classList.toggle("active",x===v)});if(v==="trips")loadTrips();if(v==="profile")loadProfile()}
 function cap(s){return s[0].toUpperCase()+s.slice(1)}
-async function loadTrips(){const r=await api("listarCorridasPassageiro",{passageiroId:user.id});$("tripsList").innerHTML=r.ok?r.corridas.map(c=>`<div class="history-item"><strong>${esc(c.origemBairro)} → ${esc(c.destinoBairro)}</strong><br><small>${esc(c.status)} • ${money((Number(c.valor)||0)+(Number(c.esperaValor)||0))}</small>${c.status==="FINALIZADA"&&!(Number(c.avaliacao)>0)?`<button class="btn btn-light" style="padding:10px" onclick="openRating(\'${c.id}\')">AVALIAR MOTOCA</button>`:Number(c.avaliacao)>0?`<div class="small" style="color:var(--s);margin-top:7px">${"★".repeat(Number(c.avaliacao))}</div>`:""}${c.motocaId?`<button class="btn btn-light" style="padding:10px" onclick="openReport(\'${c.id}\',\'${c.motocaId}\')">DENUNCIAR MOTOCA</button>`:""}</div>`).join(""):"Erro"}
+async function loadTrips(){
+  const r=await api("listarCorridasPassageiro",{passageiroId:user.id});
+  $("tripsList").innerHTML=r.ok?r.corridas.map(c=>{
+    const avaliada=Number(c.avaliacao)>0||isRatingDone(c.id);
+    return `<div class="history-item"><strong>${esc(c.origemBairro)} → ${esc(c.destinoBairro)}</strong><br><small>${esc(c.status)} • ${money((Number(c.valor)||0)+(Number(c.esperaValor)||0))}</small>${c.status==="FINALIZADA"&&!avaliada?`<button class="btn btn-light" style="padding:10px" onclick="openRating(\'${c.id}\')">AVALIAR MOTOCA</button>`:Number(c.avaliacao)>0?`<div class="small" style="color:var(--s);margin-top:7px">${"★".repeat(Number(c.avaliacao))}</div>`:""}${c.motocaId?`<button class="btn btn-light" style="padding:10px" onclick="openReport(\'${c.id}\',\'${c.motocaId}\')">DENUNCIAR MOTOCA</button>`:""}</div>`;
+  }).join(""):"Erro";
+}
 async function loadProfile(){const r=await api("obterPerfilPassageiro",{passageiroId:user.id});if(!r.ok)return alert(r.message);user={...user,...r.perfil};localStorage.setItem("motocas_passageiro",JSON.stringify(user));$("profileName").value=user.nome||"";$("profileEmail").value=user.email||"";$("profilePhone").value=formatPhone(user.telefone||"");renderProfilePhoto(user.fotoDataUrl)}
 function renderProfilePhoto(src){$("profilePhoto").innerHTML=src?`<img src="${src}">`:`<i class="fa-solid fa-user"></i>`}
 function handlePhoto(e){const f=e.target.files[0];if(!f)return;if(f.size>6*1024*1024)return alert("Escolha uma imagem de até 6 MB.");const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{const max=600,scale=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext("2d").drawImage(img,0,0,c.width,c.height);pendingPhotoMime="image/jpeg";pendingPhotoBase64=c.toDataURL("image/jpeg",.78);renderProfilePhoto(pendingPhotoBase64)};img.src=rd.result};rd.readAsDataURL(f)}
 async function saveProfile(){loading(true,"Salvando...");const r=await api("atualizarPerfilPassageiro",{passageiroId:user.id,nome:val("profileName"),email:val("profileEmail"),telefone:val("profilePhone"),fotoBase64:pendingPhotoBase64,fotoMime:pendingPhotoMime});loading(false);if(!r.ok)return msg("profileMsg",r.message,true);user={...user,...r.perfil};localStorage.setItem("motocas_passageiro",JSON.stringify(user));pendingPhotoBase64="";msg("profileMsg","Perfil atualizado.");renderProfilePhoto(user.fotoDataUrl)}
-async function checkRating(){const r=await api("corridaPendenteAvaliacao",{passageiroId:user.id});if(r.ok&&r.corrida)openRating(r.corrida.id)}
+async function checkRating(){
+  if(!user||ratingCheckBusy)return;
+  ratingCheckBusy=true;
+  try{
+    const r=await api("corridaPendenteAvaliacao",{passageiroId:user.id});
+    if(!r.ok||!r.corrida)return;
+
+    const id=r.corrida.id;
+    if(isRatingDone(id))return;
+
+    // Não reabre o mesmo modal se ele já estiver aberto.
+    if(ratingRideId===id&&!$("ratingModal").classList.contains("hidden"))return;
+    openRating(id);
+  }finally{
+    ratingCheckBusy=false;
+  }
+}
+function ratingDoneKey(id){return user&&user.id?`motocas_rating_done_${user.id}_${id}`:`motocas_rating_done_${id}`}
+function isRatingDone(id){return !!localStorage.getItem(ratingDoneKey(id))}
+function markRatingDone(id){if(id)localStorage.setItem(ratingDoneKey(id),"1")}
+
 function renderStars(){$("ratingStars").innerHTML=[1,2,3,4,5].map(i=>`<button id="star${i}" onclick="chooseRating(${i})"><i class="fa-solid fa-star"></i></button>`).join("")}
-function openRating(id){ratingRideId=id;ratingValue=0;chooseRating(0);$("ratingModal").classList.remove("hidden")}
+function openRating(id){
+  if(!id||isRatingDone(id))return;
+  ratingRideId=id;
+  ratingValue=0;
+  chooseRating(0);
+  $("ratingModal").classList.remove("hidden");
+}
 function closeRating(){$("ratingModal").classList.add("hidden")}
 function chooseRating(n){ratingValue=n;[1,2,3,4,5].forEach(i=>$("star"+i).classList.toggle("on",i<=n))}
-async function submitRating(){if(!ratingValue)return alert("Escolha uma nota.");loading(true,"Enviando...");const r=await api("avaliarCorrida",{corridaId:ratingRideId,passageiroId:user.id,nota:ratingValue});loading(false);if(!r.ok)return alert(r.message);closeRating();if($("tripsView").classList.contains("active"))loadTrips()}
+async function submitRating(){
+  if(!ratingValue)return alert("Escolha uma nota.");
+  if(!ratingRideId)return;
+
+  const rideId=ratingRideId;
+  loading(true,"Enviando...");
+
+  const r=await api("avaliarCorrida",{
+    corridaId:rideId,
+    passageiroId:user.id,
+    nota:ratingValue
+  });
+
+  loading(false);
+
+  if(!r.ok){
+    // Se o servidor informar que já foi avaliada, também impede reaparecimento.
+    const m=String(r.message||"").toLowerCase();
+    if(m.includes("já foi avaliada")||m.includes("ja foi avaliada")){
+      markRatingDone(rideId);
+      closeRating();
+      ratingRideId=null;
+      if($("tripsView").classList.contains("active"))loadTrips();
+      return;
+    }
+    return alert(r.message);
+  }
+
+  // Uma avaliação fica vinculada somente a ESTA viagem.
+  markRatingDone(rideId);
+  closeRating();
+  ratingRideId=null;
+  ratingValue=0;
+
+  if($("tripsView").classList.contains("active"))loadTrips();
+}
 
 function openChat(rideId){
   if(!rideId)return;
