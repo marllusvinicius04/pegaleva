@@ -70,8 +70,18 @@ function toggleMenu(force){
 function mode(m){["loginForm","cadForm","forgotForm"].forEach(x=>$(x).classList.add("hidden"));$("tabLogin").classList.toggle("active",m==="login");$("tabCad").classList.toggle("active",m==="cad");if(m==="login")$("loginForm").classList.remove("hidden");if(m==="cad")$("cadForm").classList.remove("hidden");if(m==="forgot")$("forgotForm").classList.remove("hidden")}
 async function loadCities(){const r=await api("listarCidades");if(r.ok)$("cidade").innerHTML='<option value="">Selecione</option>'+r.cidades.map(c=>`<option>${esc(c)}</option>`).join("")}
 function loadCityMap(city){
-  const q=encodeURIComponent((city||"Brasil")+", Brasil");
-  $("cityMap").src=`https://maps.google.com/maps?q=${q}&z=14&output=embed`;
+  const mapa=$("cityMap");
+  if(!mapa)return;
+
+  const cidade=String(city||"Brasil").trim();
+
+  // Mantém um mapa incorporado limpo, sem o card branco do Google Maps.
+  // O OpenStreetMap permite exibir o mapa sem aquela caixa de
+  // nome/endereço/"Ver mapa ampliado".
+  const busca=encodeURIComponent(cidade+", Brasil");
+  mapa.src="https://www.openstreetmap.org/export/embed.html?search="+busca;
+  mapa.setAttribute("loading","lazy");
+  mapa.setAttribute("referrerpolicy","no-referrer");
 }
 async function openApp(){
   $("auth").classList.add("hidden");
