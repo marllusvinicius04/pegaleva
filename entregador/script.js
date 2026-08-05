@@ -582,8 +582,25 @@ async function confirmStartWait(){if(!waitRideId)return;loading(true,"Ativando e
 async function stopWait(id){if(waitIntervals[id]){clearInterval(waitIntervals[id]);delete waitIntervals[id]}loading(true,"Parando espera...");const r=await api("pararEspera",{corridaId:id,motocaId:motoca.id});loading(false);if(!r.ok)return alert(r.message);loadActiveRides()}
 async function setRideStatus(id,status){
   const idx=activeRidesCache.findIndex(c=>c.id===id);
-  const anterior=idx>=0?activeRidesCache[idx].status:null;
+  const textos={
+    A_CAMINHO:"Avisando que está a caminho...",
+    CHEGOU:"Avisando que você chegou...",
+    EM_CORRIDA:"Iniciando corrida..."
+  };
 
+  loading(true,textos[status]||"Atualizando corrida...");
+
+  const r=await api("atualizarStatusCorrida",{
+    corridaId:id,
+    motocaId:motoca.id,
+    status
+  });
+
+  loading(false);
+
+  if(!r.ok)return alert(r.message);
+
+  // Só muda depois que o servidor confirmou, mas sem esperar uma segunda consulta.
   if(idx>=0){
     activeRidesCache[idx]={...activeRidesCache[idx],status};
     const box=$("activeCarousel");
@@ -591,20 +608,10 @@ async function setRideStatus(id,status){
     startWaitDisplays(activeRidesCache);
   }
 
-  const r=await api("atualizarStatusCorrida",{corridaId:id,motocaId:motoca.id,status});
-
-  if(!r.ok){
-    if(idx>=0&&anterior){
-      activeRidesCache[idx]={...activeRidesCache[idx],status:anterior};
-      const box=$("activeCarousel");
-      if(box)box.innerHTML=activeRidesCache.map((c,i)=>rideCard(c,i)).join("");
-      startWaitDisplays(activeRidesCache);
-    }
-    return alert(r.message);
-  }
-
   if(status!=="EM_CORRIDA")rideStateRestored=true;
-  setTimeout(()=>loadActiveRides(),80);
+
+  // Confere/sincroniza em segundo plano.
+  setTimeout(()=>loadActiveRides(),350);
 }
 async function openPayment(id,restoring=false){
   if(paymentBusy)return;
@@ -670,6 +677,7 @@ async function confirmPaymentNow(){
     saveRideState({rideId,stage:"READY_TO_FINISH"});
     rideStateRestored=true;
 
+    // Servidor confirmou: agora troca imediatamente para FINALIZAR.
     const idx=activeRidesCache.findIndex(c=>c.id===rideId);
     if(idx>=0){
       activeRidesCache[idx]={
@@ -683,8 +691,10 @@ async function confirmPaymentNow(){
       startWaitDisplays(activeRidesCache);
     }
 
-    strongAlert("Pagamento confirmado","Pagamento recebido. Finalize a viagem no botão verde.","finish");
-    setTimeout(()=>loadActiveRides(),100);
+    strongAlert("Pagamento confirmado","Pagamento recebido. Agora você pode finalizar a viagem.","finish");
+
+    // Apenas sincronização posterior; não segura o próximo botão.
+    setTimeout(()=>loadActiveRides(),350);
   }finally{
     paymentBusy=false;
     loading(false);
@@ -695,7 +705,7 @@ async function finalizeRide(id){
   if(!confirm("Confirmar finalização desta viagem?"))return;
 
   paymentBusy=true;
-  loading(true,"Finalizando...");
+  loading(true,"Finalizando viagem...");
 
   try{
     const r=await api("finalizarCorrida",{corridaId:id,motocaId:motoca.id});
@@ -714,9 +724,11 @@ async function finalizeRide(id){
         : '<div class="small">Nenhuma corrida aceita.</div>';
     }
 
-    strongAlert("Viagem finalizada","Corrida concluída e saldo atualizado.","finish");
-    setTimeout(()=>loadBalance(),0);
-    setTimeout(()=>loadActiveRides(),100);
+    strongAlert("Viagem finalizada","Corrida concluída com sucesso.","finish");
+
+    // Dados secundários atualizam depois.
+    setTimeout(()=>loadBalance(),150);
+    setTimeout(()=>loadActiveRides(),450);
   }finally{
     paymentBusy=false;
     loading(false);
