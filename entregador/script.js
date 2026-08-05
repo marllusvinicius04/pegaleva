@@ -1,5 +1,5 @@
 const API="https://script.google.com/macros/s/AKfycbxYv4UOTDPWrr7Kdpu-oZdgQqGyGc8ZX-0OOBk6vFrwENvlBcjyDrCNBhyF3MxvS_8GsA/exec";
-let motoca=null,online=false,pollTimer=null,lastOfferId=null,currentOffer=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",waitRideId=null,paymentRideId=null,paymentMethod=null,photoToOpen="",waitIntervals={},chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnreadByRide={},chatBusy=false,chatPendingRefresh=false,lastActiveStatuses={},activeRidesBusy=false,offerBusy=false,tripsBusy=false,paymentBusy=false,rideStateRestored=false;
+let motoca=null,online=false,pollTimer=null,lastOfferId=null,currentOffer=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",waitRideId=null,paymentRideId=null,paymentMethod=null,photoToOpen="",waitIntervals={},chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnreadByRide={},chatBusy=false,chatPendingRefresh=false,lastActiveStatuses={},activeRidesBusy=false,offerBusy=false,tripsBusy=false,paymentBusy=false,rideStateRestored=false,activeRidesCache=[];
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 let balanceVisible=true,balanceRealValue=0;
 function renderBalanceVisibility(){
@@ -119,7 +119,37 @@ async function openApp(){
   },3000);
 }
 function ensureAudio(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume()}
-async function toggleOnline(){ensureAudio();loading(true,online?"Ficando offline...":"Ficando online...");const r=await api("definirOnlineMotoca",{motocaId:motoca.id,online:!online});loading(false);if(!r.ok)return alert(r.message);online=!online;motoca.online=online;localStorage.setItem("motocas_motoca",JSON.stringify(motoca));renderOnline();if(online)pollOffer();else $("offerPopup").classList.remove("show")}
+async function toggleOnline(){
+  ensureAudio();
+
+  if(online){
+    if(activeRidesCache.length){
+      return alert("Você possui corrida(s) ativa(s). Finalize todas antes de ficar offline.");
+    }
+
+    loading(true,"Verificando corridas...");
+    const check=await api("listarCorridasAtivasMotoca",{motocaId:motoca.id});
+    loading(false);
+
+    if(check.ok&&Array.isArray(check.corridas)&&check.corridas.length){
+      activeRidesCache=check.corridas;
+      return alert("Você possui corrida(s) ativa(s). Finalize todas antes de ficar offline.");
+    }
+  }
+
+  loading(true,online?"Ficando offline...":"Ficando online...");
+  const r=await api("definirOnlineMotoca",{motocaId:motoca.id,online:!online});
+  loading(false);
+  if(!r.ok)return alert(r.message);
+
+  online=!online;
+  motoca.online=online;
+  localStorage.setItem("motocas_motoca",JSON.stringify(motoca));
+  renderOnline();
+
+  if(online)pollOffer();
+  else $("offerPopup").classList.remove("show");
+}
 function renderOnline(){$("rangeSwitch").classList.toggle("online",online);$("statusLabel").textContent=online?"ONLINE":"OFFLINE";$("statusLabel").style.color=online?"var(--ok)":"var(--danger)"}
 async function loadBalance(){const r=await api("resumoGanhosMotoca",{motocaId:motoca.id});if(!r.ok)return;balanceRealValue=Number(r.saldo)||0;renderBalanceVisibility();$("corridasCount").textContent=`${r.quantidade} corridas`;$("statTrips").textContent=r.quantidade;$("statMoney").textContent=money(r.saldo);$("statRating").textContent=(Number(r.mediaAvaliacao)||0).toFixed(1);$("grossValue").textContent=money(r.bruto);$("feeValue").textContent=money(r.taxa);$("netValue").textContent=money(r.saldo);$("withdrawName").textContent=motoca.nome||"";$("withdrawEmail").textContent=motoca.email||"";$("withdrawAmount").textContent=money(r.saldo)}
 async function pollOffer(){
@@ -235,6 +265,7 @@ async function loadActiveRides(){
   try{
     const r=await api("listarCorridasAtivasMotoca",{motocaId:motoca.id});
     if(!r.ok)return;
+    activeRidesCache=Array.isArray(r.corridas)?r.corridas:[];
     const box=$("activeCarousel");
     const currentIds=new Set(r.corridas.map(c=>c.id));
     Object.keys(lastActiveStatuses).forEach(id=>{
@@ -550,20 +581,38 @@ function closeWaitConfirm(){$("waitConfirmModal").classList.add("hidden");waitRi
 async function confirmStartWait(){if(!waitRideId)return;loading(true,"Ativando espera...");const r=await api("iniciarEspera",{corridaId:waitRideId,motocaId:motoca.id});loading(false);if(!r.ok)return alert(r.message);closeWaitConfirm();loadActiveRides()}
 async function stopWait(id){if(waitIntervals[id]){clearInterval(waitIntervals[id]);delete waitIntervals[id]}loading(true,"Parando espera...");const r=await api("pararEspera",{corridaId:id,motocaId:motoca.id});loading(false);if(!r.ok)return alert(r.message);loadActiveRides()}
 async function setRideStatus(id,status){
-  loading(true,"Atualizando...");
+  const idx=activeRidesCache.findIndex(c=>c.id===id);
+  const anterior=idx>=0?activeRidesCache[idx].status:null;
+
+  if(idx>=0){
+    activeRidesCache[idx]={...activeRidesCache[idx],status};
+    const box=$("activeCarousel");
+    if(box)box.innerHTML=activeRidesCache.map((c,i)=>rideCard(c,i)).join("");
+    startWaitDisplays(activeRidesCache);
+  }
+
   const r=await api("atualizarStatusCorrida",{corridaId:id,motocaId:motoca.id,status});
-  loading(false);
-  if(!r.ok)return alert(r.message);
+
+  if(!r.ok){
+    if(idx>=0&&anterior){
+      activeRidesCache[idx]={...activeRidesCache[idx],status:anterior};
+      const box=$("activeCarousel");
+      if(box)box.innerHTML=activeRidesCache.map((c,i)=>rideCard(c,i)).join("");
+      startWaitDisplays(activeRidesCache);
+    }
+    return alert(r.message);
+  }
+
   if(status!=="EM_CORRIDA")rideStateRestored=true;
-  loadActiveRides();
+  setTimeout(()=>loadActiveRides(),80);
 }
 async function openPayment(id,restoring=false){
   if(paymentBusy)return;
   paymentBusy=true;
   try{
-    const lista=await api("listarCorridasAtivasMotoca",{motocaId:motoca.id});
-    const c=lista.ok?lista.corridas.find(x=>x.id===id):null;
-    if(c&&c.status==="AGUARDANDO_PAGAMENTO"&&c.pagamentoStatus==="CONFIRMADO"){
+    const cached=activeRidesCache.find(x=>x.id===id);
+
+    if(cached&&cached.status==="AGUARDANDO_PAGAMENTO"&&cached.pagamentoStatus==="CONFIRMADO"){
       saveRideState({rideId:id,stage:"READY_TO_FINISH"});
       rideStateRestored=true;
       $("paymentModal").classList.add("hidden");
@@ -571,9 +620,11 @@ async function openPayment(id,restoring=false){
       if(!restoring)strongAlert("Pagamento confirmado","Agora finalize a viagem.","finish");
       return;
     }
+
     if(!restoring)loading(true,"Preparando pagamento...");
     const r=await api("prepararPagamento",{corridaId:id,motocaId:motoca.id});
     if(!r.ok)return alert(r.message);
+
     paymentRideId=id;
     saveRideState({rideId:id,stage:"PAYMENT"});
     rideStateRestored=true;
@@ -596,41 +647,76 @@ function closeConfirmPayment(){$("confirmPaymentModal").classList.add("hidden")}
 async function confirmPaymentNow(){
   if(paymentBusy)return;
   paymentBusy=true;
+
   const rideId=paymentRideId;
   const method=paymentMethod;
+
   $("confirmPaymentModal").classList.add("hidden");
   loading(true,"Confirmando pagamento...");
+
   try{
-    const r=await api("confirmarPagamentoCorrida",{corridaId:rideId,motocaId:motoca.id,metodo:method});
+    const r=await api("confirmarPagamentoCorrida",{
+      corridaId:rideId,
+      motocaId:motoca.id,
+      metodo:method
+    });
+
     if(!r.ok){
       $("confirmPaymentModal").classList.remove("hidden");
       return alert(r.message);
     }
+
     $("paymentModal").classList.add("hidden");
-    saveRideState({rideId:rideId,stage:"READY_TO_FINISH"});
+    saveRideState({rideId,stage:"READY_TO_FINISH"});
     rideStateRestored=true;
+
+    const idx=activeRidesCache.findIndex(c=>c.id===rideId);
+    if(idx>=0){
+      activeRidesCache[idx]={
+        ...activeRidesCache[idx],
+        status:"AGUARDANDO_PAGAMENTO",
+        pagamentoStatus:"CONFIRMADO",
+        pagamentoMetodo:method
+      };
+      const box=$("activeCarousel");
+      if(box)box.innerHTML=activeRidesCache.map((c,i)=>rideCard(c,i)).join("");
+      startWaitDisplays(activeRidesCache);
+    }
+
     strongAlert("Pagamento confirmado","Pagamento recebido. Finalize a viagem no botão verde.","finish");
+    setTimeout(()=>loadActiveRides(),100);
   }finally{
     paymentBusy=false;
     loading(false);
   }
-  await loadActiveRides();
 }
 async function finalizeRide(id){
   if(paymentBusy)return;
   if(!confirm("Confirmar finalização desta viagem?"))return;
+
   paymentBusy=true;
   loading(true,"Finalizando...");
+
   try{
     const r=await api("finalizarCorrida",{corridaId:id,motocaId:motoca.id});
     if(!r.ok)return alert(r.message);
+
     delete lastActiveStatuses[id];
     saveRideState(null);
     rideStateRestored=true;
     closeChat();
-    await loadBalance();
-    await loadActiveRides();
+
+    activeRidesCache=activeRidesCache.filter(c=>c.id!==id);
+    const box=$("activeCarousel");
+    if(box){
+      box.innerHTML=activeRidesCache.length
+        ? activeRidesCache.map((c,i)=>rideCard(c,i)).join("")
+        : '<div class="small">Nenhuma corrida aceita.</div>';
+    }
+
     strongAlert("Viagem finalizada","Corrida concluída e saldo atualizado.","finish");
+    setTimeout(()=>loadBalance(),0);
+    setTimeout(()=>loadActiveRides(),100);
   }finally{
     paymentBusy=false;
     loading(false);
@@ -700,6 +786,7 @@ function logout(){
   tripsBusy=false;
   paymentBusy=false;
   rideStateRestored=false;
+  activeRidesCache=[];
 
   if($("offerPopup"))$("offerPopup").classList.remove("show");
   if($("app"))$("app").classList.add("hidden");
