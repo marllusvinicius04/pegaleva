@@ -19,9 +19,7 @@
   padding: 0;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
   font-family: Arial, Helvetica, sans-serif;
@@ -36,16 +34,10 @@ a {
   word-break: break-word;
 }
 
-a:hover {
-  text-decoration: underline;
-}
+a:hover { text-decoration: underline; }
 
 .topo {
-  background: linear-gradient(
-    135deg,
-    var(--cor-principal),
-    var(--cor-principal-escura)
-  );
+  background: linear-gradient(135deg, var(--cor-principal), var(--cor-principal-escura));
   color: #ffffff;
   padding: 52px 20px 70px;
   text-align: center;
@@ -102,9 +94,7 @@ a:hover {
   color: var(--cor-texto-suave);
 }
 
-section {
-  scroll-margin-top: 20px;
-}
+section { scroll-margin-top: 20px; }
 
 section + section {
   margin-top: 34px;
@@ -119,17 +109,9 @@ h2 {
   line-height: 1.35;
 }
 
-p + p {
-  margin-top: 12px;
-}
-
-ul {
-  margin: 14px 0 0 22px;
-}
-
-li + li {
-  margin-top: 7px;
-}
+p + p { margin-top: 12px; }
+ul { margin: 14px 0 0 22px; }
+li + li { margin-top: 7px; }
 
 .contato {
   margin-top: 18px;
@@ -139,9 +121,7 @@ li + li {
   border: 1px solid #dce3ff;
 }
 
-.contato p + p {
-  margin-top: 9px;
-}
+.contato p + p { margin-top: 9px; }
 
 .rodape {
   padding: 0 20px 34px;
@@ -156,15 +136,7 @@ li + li {
     padding-bottom: 62px;
   }
 
-  .pagina {
-    width: min(100% - 20px, 980px);
-  }
-
-  .politica {
-    border-radius: 14px;
-  }
-
-  .contato {
-    padding: 18px;
-  }
+  .pagina { width: min(100% - 20px, 980px); }
+  .politica { border-radius: 14px; }
+  .contato { padding: 18px; }
 }
