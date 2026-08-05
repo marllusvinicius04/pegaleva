@@ -1,160 +1,148 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Motocas • Motoca</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Motocas • Passageiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="loading" class="loader hidden"><div class="spinner"></div><strong id="loadingText">Carregando...</strong></div>
 
 <section id="auth" class="auth"><div class="auth-card">
-<div class="logo"><img src="https://i.ibb.co/V0c4KbYY/image-removebg-preview-1.png"><h2>Área do Motoca</h2><p class="small">Fique online, aceite corridas e acompanhe seus ganhos.</p></div>
+<div class="logo-wrap"><img src="https://i.ibb.co/V0c4KbYY/image-removebg-preview-1.png"><h2>Vá de Motocas</h2><p class="small">Mobilidade econômica e prática.</p></div>
 <div class="tabs"><button id="tabLogin" class="active" onclick="mode('login')">Entrar</button><button id="tabCad" onclick="mode('cad')">Cadastrar</button></div>
-<form id="loginForm"><div class="form-group"><label>E-mail</label><input id="loginEmail" type="email" placeholder="Digite seu e-mail"></div><div class="form-group"><label>Senha</label><input id="loginSenha" type="password" placeholder="Digite sua senha"></div><button class="btn">ENTRAR</button><button type="button" class="btn btn-light" onclick="mode('forgot')">ESQUECI MINHA SENHA</button><div id="loginMsg" class="msg"></div></form>
+<form id="loginForm"><div class="form-group"><label>E-mail</label><div class="input"><i class="fa-solid fa-envelope"></i><input id="loginEmail" type="email" placeholder="Digite seu e-mail"></div></div><div class="form-group"><label>Senha</label><div class="input"><i class="fa-solid fa-lock"></i><input id="loginSenha" type="password" placeholder="Digite sua senha"></div></div><button class="btn">ENTRAR</button><button type="button" class="btn btn-light" onclick="mode('forgot')">ESQUECI MINHA SENHA</button><div id="loginMsg" class="msg"></div></form>
 <form id="cadForm" class="hidden">
-<div class="cad-progress"><span id="cadP1" class="on"></span><span id="cadP2"></span><span id="cadP3"></span></div>
-
-<div id="cadStep1">
-  <h3>Seus dados</h3>
-  <div class="grid2">
-    <div class="form-group"><label>Nome</label><div class="field-icon"><i class="fa-solid fa-user"></i><input id="nome" placeholder="Digite seu nome completo"></div></div>
-    <div class="form-group"><label>E-mail</label><div class="field-icon"><i class="fa-solid fa-envelope"></i><input id="email" type="email" placeholder="Digite seu melhor e-mail"></div></div>
-  </div>
-  <div class="grid2">
-    <div class="form-group"><label>CPF</label><div class="field-icon"><i class="fa-solid fa-id-card"></i><input id="cpf" inputmode="numeric" placeholder="000.000.000-00"></div></div>
-    <div class="form-group"><label>WhatsApp</label><div class="field-icon wa-input"><i class="fa-brands fa-whatsapp"></i><input id="telefone" inputmode="tel" placeholder="DDD + número" oninput="maskPhone(this)"></div></div>
-  </div>
-  <div class="form-group"><label>Cidade</label><div class="field-icon"><i class="fa-solid fa-city"></i><select id="cidade"></select></div></div>
-  <button type="button" class="btn" onclick="cadStep(2)">CONTINUAR</button>
-</div>
-
-<div id="cadStep2" class="hidden">
-  <h3>Sua moto</h3>
-  <div class="grid2">
-    <div class="form-group"><label>CNH</label><div class="field-icon"><i class="fa-solid fa-id-badge"></i><input id="cnh" placeholder="Número da CNH"></div></div>
-    <div class="form-group"><label>Placa</label><div class="field-icon"><i class="fa-solid fa-motorcycle"></i><input id="placa" placeholder="Ex.: ABC1D23"></div></div>
-  </div>
-  <div class="grid2">
-    <div class="form-group"><label>Marca</label><div class="field-icon"><i class="fa-solid fa-motorcycle"></i><input id="marca" placeholder="Ex.: Honda"></div></div>
-    <div class="form-group"><label>Modelo</label><div class="field-icon"><i class="fa-solid fa-motorcycle"></i><input id="modelo" placeholder="Ex.: CG 160"></div></div>
-  </div>
-  <div class="grid2">
-    <div class="form-group"><label>Cor</label><div class="field-icon"><i class="fa-solid fa-palette"></i><input id="cor" placeholder="Ex.: Preta"></div></div>
-    <div class="form-group"><label>Ano</label><div class="field-icon"><i class="fa-solid fa-calendar"></i><input id="ano" inputmode="numeric" placeholder="Ex.: 2024"></div></div>
-  </div>
-  <div class="grid2"><button type="button" class="btn btn-light" onclick="cadStep(1)">VOLTAR</button><button type="button" class="btn" onclick="cadStep(3)">CONTINUAR</button></div>
-</div>
-
-<div id="cadStep3" class="hidden">
-  <h3>Acesso</h3>
-  <div class="form-group"><label>Senha</label><div class="field-icon"><i class="fa-solid fa-lock"></i><input id="senha" type="password" placeholder="Crie uma senha com pelo menos 6 caracteres"></div></div>
-  <div class="form-group"><label>Confirmar senha</label><div class="field-icon"><i class="fa-solid fa-lock"></i><input id="senhaConfirm" type="password" placeholder="Digite a senha novamente"></div></div>
-  <div class="grid2"><button type="button" class="btn btn-light" onclick="cadStep(2)">VOLTAR</button><button class="btn">ENVIAR PARA APROVAÇÃO</button></div>
-</div>
-<div id="cadMsg" class="msg"></div>
+<div class="form-group"><label>Nome</label><div class="input"><i class="fa-solid fa-user"></i><input id="nome" placeholder="Digite seu nome completo"></div></div>
+<div class="form-group"><label>E-mail</label><div class="input"><i class="fa-solid fa-envelope"></i><input id="email" type="email" placeholder="Digite seu melhor e-mail"></div></div>
+<div class="form-group"><label>CPF</label><div class="input"><i class="fa-solid fa-id-card"></i><input id="cpf" inputmode="numeric" placeholder="000.000.000-00"></div></div>
+<div class="form-group"><label>WhatsApp</label><div class="input wa-input"><i class="fa-brands fa-whatsapp"></i><input id="telefone" inputmode="tel" placeholder="DDD + número" oninput="maskPhone(this)"></div></div>
+<div class="form-group"><label>Cidade</label><div class="input"><i class="fa-solid fa-city"></i><select id="cidade"></select></div></div>
+<div class="form-group"><label>Senha</label><div class="input"><i class="fa-solid fa-lock"></i><input id="senha" type="password" placeholder="Crie uma senha com pelo menos 6 caracteres"></div></div>
+<button class="btn">CRIAR CONTA</button><div id="cadMsg" class="msg"></div>
 </form>
-<form id="forgotForm" class="hidden"><h3>Recuperar senha</h3><div class="form-group"><label>E-mail cadastrado</label><input id="forgotEmail"></div><button type="button" class="btn" onclick="sendReset()">ENVIAR CÓDIGO</button><div id="reset2" class="hidden"><div class="form-group"><label>Código</label><input id="resetCode"></div><div class="form-group"><label>Nova senha</label><input id="newPass" type="password"></div><button type="button" class="btn btn-dark" onclick="confirmReset()">REDEFINIR</button></div><button type="button" class="btn btn-light" onclick="mode('login')">VOLTAR</button><div id="forgotMsg" class="msg"></div></form>
+<form id="forgotForm" class="hidden"><h3>Recuperar senha</h3><div class="form-group"><label>E-mail cadastrado</label><input id="forgotEmail" type="email"></div><button type="button" class="btn" onclick="sendReset()">ENVIAR CÓDIGO</button><div id="reset2" class="hidden"><div class="form-group"><label>Código</label><input id="resetCode"></div><div class="form-group"><label>Nova senha</label><input id="newPass" type="password"></div><button type="button" class="btn btn-dark" onclick="confirmReset()">REDEFINIR</button></div><button type="button" class="btn btn-light" onclick="mode('login')">VOLTAR</button><div id="forgotMsg" class="msg"></div></form>
 </div></section>
 
 
 <section id="welcome" class="auth hidden">
   <div class="auth-card welcome-card">
-    <div class="welcome-icon"><i class="fa-solid fa-hourglass-half"></i></div>
-    <h2>Cadastro enviado!</h2>
-    <p>Bem-vindo ao Motocas. Recebemos seus dados e seu cadastro agora segue para aprovação da equipe.</p>
-    <div class="welcome-summary">
-      <small>CADASTRO DE</small>
-      <strong id="welcomeName">Motoca</strong>
+    <div class="welcome-icon"><i class="fa-solid fa-circle-check"></i></div>
+    <h2>Conta criada!</h2>
+    <p>Bem-vindo ao Motocas. Seu cadastro foi concluído e você já pode começar a solicitar suas corridas.</p>
+    <div class="welcome-name">
+      <small>CONTA CRIADA PARA</small>
+      <strong id="welcomeName">Passageiro</strong>
     </div>
-    <button class="btn" onclick="continueAfterSignup()">ACOMPANHAR APROVAÇÃO</button>
+    <button class="btn" onclick="accessAfterSignup()">ACESSAR MOTOCAS</button>
   </div>
 </section>
 
-<section id="approval" class="auth hidden"><div class="auth-card approval-card"><div class="approval-icon"><i class="fa-solid fa-hourglass-half"></i></div><h2>Cadastro em aprovação</h2><p id="approvalText" class="small">Nossa equipe está revisando seus dados.</p><button class="btn btn-dark" onclick="logout()">SAIR</button></div></section>
-
 <section id="app" class="app hidden">
-<header class="topbar"><button class="menu-btn" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i></button><img src="https://i.ibb.co/YF4Wj6r4/Chat-GPT-Image-4-de-ago-de-2026-20-55-22-removebg-preview-1.png"><strong>MOTOCA</strong><span id="cityTop" class="city"></span></header>
+<header class="topbar"><button class="menu-btn" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i></button><img src="https://i.ibb.co/YF4Wj6r4/Chat-GPT-Image-4-de-ago-de-2026-20-55-22-removebg-preview-1.png"><strong>PASSAGEIRO</strong><span id="cityTop" class="city"></span></header>
 <aside id="sideMenu" class="drawer">
-  <h3 id="drawerName">Motoca</h3><small id="drawerEmail"></small>
+  <h3 id="drawerName">Passageiro</h3><small id="drawerEmail"></small>
   <a onclick="showView('home');toggleMenu(false)"><i class="fa-solid fa-house"></i> Início</a>
-  <a onclick="showView('trips');toggleMenu(false)"><i class="fa-solid fa-route"></i> Corridas</a>
-  <a onclick="showView('earnings');toggleMenu(false)"><i class="fa-solid fa-wallet"></i> Ganhos</a>
+  <a onclick="showView('trips');toggleMenu(false)"><i class="fa-solid fa-clock-rotate-left"></i> Corridas</a>
   <a onclick="showView('profile');toggleMenu(false)"><i class="fa-solid fa-user"></i> Perfil</a>
   <a onclick="openSupportWhatsApp()"><i class="fa-brands fa-whatsapp"></i> Suporte WhatsApp</a>
   <a onclick="requestAccountDeletion()"><i class="fa-solid fa-user-xmark"></i> Excluir minha conta</a>
   <a onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
 </aside>
 <div id="drawerOverlay" class="drawer-overlay" onclick="toggleMenu(false)"></div>
-<main class="wrap">
-
-<div id="homeView" class="view active">
-<section class="hero"><div class="hero-head"><div><small>Bem-vindo</small><h1 id="first">Motoca</h1></div><i class="fa-solid fa-motorcycle" style="font-size:28px;color:var(--s)"></i></div><div class="balance-grid"><div class="balance-card"><small>SALDO LÍQUIDO</small><div class="balance-line"><div id="saldo" class="balance">R$ 0,00</div><button type="button" id="balanceEye" class="balance-eye" onclick="toggleBalanceVisibility()" aria-label="Ocultar saldo"><i class="fa-solid fa-eye"></i></button></div><strong id="corridasCount">0 corridas</strong></div><div class="balance-card"><small>DISPONIBILIDADE</small><div class="availability"><div class="availability-title"><strong>STATUS</strong><span id="statusLabel">OFFLINE</span></div><div id="rangeSwitch" class="range-switch" onclick="toggleOnline()"><div class="range-item offline-item"><i class="fa-solid fa-motorcycle"></i> OFF</div><div class="range-item online-item"><i class="fa-solid fa-motorcycle"></i> ON</div></div></div></div></div></section>
-<div class="stats"><div class="stat"><i class="fa-solid fa-route"></i><strong id="statTrips">0</strong><small>CORRIDAS</small></div><div class="stat"><i class="fa-solid fa-wallet"></i><strong id="statMoney">R$ 0</strong><small>GANHOS</small></div><div class="stat"><i class="fa-solid fa-star"></i><strong id="statRating">0.0</strong><small>AVALIAÇÃO</small></div></div>
-<section class="card"><div class="card-title">Corridas aceitas</div><div id="activeCarousel" class="active-carousel"><div class="small">Nenhuma corrida aceita.</div></div></section>
-</div>
-
-<div id="tripsView" class="view"><div class="card"><div class="card-title">Minhas corridas</div><div id="tripsList"></div></div></div>
-<div id="earningsView" class="view">
-<div class="card">
-  <div class="card-title">Ganhos</div>
-  <p>Bruto: <strong id="grossValue"></strong></p>
-  <p>Descontos: <strong id="feeValue" style="color:var(--danger)"></strong></p>
-  <p>Seu saldo: <strong id="netValue" style="color:var(--ok)"></strong></p>
-
-  <div class="withdraw-box">
-    <div class="card-title" style="font-size:14px">Solicitar saque</div>
-    <div class="withdraw-line"><span>Nome</span><strong id="withdrawName"></strong></div>
-    <div class="withdraw-line"><span>E-mail</span><strong id="withdrawEmail"></strong></div>
-    <div class="withdraw-line"><span>Valor solicitado</span><strong id="withdrawAmount"></strong></div>
-    <div class="form-group" style="margin-top:12px">
-      <label>Chave Pix para receber</label>
-      <input id="withdrawPix" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
-    </div>
-    <button class="btn" onclick="requestWithdraw()"><i class="fa-solid fa-money-bill-transfer"></i> SOLICITAR SAQUE</button>
-    <p class="small">Mínimo de R$ 10,00. Uma solicitação por dia. Pagamentos são realizados até o fim do dia.</p>
-    <div id="withdrawMsg" class="msg"></div>
+<div class="map">
+  <iframe id="cityMap" class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa da cidade"></iframe>
+  <div class="map-shade"></div>
+  <div class="pin-radar">
+    <span class="pin-wave"></span>
+    <span class="pin-wave w2"></span>
+    <span class="pin-wave w3"></span>
+    <div class="pin"><i class="fa-solid fa-location-dot"></i></div>
   </div>
+  <div class="map-label"><small>VOCÊ ESTÁ EM</small><strong id="mapCity"></strong></div>
+</div>
+<nav class="tabsbar"><button id="navHome" class="active" onclick="showView('home')"><i class="fa-solid fa-house"></i>INÍCIO</button><button id="navTrips" onclick="showView('trips')"><i class="fa-solid fa-clock-rotate-left"></i>CORRIDAS</button><button id="navProfile" onclick="showView('profile')"><i class="fa-solid fa-user"></i>PERFIL</button></nav>
 
-  <div id="withdrawList"></div>
-</div>
-</div>
-<div id="profileView" class="view"><div class="card"><div id="profilePhoto" class="profile-photo"><i class="fa-solid fa-user"></i></div><label class="photo-btn"><i class="fa-solid fa-camera"></i> ALTERAR FOTO<input id="photoInput" type="file" accept="image/*" class="hidden"></label><div class="form-group"><label>Nome</label><input id="profileName" class="readonly" readonly></div><div class="form-group"><label>E-mail</label><input id="profileEmail"></div><div class="form-group"><label>WhatsApp</label><div class="field-icon wa-input"><i class="fa-brands fa-whatsapp"></i><input id="profilePhone" inputmode="tel" placeholder="DDD + número" oninput="maskPhone(this)"></div></div><button class="btn" onclick="saveProfile()">SALVAR PERFIL</button><div id="profileMsg" class="msg"></div></div></div>
+<main class="content">
+<div id="homeView" class="view active"><div class="card"><div class="card-title">Mobilidade simples</div><div class="small">Veja o preço antes de solicitar e acompanhe a situação da sua corrida.</div></div></div>
+<div id="tripsView" class="view"><div class="card"><div class="card-title">Minhas corridas</div><div id="tripsList"></div></div></div>
+<div id="profileView" class="view"><div class="card"><div id="profilePhoto" class="profile-photo"><i class="fa-solid fa-user"></i></div><label class="photo-btn"><i class="fa-solid fa-camera"></i> ALTERAR FOTO<input id="photoInput" type="file" accept="image/*" class="hidden"></label><div class="form-group"><label>Nome</label><input id="profileName"></div><div class="form-group"><label>E-mail</label><input id="profileEmail"></div><div class="form-group"><label>WhatsApp</label><div class="input wa-input"><i class="fa-brands fa-whatsapp"></i><input id="profilePhone" inputmode="tel" placeholder="DDD + número" oninput="maskPhone(this)"></div></div><button class="btn" onclick="saveProfile()">SALVAR PERFIL</button><div id="profileMsg" class="msg"></div></div></div>
 </main>
 
 <a class="panic" href="tel:190" aria-label="Ligar para emergência"><strong style="font-size:14px">190</strong></a>
 
-<nav class="bottom"><button id="navHome" class="active" onclick="showView('home')"><i class="fa-solid fa-house"></i>INÍCIO</button><button id="navTrips" onclick="showView('trips')"><i class="fa-solid fa-route"></i>CORRIDAS</button><button id="navEarnings" onclick="showView('earnings')"><i class="fa-solid fa-wallet"></i>GANHOS</button><button id="navProfile" onclick="showView('profile')"><i class="fa-solid fa-user"></i>PERFIL</button></nav>
+<section class="ride-sheet">
+<div class="handle"></div>
+<div id="stepContent">
+<div class="sheet-head"><div class="sheet-title" id="sheetTitle">Onde você está?</div><div class="step" id="stepLabel">ETAPA 1 DE 5</div></div>
+<div class="progress"><span id="p1" class="on"></span><span id="p2"></span><span id="p3"></span><span id="p4"></span><span id="p5"></span></div>
+<div id="step1"><div class="choice"><i class="fa-solid fa-location-crosshairs"></i><select id="origemBairro"></select></div><div class="actions one"><button class="btn btn-dark" onclick="nextStep(2)">CONTINUAR</button></div></div>
+<div id="step2" class="hidden">
+  <div class="choice"><i class="fa-solid fa-road"></i><input id="origemLogradouro" placeholder="Rua, avenida ou logradouro"></div>
+  <div class="choice"><i class="fa-solid fa-hashtag"></i><input id="origemNumero" inputmode="numeric" placeholder="Número (se não tiver, coloque 0)"></div>
+  <div class="choice"><i class="fa-solid fa-map-pin"></i><input id="origemReferencia" placeholder="Ponto de referência"></div>
+  <div class="actions"><button class="btn btn-light" onclick="nextStep(1)">VOLTAR</button><button class="btn btn-dark" onclick="nextStep(3)">CONTINUAR</button></div>
+</div>
+<div id="step3" class="hidden"><div class="choice"><i class="fa-solid fa-flag-checkered"></i><select id="destinoBairro"></select></div><div class="actions"><button class="btn btn-light" onclick="nextStep(2)">VOLTAR</button><button class="btn btn-dark" onclick="nextStep(4)">CONTINUAR</button></div></div>
+<div id="step4" class="hidden">
+  <div class="choice"><i class="fa-solid fa-road"></i><input id="destinoLogradouro" placeholder="Rua, avenida ou logradouro"></div>
+  <div class="choice"><i class="fa-solid fa-hashtag"></i><input id="destinoNumero" inputmode="numeric" placeholder="Número (se não tiver, coloque 0)"></div>
+  <div class="choice"><i class="fa-solid fa-map-pin"></i><input id="destinoReferencia" placeholder="Ponto de referência"></div>
+  <div class="actions"><button class="btn btn-light" onclick="nextStep(3)">VOLTAR</button><button class="btn btn-dark" onclick="nextStep(5)">VER VALOR</button></div>
+</div>
+<div id="step5" class="hidden"><div class="farebox"><div><small>VALOR</small><div id="fareValue" class="fare">R$ 0,00</div></div><i class="fa-solid fa-motorcycle"></i></div><div class="choice"><i class="fa-solid fa-wallet"></i><select id="pagamento"><option>Dinheiro</option><option>Pix</option></select></div><div class="actions"><button class="btn btn-light" onclick="nextStep(4)">VOLTAR</button><button class="btn" onclick="requestRide()">SOLICITAR</button></div></div>
+</div>
+
+<div id="searchState" class="hidden search"><div class="sheet-title">Buscando um Motoca...</div><div class="moto-run"><i class="fa-solid fa-motorcycle"></i></div><button id="cancelPendingBtn" class="btn btn-danger" onclick="cancelActiveRide()">CANCELAR CORRIDA</button></div>
+
+<div id="acceptedState" class="hidden">
+<div class="sheet-head"><div class="sheet-title">Seu Motoca</div><div class="step" id="driverStatus"></div></div>
+<div class="person">
+  <div id="driverAvatar" class="avatar" onclick="openDriverPhoto()"><span>M</span></div>
+  <div style="min-width:0">
+    <strong id="driverName"></strong>
+    <div class="vehicle-info">
+      <i class="fa-solid fa-motorcycle"></i>
+      <span id="driverMoto">Veículo não informado</span>
+    </div>
+    <div class="driver-rating">
+      <i class="fa-solid fa-star"></i>
+      <span id="driverRating">Novo Motoca</span>
+    </div>
+    <div class="status" id="rideSituation"></div>
+  </div>
+</div>
+<button id="chatPassengerBtn" class="btn btn-dark chat-main-btn" onclick="openChat(activeRideId)"><i class="fa-solid fa-comments"></i> CONVERSAR COM MOTOCA <span id="chatPassengerBadge" class="chat-badge">0</span></button>
+<button id="cancelAcceptedBtn" class="btn btn-danger" onclick="cancelActiveRide()">CANCELAR CORRIDA</button>
+</div>
+</section>
 </section>
 
-<div id="systemAlert" class="system-alert"><strong id="systemAlertTitle"></strong><small id="systemAlertText"></small></div>
-<div id="offerPopup" class="offer-popup"><div class="card-title"><i class="fa-solid fa-bell" style="color:var(--s)"></i> Nova corrida</div><div id="offerBody"></div><div id="offerSwipe" class="swipe accept"><div class="swipe-label"><span>RECUSAR</span><span>ACEITAR</span></div><div class="swipe-knob"><i class="fa-solid fa-motorcycle"></i></div></div></div>
 
-<div id="waitConfirmModal" class="modal hidden"><div class="modal-card"><h3>Ativar tempo de espera?</h3><p id="waitConfirmText" class="small">Use apenas quando houver espera extra ou tempo adicional relacionado à corrida.</p><button class="btn" onclick="confirmStartWait()">SIM, ATIVAR</button><button class="btn btn-light" onclick="closeWaitConfirm()">NÃO AGORA</button></div></div>
 
-<div id="paymentModal" class="modal hidden"><div class="modal-card"><h3>Pagamento da viagem</h3><div class="payment-meta"><small>TOTAL</small><div id="paymentTotal" class="fare">R$ 0,00</div><strong>PIX: 57.293.143/0001-56</strong><small>MERCADO PAGO • MARLLUS VINICIUS</small></div><div id="qrcode" class="qr"></div><div class="grid2"><button class="btn btn-ok" onclick="confirmPaymentChoice('PIX')">PIX REALIZADO</button><button class="btn btn-dark" onclick="confirmPaymentChoice('ESPECIE')">PAGO EM ESPÉCIE</button></div></div></div>
-
-<div id="confirmPaymentModal" class="modal hidden"><div class="modal-card"><h3>Confirmar pagamento?</h3><p class="small" id="confirmPaymentText"></p><button class="btn btn-ok" onclick="confirmPaymentNow()">SIM, RECEBI</button><button class="btn btn-light" onclick="closeConfirmPayment()">VOLTAR</button></div></div>
+<div id="ratingModal" class="rating-modal hidden"><div class="modal-card"><h3>Avalie seu Motoca</h3><div id="ratingStars" class="stars"></div><button class="btn" onclick="submitRating()">ENVIAR</button><button class="btn btn-light" onclick="closeRating()">DEPOIS</button></div></div>
 <div id="photoModal" class="photo-modal hidden" onclick="closePhoto()"><img id="fullPhoto"></div>
+<div id="reportModal" class="rating-modal hidden"><div class="modal-card"><h3>Denunciar Motoca</h3><div class="form-group"><label>Motivo</label><select id="reportType"><option value="">Selecione</option><option value="CONDUTA_INADEQUADA">Conduta inadequada</option><option value="DIRECAO_PERIGOSA">Direção perigosa</option><option value="COBRANCA_INDEVIDA">Cobrança indevida</option><option value="VEICULO_DIFERENTE">Veículo diferente</option><option value="OUTRO">Outro</option></select></div><div class="form-group"><label>Descrição opcional</label><input id="reportText" placeholder="Conte o que aconteceu"></div><button class="btn btn-danger" onclick="submitReport()">ENVIAR DENÚNCIA</button><button class="btn btn-light" onclick="closeReport()">CANCELAR</button></div></div>
 
 
 <div id="chatOverlay" class="chat-overlay" onclick="closeChat()"></div>
 <aside id="chatDrawer" class="chat-drawer">
   <div class="chat-head">
     <button onclick="closeChat()"><i class="fa-solid fa-arrow-left"></i></button>
-    <div><strong>Chat da corrida</strong><small>Converse com o passageiro</small></div>
+    <div><strong>Chat da corrida</strong><small>Converse com seu Motoca</small></div>
   </div>
   <div id="chatMessages" class="chat-messages"></div>
   <div class="chat-compose">
     <div id="chatReceiveLoading" class="chat-loading"><span class="mini-spin"></span> Recebendo novas mensagens...</div>
-    <div id="chatSendLoading" class="chat-loading"><span class="mini-spin"></span> Enviando mensagem...</div>
-    <label class="chat-photo-btn"><i class="fa-solid fa-camera"></i> ENVIAR FOTO
-      <input id="chatPhotoInput" type="file" accept="image/*" capture="environment" class="hidden" onchange="sendChatPhoto(this)">
-    </label>
+<div id="chatSendLoading" class="chat-loading"><span class="mini-spin"></span> Enviando mensagem...</div>
+<label class="chat-photo-btn"><i class="fa-solid fa-camera"></i> ENVIAR FOTO
+  <input id="chatPhotoInput" type="file" accept="image/*" capture="environment" class="hidden" onchange="sendChatPhoto(this)">
+</label>
     <div class="chat-row">
       <input id="chatInput" maxlength="500" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter')sendChatMessage()">
       <button class="chat-send" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
