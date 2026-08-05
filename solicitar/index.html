@@ -1,292 +1,154 @@
-<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Pega&Leva Delivery</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="style.css"></head><body>
-<section id="loginView" class="auth">
-<div class="auth-card">
-  <div class="logo"><img src="https://i.ibb.co/3YCDGsVD/PEGA-E-LEVA-MKT-1.png" alt="Pega&Leva"></div>
-  <h1>Entrar</h1>
-  <p>Acesse sua conta para solicitar e acompanhar entregas.</p>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Motocas • Passageiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="loading" class="loader hidden"><div class="spinner"></div><strong id="loadingText">Carregando...</strong></div>
 
-  <div id="quickLoginBox" class="hide" style="margin:14px 0 18px">
-    <div style="font-size:.72rem;font-weight:900;color:#64748b;letter-spacing:.06em;margin-bottom:8px">ENTRAR RAPIDAMENTE</div>
-    <div style="display:flex;align-items:center;gap:10px;border:1px solid #dbe7ff;background:#f8fbff;border-radius:14px;padding:10px">
-      <button id="quickLoginAccount" type="button" style="flex:1;display:flex;align-items:center;gap:11px;border:0;background:transparent;text-align:left;cursor:pointer;padding:2px">
-        <span style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#0646c8;color:#fff;font-size:1rem"><i class="fa-solid fa-user"></i></span>
-        <span style="min-width:0">
-          <strong id="quickLoginName" style="display:block;color:#172033;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Conta salva</strong>
-          <small id="quickLoginEmail" style="display:block;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></small>
-        </span>
-      </button>
-      <button id="removeQuickLogin" type="button" title="Remover conta salva" style="width:38px;height:38px;border:0;border-radius:10px;background:#fff;color:#d93025;cursor:pointer"><i class="fa-solid fa-trash"></i></button>
+<section id="auth" class="auth"><div class="auth-card">
+<div class="logo-wrap"><img src="https://i.ibb.co/V0c4KbYY/image-removebg-preview-1.png"><h2>Vá de Motocas</h2><p class="small">Mobilidade econômica e prática.</p></div>
+<div class="tabs"><button id="tabLogin" class="active" onclick="mode('login')">Entrar</button><button id="tabCad" onclick="mode('cad')">Cadastrar</button></div>
+<form id="loginForm"><div class="form-group"><label>E-mail</label><div class="input"><i class="fa-solid fa-envelope"></i><input id="loginEmail" type="email" placeholder="Digite seu e-mail"></div></div><div class="form-group"><label>Senha</label><div class="input"><i class="fa-solid fa-lock"></i><input id="loginSenha" type="password" placeholder="Digite sua senha"></div></div><button class="btn">ENTRAR</button><button type="button" class="btn btn-light" onclick="mode('forgot')">ESQUECI MINHA SENHA</button><div id="loginMsg" class="msg"></div></form>
+<form id="cadForm" class="hidden">
+<div class="form-group"><label>Nome</label><div class="input"><i class="fa-solid fa-user"></i><input id="nome" placeholder="Digite seu nome completo"></div></div>
+<div class="form-group"><label>E-mail</label><div class="input"><i class="fa-solid fa-envelope"></i><input id="email" type="email" placeholder="Digite seu melhor e-mail"></div></div>
+<div class="form-group"><label>CPF</label><div class="input"><i class="fa-solid fa-id-card"></i><input id="cpf" inputmode="numeric" placeholder="000.000.000-00"></div></div>
+<div class="form-group"><label>WhatsApp</label><div class="input wa-input"><i class="fa-brands fa-whatsapp"></i><input id="telefone" inputmode="tel" placeholder="DDD + número" oninput="maskPhone(this)"></div></div>
+<div class="form-group"><label>Cidade</label><div class="input"><i class="fa-solid fa-city"></i><select id="cidade"></select></div></div>
+<div class="form-group"><label>Senha</label><div class="input"><i class="fa-solid fa-lock"></i><input id="senha" type="password" placeholder="Crie uma senha com pelo menos 6 caracteres"></div></div>
+<button class="btn">CRIAR CONTA</button><div id="cadMsg" class="msg"></div>
+</form>
+<form id="forgotForm" class="hidden"><h3>Recuperar senha</h3><div class="form-group"><label>E-mail cadastrado</label><input id="forgotEmail" type="email"></div><button type="button" class="btn" onclick="sendReset()">ENVIAR CÓDIGO</button><div id="reset2" class="hidden"><div class="form-group"><label>Código</label><input id="resetCode"></div><div class="form-group"><label>Nova senha</label><input id="newPass" type="password"></div><button type="button" class="btn btn-dark" onclick="confirmReset()">REDEFINIR</button></div><button type="button" class="btn btn-light" onclick="mode('login')">VOLTAR</button><div id="forgotMsg" class="msg"></div></form>
+</div></section>
+
+
+<section id="welcome" class="auth hidden">
+  <div class="auth-card welcome-card">
+    <div class="welcome-icon"><i class="fa-solid fa-circle-check"></i></div>
+    <h2>Conta criada!</h2>
+    <p>Bem-vindo ao Motocas. Seu cadastro foi concluído e você já pode começar a solicitar suas corridas.</p>
+    <div class="welcome-name">
+      <small>CONTA CRIADA PARA</small>
+      <strong id="welcomeName">Passageiro</strong>
     </div>
-    <div id="quickLoginLoading" class="auth-loading"><span class="spinner"></span>Entrando na conta salva...</div>
-    <div id="quickLoginError" class="err"></div>
-    <div class="auth-divider" style="margin-top:16px">ou entre com outra conta</div>
+    <button class="btn" onclick="accessAfterSignup()">ACESSAR MOTOCAS</button>
   </div>
-
-  <form id="loginForm" autocomplete="on">
-    <div class="field">
-      <label>E-mail</label>
-      <div class="input-icon-wrap">
-        <i class="fa-regular fa-envelope"></i>
-        <input id="loginEmail" name="email" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required>
-      </div>
-    </div>
-
-    <div class="field">
-      <label>Senha</label>
-      <div class="input-icon-wrap has-toggle">
-        <i class="fa-solid fa-lock"></i>
-        <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
-        <button class="password-toggle" type="button" data-toggle-password="loginPassword"><i class="fa-regular fa-eye"></i></button>
-      </div>
-    </div>
-
-    <label class="remember">
-      <input id="rememberLogin" type="checkbox">
-      Salvar minhas informações para entrar rapidamente
-    </label>
-
-    <button class="btn primary full" type="submit">
-      <i class="fa-solid fa-right-to-bracket"></i> Entrar
-    </button>
-    <div id="loginError" class="err"></div><div class="auth-loading" id="loginLoading"><span class="spinner"></span>Entrando...</div>
-  </form>
-
-  <div class="auth-divider">ou</div>
-
-  <button class="btn outline full" id="openRegister" type="button">
-    <i class="fa-solid fa-user-plus"></i> Criar conta
-  </button>
-</div>
 </section>
 
-<section id="accountTypeView" class="auth hide">
-<div class="auth-card">
-  <div class="logo"><img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png" alt="Pega&Leva"></div>
-  <h1>Que tipo de conta deseja criar?</h1>
-  <p>Escolha a opção que mais combina com a sua rotina.</p>
-  <div class="account-type-list">
-    <button class="account-type-card" id="choosePersonalAccount" type="button">
-      <span class="account-type-icon"><i class="fa-solid fa-box"></i></span>
-      <span><strong>Para enviar itens do dia a dia</strong><small>Ideal para quem deseja solicitar entregas pessoais sempre que precisar.</small></span>
-    </button>
-    <button class="account-type-card" id="chooseCompanyAccount" type="button">
-      <span class="account-type-icon"><i class="fa-solid fa-store"></i></span>
-      <span><strong>Como empresa</strong><small>Para vender e enviar com frequência, com recursos pensados para o seu negócio.</small></span>
-    </button>
+<section id="app" class="app hidden">
+<header class="topbar"><button class="menu-btn" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i></button><img src="https://i.ibb.co/YF4Wj6r4/Chat-GPT-Image-4-de-ago-de-2026-20-55-22-removebg-preview-1.png"><strong>PASSAGEIRO</strong><span id="cityTop" class="city"></span></header>
+<aside id="sideMenu" class="drawer">
+  <h3 id="drawerName">Passageiro</h3><small id="drawerEmail"></small>
+  <a onclick="showView('home');toggleMenu(false)"><i class="fa-solid fa-house"></i> Início</a>
+  <a onclick="showView('trips');toggleMenu(false)"><i class="fa-solid fa-clock-rotate-left"></i> Corridas</a>
+  <a onclick="showView('profile');toggleMenu(false)"><i class="fa-solid fa-user"></i> Perfil</a>
+  <a onclick="openSupportWhatsApp()"><i class="fa-brands fa-whatsapp"></i> Suporte WhatsApp</a>
+  <a onclick="requestAccountDeletion()"><i class="fa-solid fa-user-xmark"></i> Excluir minha conta</a>
+  <a onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
+</aside>
+<div id="drawerOverlay" class="drawer-overlay" onclick="toggleMenu(false)"></div>
+<div class="map">
+  <iframe id="cityMap" class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa da cidade"></iframe>
+  <div class="map-shade"></div>
+  <div class="pin-radar">
+    <span class="pin-wave"></span>
+    <span class="pin-wave w2"></span>
+    <span class="pin-wave w3"></span>
+    <div class="pin"><i class="fa-solid fa-location-dot"></i></div>
   </div>
-  <button class="btn secondary full" id="backFromAccountType" type="button"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+  <div class="map-label"><small>VOCÊ ESTÁ EM</small><strong id="mapCity"></strong></div>
+</div>
+<nav class="tabsbar"><button id="navHome" class="active" onclick="showView('home')"><i class="fa-solid fa-house"></i>INÍCIO</button><button id="navTrips" onclick="showView('trips')"><i class="fa-solid fa-clock-rotate-left"></i>CORRIDAS</button><button id="navProfile" onclick="showView('profile')"><i class="fa-solid fa-user"></i>PERFIL</button></nav>
+
+<main class="content">
+<div id="homeView" class="view active"><div class="card"><div class="card-title">Mobilidade simples</div><div class="small">Veja o preço antes de solicitar e acompanhe a situação da sua corrida.</div></div></div>
+<div id="tripsView" class="view"><div class="card"><div class="card-title">Minhas corridas</div><div id="tripsList"></div></div></div>
+<div id="profileView" class="view"><div class="card"><div id="profilePhoto" class="profile-photo"><i class="fa-solid fa-user"></i></div><label class="photo-btn"><i class="fa-solid fa-camera"></i> ALTERAR FOTO<input id="photoInput" type="file" accept="image/*" class="hidden"></label><div class="form-group"><label>Nome</label><input id="profileName"></div><div class="form-group"><label>E-mail</label><input id="profileEmail"></div><div class="form-group"><label>WhatsApp</label><div class="input wa-input"><i class="fa-brands fa-whatsapp"></i><input id="profilePhone" inputmode="tel" placeholder="DDD + número" oninput="maskPhone(this)"></div></div><button class="btn" onclick="saveProfile()">SALVAR PERFIL</button><div id="profileMsg" class="msg"></div></div></div>
+</main>
+
+<a class="panic" href="tel:190" aria-label="Ligar para emergência"><strong style="font-size:14px">190</strong></a>
+
+<section class="ride-sheet">
+<div class="handle"></div>
+<div id="stepContent">
+<div class="sheet-head"><div class="sheet-title" id="sheetTitle">Onde você está?</div><div class="step" id="stepLabel">ETAPA 1 DE 5</div></div>
+<div class="progress"><span id="p1" class="on"></span><span id="p2"></span><span id="p3"></span><span id="p4"></span><span id="p5"></span></div>
+<div id="step1"><div class="choice"><i class="fa-solid fa-location-crosshairs"></i><select id="origemBairro"></select></div><div class="actions one"><button class="btn btn-dark" onclick="nextStep(2)">CONTINUAR</button></div></div>
+<div id="step2" class="hidden">
+  <div class="choice"><i class="fa-solid fa-road"></i><input id="origemLogradouro" placeholder="Rua, avenida ou logradouro"></div>
+  <div class="choice"><i class="fa-solid fa-hashtag"></i><input id="origemNumero" inputmode="numeric" placeholder="Número (se não tiver, coloque 0)"></div>
+  <div class="choice"><i class="fa-solid fa-map-pin"></i><input id="origemReferencia" placeholder="Ponto de referência"></div>
+  <div class="actions"><button class="btn btn-light" onclick="nextStep(1)">VOLTAR</button><button class="btn btn-dark" onclick="nextStep(3)">CONTINUAR</button></div>
+</div>
+<div id="step3" class="hidden"><div class="choice"><i class="fa-solid fa-flag-checkered"></i><select id="destinoBairro"></select></div><div class="actions"><button class="btn btn-light" onclick="nextStep(2)">VOLTAR</button><button class="btn btn-dark" onclick="nextStep(4)">CONTINUAR</button></div></div>
+<div id="step4" class="hidden">
+  <div class="choice"><i class="fa-solid fa-road"></i><input id="destinoLogradouro" placeholder="Rua, avenida ou logradouro"></div>
+  <div class="choice"><i class="fa-solid fa-hashtag"></i><input id="destinoNumero" inputmode="numeric" placeholder="Número (se não tiver, coloque 0)"></div>
+  <div class="choice"><i class="fa-solid fa-map-pin"></i><input id="destinoReferencia" placeholder="Ponto de referência"></div>
+  <div class="actions"><button class="btn btn-light" onclick="nextStep(3)">VOLTAR</button><button class="btn btn-dark" onclick="nextStep(5)">VER VALOR</button></div>
+</div>
+<div id="step5" class="hidden"><div class="farebox"><div><small>VALOR</small><div id="fareValue" class="fare">R$ 0,00</div></div><i class="fa-solid fa-motorcycle"></i></div><div class="choice"><i class="fa-solid fa-wallet"></i><select id="pagamento"><option>Dinheiro</option><option>Pix</option></select></div><div class="actions"><button class="btn btn-light" onclick="nextStep(4)">VOLTAR</button><button class="btn" onclick="requestRide()">SOLICITAR</button></div></div>
+</div>
+
+<div id="searchState" class="hidden search"><div class="sheet-title">Buscando um Motoca...</div><div class="moto-run"><i class="fa-solid fa-motorcycle"></i></div><button id="cancelPendingBtn" class="btn btn-danger" onclick="cancelActiveRide()">CANCELAR CORRIDA</button></div>
+
+<div id="acceptedState" class="hidden">
+<div class="sheet-head"><div class="sheet-title">Seu Motoca</div><div class="step" id="driverStatus"></div></div>
+<div class="person">
+  <div id="driverAvatar" class="avatar" onclick="openDriverPhoto()"><span>M</span></div>
+  <div style="min-width:0">
+    <strong id="driverName"></strong>
+    <div class="vehicle-info">
+      <i class="fa-solid fa-motorcycle"></i>
+      <span id="driverMoto">Veículo não informado</span>
+    </div>
+    <div class="driver-rating">
+      <i class="fa-solid fa-star"></i>
+      <span id="driverRating">Novo Motoca</span>
+    </div>
+    <div class="status" id="rideSituation"></div>
+  </div>
+</div>
+<button id="chatPassengerBtn" class="btn btn-dark chat-main-btn" onclick="openChat(activeRideId)"><i class="fa-solid fa-comments"></i> CONVERSAR COM MOTOCA <span id="chatPassengerBadge" class="chat-badge">0</span></button>
+<button id="cancelAcceptedBtn" class="btn btn-danger" onclick="cancelActiveRide()">CANCELAR CORRIDA</button>
 </div>
 </section>
-<section id="registerView" class="auth hide">
-<div class="auth-card">
-  <div class="logo"><img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png" alt="Pega&Leva"></div>
-  <h1>Criar conta</h1>
-  <p>Preencha seus dados em etapas rápidas.</p>
-
-  <div class="register-progress" id="registerProgress">
-    <span class="on"></span><span></span><span></span>
-  </div>
-
-  <form id="registerForm" autocomplete="on">
-    <div class="register-step on" data-register-step="0">
-<div class="register-step-title"><i class="fa-solid fa-user"></i><span><strong>Seus dados</strong><small>Informações para identificar sua conta</small></span></div>
-      <div class="field">
-        <label>Nome completo</label>
-        <input id="regName" autocomplete="name" placeholder="Digite seu nome completo" required>
-      </div>
-      <div class="field">
-        <label>E-mail</label>
-        <input id="regEmail" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required>
-      </div>
-      <div class="field">
-        <label>Senha</label>
-        <div class="input-icon-wrap has-toggle">
-          <i class="fa-solid fa-lock"></i>
-          <input id="regPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Crie uma senha com 6 ou mais caracteres" required>
-          <button class="password-toggle" type="button" data-toggle-password="regPassword"><i class="fa-regular fa-eye"></i></button>
-        </div>
-      </div>
-    </div>
-
-    <div class="register-step" data-register-step="1">
-<div class="register-step-title"><i class="fa-solid fa-shield-halved"></i><span><strong>Contato e acesso</strong><small>Dados para entrar e receber atualizações</small></span></div>
-      <div class="field">
-        <label>DDD + WhatsApp</label>
-        <input id="regWhatsapp" inputmode="numeric" autocomplete="tel" placeholder="Ex.: 89 99999-9999" required>
-      </div>
-      <div class="field">
-        <label>CPF ou CNPJ</label>
-        <input id="regDoc" inputmode="numeric" placeholder="Digite seu CPF ou CNPJ" required>
-      </div>
-      
-    </div>
-
-    <div class="register-step" data-register-step="2">
-<div class="register-step-title"><i class="fa-solid fa-location-dot"></i><span><strong>Seu endereço</strong><small>Usado como origem rápida das entregas</small></span></div>
-      <div class="field">
-        <label>Logradouro</label>
-        <input id="regStreet" autocomplete="street-address" placeholder="Rua, avenida ou alameda" required>
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label>Número</label>
-          <input id="regNumber" placeholder="Ex.: 120" required>
-        </div>
-        <div class="field">
-          <label>Cidade</label>
-          <select id="regCity" required>
-            <option value="">Selecione</option>
-            <option>Uruçuí</option>
-            <option>Benedito Leite</option>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label>Ponto de referência</label>
-        <input id="regReference" placeholder="Ex.: próximo à praça" required>
-      </div>
-    </div>
-
-    <div class="step-loading" id="registerStepLoading"><span class="spinner"></span>Carregando próxima etapa...</div>
-    <div class="moto-loading" id="registerMotoLoading">
-      <div class="mini-road"><i class="fa-solid fa-motorcycle mini-bike"></i></div>
-      <p>Criando sua conta...</p>
-    </div><div class="step-actions">
-      <button class="btn secondary hide" id="registerBack" type="button">Voltar</button>
-      <button class="btn primary" id="registerNext" type="button">Continuar</button>
-      <button class="btn primary hide" id="registerSubmit" type="submit">Criar conta</button>
-    </div>
-  </form>
-
-  <div class="switch">Já possui conta? <button id="backLogin" type="button">Entrar</button></div>
-</div>
 </section>
-<section id="appView" class="app hide"><header class="topbar"><div><img src="https://i.ibb.co/Q3YNqgKy/PEGA-E-LEVA-MKT.png"><button class="profile" id="profileBtn"><i class="fa-regular fa-user"></i></button></div></header><main class="main"><section class="welcome"><small>ÁREA DA EMPRESA</small><h2 id="welcomeName">Olá!</h2><p id="welcomeCompany"></p></section><nav class="app-nav"><button class="nav-item active"><i class="fa-solid fa-house"></i>Início</button><button class="nav-item" id="navSimulator"><i class="fa-solid fa-calculator"></i>Simular</button><button class="nav-item" id="navTrips"><i class="fa-solid fa-motorcycle"></i>Entregas</button><button class="nav-item" id="navInvoice"><i class="fa-solid fa-file-invoice-dollar"></i>Faturas</button><button class="nav-item" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i>Sair</button></nav><section class="card"><div class="head"><h3>Fatura de entregas</h3><span class="badge">Pendente</span></div><div class="balance" id="invoiceBalance">R$ 0,00</div><p id="invoiceText">Nenhuma entrega pendente.</p><div class="actions"><button class="btn primary" id="payInvoice">Pagar fatura</button><button class="btn secondary" id="viewTrips">Ver entregas</button></div></section><section id="businessSection" class="business-section hide">
-  <div class="business-title"><h3>Para seu negócio</h3><span class="badge blue">Exclusivo para empresas</span></div>
-  <article id="catalogOfferCard" class="business-product">
-    <div class="business-product-icon"><i class="fa-solid fa-store"></i></div>
-    <h4>Crie seu catálogo com integração de fretes</h4>
-    <p>Venda com mais agilidade e deixe seus clientes escolherem os produtos e o frete em um só lugar.</p>
-    <div class="business-price">R$ 49,90 <small>por mês</small></div>
-    <button class="btn primary full" id="catalogLearnMore"><i class="fa-solid fa-circle-info"></i> Quero saber mais</button>
-  </article>
-  <article id="catalogActiveCard" class="business-product catalog-active hide">
-    <div class="business-product-icon"><i class="fa-solid fa-circle-check"></i></div>
-    <h4>Catálogo ativo</h4>
-    <p>Seu catálogo já está liberado. Copie o link abaixo para enviar aos seus clientes.</p>
-    <div class="catalog-link-box">
-      <input id="catalogLinkInput" readonly>
-      <button class="btn success" id="copyCatalogLink"><i class="fa-regular fa-copy"></i> Copiar</button>
-    </div>
-    <a class="btn primary full" id="openCatalogLink" href="#" target="_blank" style="margin-top:9px;text-decoration:none"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir catálogo</a>
-  </article>
-</section>
-<a class="banner hide" id="marketingBanner" href="#" target="_blank"><img id="bannerImage"></a></main><section class="request">
-<div style="text-align:center;margin-bottom:10px">
-<div style="font-size:.72rem;font-weight:900;color:#0646c8;letter-spacing:.08em">PEÇA SUA ENTREGA</div>
-<h3 style="margin:4px 0 6px;font-size:1.08rem"><i class="fa-solid fa-motorcycle"></i> Para onde vamos?</h3>
-</div>
-<div class="location-box"><button class="loc" id="originTrigger"><i class="fa-solid fa-location-dot"></i><span><small>1º PASSO • ORIGEM</small><strong id="originLabel">Toque para escolher a coleta</strong></span></button><button class="loc" id="destinationTrigger"><i class="fa-solid fa-flag-checkered"></i><span><small>2º PASSO • DESTINO</small><strong id="destinationLabel">Toque para escolher o destino</strong></span></button></div><button class="btn primary full" id="continueRequest" style="margin-top:9px">Continuar →</button></section></section><button class="floating-trips" id="floatingTrips"><i class="fa-solid fa-motorcycle"></i><span class="dot" id="tripNotification">0</span></button>
-<div class="sheet" id="choiceSheet"><div class="sheet-box"><div class="sheet-head"><h3 id="choiceTitle"></h3><button class="close" data-close="choiceSheet">×</button></div><div class="option-list" id="choiceOptions"></div></div></div><div class="sheet" id="wizardSheet"><div class="sheet-box"><div class="sheet-head"><h3 id="wizardTitle"></h3><button class="close" data-close="wizardSheet">×</button></div><div class="steps" id="steps"></div><div id="wizardContent"></div>
-    <div class="moto-loading" id="wizardMotoLoading">
-      <div class="mini-road"><i class="fa-solid fa-motorcycle mini-bike"></i></div>
-      <p>Carregando próxima etapa...</p>
-    </div>
-    <div class="actions"><button class="btn secondary" id="backStep">Voltar</button><button class="btn primary" id="nextStep">Continuar</button></div></div></div>
-<div class="modal" id="whatsappInfo"><div class="modal-box wa"><button class="close" data-close="whatsappInfo" style="float:right">×</button><i class="fa-brands fa-whatsapp"></i><h3>Envio de localização</h3><p>Após concluir a solicitação, envie pelo WhatsApp a localização atual da origem e/ou do destino, conforme a opção escolhida.</p><button class="btn primary full" data-close="whatsappInfo">Entendi</button></div></div><div class="modal" id="loadingModal"><div class="modal-box loading"><div class="road"><i class="fa-solid fa-motorcycle bike"></i></div><h3>Preparando sua solicitação...</h3></div></div><div class="modal" id="successModal"><div class="modal-box success"><i class="fa-solid fa-circle-check"></i><h2>Solicitação confirmada!</h2><p id="successCode"></p><button class="btn primary full" id="sendWhatsapp"><i class="fa-brands fa-whatsapp"></i>Solicitar via WhatsApp</button></div></div>
 
 
-<div class="modal" id="catalogInfoModal">
-  <div class="modal-box">
-    <button class="close" data-close="catalogInfoModal" style="float:right">×</button>
-    <div class="business-product-icon"><i class="fa-solid fa-store"></i></div>
-    <h2 style="margin:8px 0">Catálogo com integração de fretes</h2>
-    <p style="color:var(--muted);font-size:.78rem;line-height:1.55">Tenha uma página própria para vender seus produtos e facilitar os pedidos dos seus clientes.</p>
-    <div class="product-info-list">
-      <div class="product-info-item"><i class="fa-solid fa-box-open"></i><div><strong>Produtos à vontade</strong><span>Adicione e organize quantos produtos desejar no seu catálogo.</span></div></div>
-      <div class="product-info-item"><i class="fa-brands fa-whatsapp"></i><div><strong>Pedidos no seu WhatsApp</strong><span>Você recebe o pedido organizado, em formato de notinha, diretamente no WhatsApp.</span></div></div>
-      <div class="product-info-item"><i class="fa-solid fa-motorcycle"></i><div><strong>Fretes integrados</strong><span>O cliente visualiza as opções de frete, escolhe a melhor e você só precisa solicitar o entregador.</span></div></div>
-      <div class="product-info-item"><i class="fa-solid fa-link"></i><div><strong>Link para compartilhar</strong><span>Envie seu catálogo para clientes e divulgue nas redes sociais.</span></div></div>
-    </div>
-    <div class="business-price">R$ 49,90 <small>por mês</small></div>
-    <button class="btn success full" id="catalogContactBtn"><i class="fa-brands fa-whatsapp"></i> Tenho interesse</button>
+
+<div id="ratingModal" class="rating-modal hidden"><div class="modal-card"><h3>Avalie seu Motoca</h3><div id="ratingStars" class="stars"></div><button class="btn" onclick="submitRating()">ENVIAR</button><button class="btn btn-light" onclick="closeRating()">DEPOIS</button></div></div>
+<div id="photoModal" class="photo-modal hidden" onclick="closePhoto()"><img id="fullPhoto"></div>
+<div id="reportModal" class="rating-modal hidden"><div class="modal-card"><h3>Denunciar Motoca</h3><div class="form-group"><label>Motivo</label><select id="reportType"><option value="">Selecione</option><option value="CONDUTA_INADEQUADA">Conduta inadequada</option><option value="DIRECAO_PERIGOSA">Direção perigosa</option><option value="COBRANCA_INDEVIDA">Cobrança indevida</option><option value="VEICULO_DIFERENTE">Veículo diferente</option><option value="OUTRO">Outro</option></select></div><div class="form-group"><label>Descrição opcional</label><input id="reportText" placeholder="Conte o que aconteceu"></div><button class="btn btn-danger" onclick="submitReport()">ENVIAR DENÚNCIA</button><button class="btn btn-light" onclick="closeReport()">CANCELAR</button></div></div>
+
+
+<div id="chatOverlay" class="chat-overlay" onclick="closeChat()"></div>
+<aside id="chatDrawer" class="chat-drawer">
+  <div class="chat-head">
+    <button onclick="closeChat()"><i class="fa-solid fa-arrow-left"></i></button>
+    <div><strong>Chat da corrida</strong><small>Converse com seu Motoca</small></div>
   </div>
-</div>
-<div class="sheet" id="simulatorSheet">
-  <div class="sheet-box">
-    <div class="sheet-head">
-      <h3>Simular entrega</h3>
-      <button class="close" data-close="simulatorSheet">×</button>
+  <div id="chatMessages" class="chat-messages"></div>
+  <div class="chat-compose">
+    <div id="chatReceiveLoading" class="chat-loading"><span class="mini-spin"></span> Recebendo novas mensagens...</div>
+<div id="chatSendLoading" class="chat-loading"><span class="mini-spin"></span> Enviando mensagem...</div>
+<label class="chat-photo-btn"><i class="fa-solid fa-camera"></i> ENVIAR FOTO
+  <input id="chatPhotoInput" type="file" accept="image/*" capture="environment" class="hidden" onchange="sendChatPhoto(this)">
+</label>
+    <div class="chat-row">
+      <input id="chatInput" maxlength="500" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+      <button class="chat-send" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
-
-    <div class="register-step-title">
-      <i class="fa-solid fa-calculator"></i>
-      <span>
-        <strong>Calcule o frete</strong>
-        <small>Informe origem e destino para ver as opções.</small>
-      </span>
-    </div>
-
-    <div class="grid2">
-      <div class="field">
-        <label>Cidade de coleta</label>
-        <select id="simOriginCity">
-          <option>Uruçuí</option>
-          <option>Benedito Leite</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Bairro de coleta</label>
-        <select id="simOriginNeighborhood"></select>
-      </div>
-    </div>
-
-    <div class="grid2">
-      <div class="field">
-        <label>Cidade de destino</label>
-        <select id="simDestinationCity">
-          <option>Uruçuí</option>
-          <option>Benedito Leite</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Bairro de destino</label>
-        <select id="simDestinationNeighborhood"></select>
-      </div>
-    </div>
-
-    <button class="btn primary full" id="calculateSimulation">
-      <i class="fa-solid fa-calculator"></i> Calcular fretes
-    </button>
-
-    <div class="moto-loading" id="simulationLoading">
-      <div class="mini-road"><i class="fa-solid fa-motorcycle mini-bike"></i></div>
-      <p>Calculando as opções...</p>
-    </div>
-
-    <div id="simulationResults" style="margin-top:14px"></div>
   </div>
-</div>
+</aside>
 
-<div class="sheet" id="tripsSheet"><div class="sheet-box"><div class="sheet-head"><h3>Histórico de entregas</h3><button class="close" data-close="tripsSheet">×</button></div><div id="tripsList"></div></div></div><div class="sheet" id="invoiceSheet"><div class="sheet-box invoice-pay">
-<div class="sheet-head"><h3>Pagamento da fatura</h3><button class="close" data-close="invoiceSheet">×</button></div>
-<i class="fa-solid fa-qrcode" style="font-size:2.2rem;color:var(--p)"></i>
-<h3 style="margin:10px 0 4px">Pague via Pix</h3>
-<p style="color:var(--muted);font-size:.8rem">Escaneie o QR Code ou copie a chave abaixo.</p>
-<img class="pix-qr" src="https://i.ibb.co/v4mtHpfh/Whats-App-Image-2026-07-25-at-22-37-01.jpg" alt="QR Code Pix">
-<div class="pix-data"><strong>Chave Pix</strong><br>57293143000156<br><small>MERCADO PAGO • MARLLUS VINICIUS</small></div>
-<div class="balance" id="invoiceModalBalance">R$ 0,00</div>
-<div class="countdown" id="paymentCountdown">00:50</div>
-<p id="paymentWaitingText">Aguarde o tempo de processamento do pagamento.</p>
-<button class="btn primary full hide" id="confirmInvoicePayment"><i class="fa-brands fa-whatsapp"></i> Confirmar pagamento</button>
-</div></div></div><div class="sheet" id="profileSheet"><div class="sheet-box"><div class="sheet-head"><h3>Minha conta</h3><button class="close" data-close="profileSheet">×</button></div><div class="trip"><strong id="profileName"></strong><span id="profileCompany"></span><span id="profileAddress"></span></div></div></div><div class="status-alert" id="statusAlert">
-  <div class="status-alert-icon" id="statusAlertIcon"><i class="fa-solid fa-motorcycle"></i></div>
-  <div><strong id="statusAlertTitle">Atualização da entrega</strong><span id="statusAlertText"></span></div>
-</div>
-<div class="toast" id="toast"></div><div class="success-toast" id="successToast"><i class="fa-solid fa-circle-check"></i><div><strong>Solicitação confirmada!</strong><br><small>Sua entrega já aparece no acompanhamento.</small></div></div>
 <script src="script.js"></script>
-</body>
-</html>
+</body></html>
