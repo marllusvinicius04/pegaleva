@@ -73,7 +73,25 @@ function loadCityMap(city){
   const q=encodeURIComponent((city||"Brasil")+", Brasil");
   $("cityMap").src=`https://maps.google.com/maps?q=${q}&z=14&output=embed`;
 }
-async function openApp(){$("auth").classList.add("hidden");$("app").classList.remove("hidden");$("cityTop").textContent=user.cidade;$("mapCity").textContent=user.cidade;loadCityMap(user.cidade);$("drawerName").textContent=user.nome||"Passageiro";$("drawerEmail").textContent=user.email||"";await loadNeighborhoods();await refreshRide();await checkRating();clearInterval(pollTimer);pollTimer=setInterval(()=>{refreshRide();pollPassengerChatBadge()},900)}
+async function openApp(){
+  $("auth").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("cityTop").textContent=user.cidade;
+
+  if($("mapCity")){
+    $("mapCity").textContent="";
+    $("mapCity").style.display="none";
+  }
+
+  loadCityMap(user.cidade);
+  $("drawerName").textContent=user.nome||"Passageiro";
+  $("drawerEmail").textContent=user.email||"";
+  await loadNeighborhoods();
+  await refreshRide();
+  await checkRating();
+  clearInterval(pollTimer);
+  pollTimer=setInterval(()=>{refreshRide();pollPassengerChatBadge()},900);
+}
 async function loadNeighborhoods(){const r=await api("listarBairros",{cidade:user.cidade});if(!r.ok)return;const o='<option value="">Selecionar bairro</option>'+r.bairros.map(b=>`<option>${esc(b)}</option>`).join("");$("origemBairro").innerHTML=o;$("destinoBairro").innerHTML=o}
 function nextStep(n){if(n>step&&!valid(step))return;step=n;["step1","step2","step3","step4","step5"].forEach((x,i)=>$(x).classList.toggle("hidden",i+1!==step));["p1","p2","p3","p4","p5"].forEach((x,i)=>$(x).classList.toggle("on",i<step));const t={1:"Onde você está?",2:"Detalhes da origem",3:"Para onde você vai?",4:"Detalhes do destino",5:"Confira e solicite"};$("sheetTitle").textContent=t[step];$("stepLabel").textContent=`ETAPA ${step} DE 5`;if(step===5)calculateFare()}
 function valid(s){
