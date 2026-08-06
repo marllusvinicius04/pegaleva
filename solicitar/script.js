@@ -320,32 +320,92 @@ async function openRegionPicker(tipo){
       attributionControl:true,
       preferCanvas:true,
       inertia:true,
-      maxBoundsViscosity:1.0
+      bounceAtZoomLimits:false,
+      maxBoundsViscosity:1.0,
+      minZoom:15
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
       maxZoom:19,
+      minZoom:15,
       attribution:'&copy; OpenStreetMap'
     }).addTo(regionMap);
 
+    /*
+      A região é tratada como uma área URBANA da cidade.
+      O mapa não usa toda a caixa cadastrada de forma solta:
+      ele cria uma caixa interna menor ao redor do centro da região
+      para evitar mostrar área rural ou fora da cidade.
+    */
+    const norte=Number(regiao.norteLat);
+    const sul=Number(regiao.sulLat);
+    const leste=Number(regiao.lesteLng);
+    const oeste=Number(regiao.oesteLng);
+    const centroLat=Number(regiao.centroLat);
+    const centroLng=Number(regiao.centroLng);
+
+    const altura=Math.abs(norte-sul);
+    const largura=Math.abs(leste-oeste);
+
+    // Mantém só 72% da área cadastrada em torno do centro.
+    // Assim a região continua precisa, mas visualmente dentro da malha urbana.
+    const meiaAltura=(altura*0.72)/2;
+    const meiaLargura=(largura*0.72)/2;
+
+    const urbanoNorte=Math.min(norte,centroLat+meiaAltura);
+    const urbanoSul=Math.max(sul,centroLat-meiaAltura);
+    const urbanoLeste=Math.min(leste,centroLng+meiaLargura);
+    const urbanoOeste=Math.max(oeste,centroLng-meiaLargura);
+
     const bounds=L.latLngBounds(
-      [Number(regiao.sulLat),Number(regiao.oesteLng)],
-      [Number(regiao.norteLat),Number(regiao.lesteLng)]
+      [urbanoSul,urbanoOeste],
+      [urbanoNorte,urbanoLeste]
     );
 
-    regionMap.setMaxBounds(bounds.pad(.05));
-    regionMap.fitBounds(bounds,{padding:[20,20]});
+    // Trava total: não deixa arrastar para fora da região urbana.
+    regionMap.setMaxBounds(bounds);
+    regionMap.fitBounds(bounds,{
+      padding:[28,28],
+      maxZoom:Number(regiao.zoom)||16
+    });
 
     const savedLat=tipo==="origem"?origemLat:destinoLat;
     const savedLng=tipo==="origem"?origemLng:destinoLng;
-    if(savedLat!==null&&savedLng!==null&&pontoDentroDaRegiao(regiao,savedLat,savedLng)){
-      regionMap.setView([savedLat,savedLng],Math.max(Number(regiao.zoom)||15,15));
+
+    if(
+      savedLat!==null &&
+      savedLng!==null &&
+      savedLat<=urbanoNorte &&
+      savedLat>=urbanoSul &&
+      savedLng<=urbanoLeste &&
+      savedLng>=urbanoOeste
+    ){
+      regionMap.setView(
+        [savedLat,savedLng],
+        Math.max(Number(regiao.zoom)||16,16)
+      );
     }else{
-      regionMap.setView([Number(regiao.centroLat),Number(regiao.centroLng)],Number(regiao.zoom)||15);
+      regionMap.setView(
+        [centroLat,centroLng],
+        Math.max(Number(regiao.zoom)||16,16)
+      );
     }
+
+    // Guarda os limites urbanos efetivos para validação do ponto.
+    regionMap._motocasUrbanBounds={
+      norte:urbanoNorte,
+      sul:urbanoSul,
+      leste:urbanoLeste,
+      oeste:urbanoOeste
+    };
+
+    regionMap.on("drag",()=>{
+      regionMap.panInsideBounds(bounds,{animate:false});
+    });
 
     regionMap.on("move",updateRegionPickerStatus);
     regionMap.on("moveend",updateRegionPickerStatus);
+
     updateRegionPickerStatus();
     loading(false);
   },80);
@@ -353,25 +413,47 @@ async function openRegionPicker(tipo){
 
 function updateRegionPickerStatus(){
   if(!regionMap||!regionPickerType)return;
+
   const regiao=getSelectedRegion(regionPickerType);
   const c=regionMap.getCenter();
-  const ok=pontoDentroDaRegiao(regiao,c.lat,c.lng);
-  const el=$("regionPickerStatus");
+  const ub=regionMap._motocasUrbanBounds;
 
+  const ok=ub
+    ? (
+        c.lat<=ub.norte &&
+        c.lat>=ub.sul &&
+        c.lng<=ub.leste &&
+        c.lng>=ub.oeste
+      )
+    : pontoDentroDaRegiao(regiao,c.lat,c.lng);
+
+  const el=$("regionPickerStatus");
   el.classList.toggle("ok",ok);
   el.classList.toggle("bad",!ok);
+
   el.innerHTML=ok
-    ? `<i class="fa-solid fa-circle-check"></i> Ponto dentro da região ${esc(regiao.regiao)}`
-    : `<i class="fa-solid fa-triangle-exclamation"></i> Este ponto está fora da região ${esc(regiao.regiao)}`;
+    ? `<i class="fa-solid fa-circle-check"></i> Ponto dentro da região ${esc(regiao.regiao)} de ${esc(user.cidade)}`
+    : `<i class="fa-solid fa-triangle-exclamation"></i> Mantenha o ponto dentro da região ${esc(regiao.regiao)} de ${esc(user.cidade)}`;
 }
 
 function confirmRegionPoint(){
   if(!regionMap||!regionPickerType)return;
+
   const regiao=getSelectedRegion(regionPickerType);
   const c=regionMap.getCenter();
+  const ub=regionMap._motocasUrbanBounds;
 
-  if(!pontoDentroDaRegiao(regiao,c.lat,c.lng)){
-    return alert("Ajuste a tachinha para um ponto dentro da região selecionada.");
+  const ok=ub
+    ? (
+        c.lat<=ub.norte &&
+        c.lat>=ub.sul &&
+        c.lng<=ub.leste &&
+        c.lng>=ub.oeste
+      )
+    : pontoDentroDaRegiao(regiao,c.lat,c.lng);
+
+  if(!ok){
+    return alert(`Ajuste a tachinha para um ponto dentro da região ${regiao.regiao} de ${user.cidade}.`);
   }
 
   if(regionPickerType==="origem"){
