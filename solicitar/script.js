@@ -1,12 +1,13 @@
-const API="https://script.google.com/macros/s/AKfycbxxFkN-A0lMj8de0A4BCSADiMxgWSruDAAyLGscp5Z1HwyxV9N8pzvXzqSgDunO8SbGwQ/exec";
+const API="https://script.google.com/macros/s/AKfycbxF99rKL26CceOlyBA9HJvP9KlH6SSZBQLKTZ22_xeHxZ8jAVcTioqo5EmEK0rX7r8OZg/exec";
 let user=null,fare=null,step=1,pollTimer=null,lastStatus=null,activeRideId=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",ratingRideId=null,ratingValue=0,currentDriverPhoto="",reportRideId=null,reportMotocaId=null,chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnread=0,chatKnownCount=0,chatBusy=false,chatPendingRefresh=false,ratingCheckBusy=false;
-let regioesCache=[],origemLat=null,origemLng=null,destinoLat=null,destinoLng=null,regionMap=null,regionPickerType=null,regionMapReady=false;
+let regioesCache=[],origemLat=null,origemLng=null,destinoLat=null,destinoLng=null,origemRegiao="",destinoRegiao="",regionMap=null,regionPickerType=null,regionMapReady=false;
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 function loading(on,text="Carregando..."){$("loadingText").textContent=text;$("loading").classList.toggle("hidden",!on)}
 async function api(action,data={}){try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,data})});return await r.json()}catch(e){return{ok:false,message:"Falha de conexão."}}}
 document.addEventListener("DOMContentLoaded",async()=>{
   applyMotocasMapAndSelectStyle();
   buildRegionPicker();
+  ensureConfirmMapButtons();
   bind();
   renderStars();
   await loadCities();
@@ -141,6 +142,18 @@ function applyMotocasMapAndSelectStyle(){
       font-size:15px;
     }
 
+
+    #origemBairro,#destinoBairro,.motocas-select-wrap{display:none!important}
+    .confirm-map-btn{
+      width:100%;min-height:52px;border:0;border-radius:17px;
+      background:#001219;color:#fff;font-weight:900;font-size:11px;
+      display:flex;align-items:center;justify-content:center;gap:9px;margin-top:10px;
+      box-shadow:0 10px 25px rgba(0,18,25,.14);
+    }
+    .confirm-map-btn i{color:#ee9b00;font-size:15px}
+    .confirm-map-btn.confirmed{background:#e9f8ef;color:#14864e;border:1px solid #c9ebd7}
+    .confirm-map-btn.confirmed i{color:#14864e}
+
     .region-picker{
       position:fixed;inset:0;z-index:1200;background:#001219;
       display:flex;flex-direction:column;
@@ -217,6 +230,49 @@ function applyMotocasMapAndSelectStyle(){
 }
 
 
+
+function ensureConfirmMapButtons(){
+  const configs=[
+    {tipo:"origem",anchor:"origemReferencia",id:"confirmOriginMapBtn",texto:"CONFIRMAR REGIÃO DA ORIGEM"},
+    {tipo:"destino",anchor:"destinoReferencia",id:"confirmDestMapBtn",texto:"CONFIRMAR REGIÃO DO DESTINO"}
+  ];
+
+  configs.forEach(c=>{
+    if($(c.id))return;
+    const anchor=$(c.anchor);
+    if(!anchor)return;
+
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.id=c.id;
+    btn.className="confirm-map-btn";
+    btn.innerHTML=`<i class="fa-solid fa-map-location-dot"></i> ${c.texto}`;
+    btn.onclick=()=>openRegionPicker(c.tipo);
+
+    anchor.insertAdjacentElement("afterend",btn);
+  });
+}
+
+function updateMapConfirmButton(tipo){
+  const btn=$(tipo==="origem"?"confirmOriginMapBtn":"confirmDestMapBtn");
+  if(!btn)return;
+
+  const regiao=tipo==="origem"?origemRegiao:destinoRegiao;
+  const ok=tipo==="origem"
+    ? origemLat!==null&&origemLng!==null
+    : destinoLat!==null&&destinoLng!==null;
+
+  btn.classList.toggle("confirmed",ok);
+
+  if(ok){
+    btn.innerHTML=`<i class="fa-solid fa-circle-check"></i> ${esc(regiao||"REGIÃO CONFIRMADA")}`;
+  }else{
+    btn.innerHTML=`<i class="fa-solid fa-map-location-dot"></i> ${
+      tipo==="origem"?"CONFIRMAR REGIÃO DA ORIGEM":"CONFIRMAR REGIÃO DO DESTINO"
+    }`;
+  }
+}
+
 function buildRegionPicker(){
   if($("regionPicker"))return;
 
@@ -292,11 +348,22 @@ function pontoDentroDaRegiao(regiao,lat,lng){
 }
 
 async function openRegionPicker(tipo){
-  const regiao=getSelectedRegion(tipo);
-  if(!regiao)return alert("Selecione uma região primeiro.");
+  if(!user)return;
+
+  const rua=tipo==="origem"?val("origemLogradouro"):val("destinoLogradouro");
+  if(!rua)return alert(tipo==="origem"?"Informe a rua/avenida de origem primeiro.":"Informe a rua/avenida de destino primeiro.");
 
   regionPickerType=tipo;
-  loading(true,"Abrindo região...");
+  loading(true,"Abrindo mapa...");
+
+  if(!regioesCache.length){
+    const rr=await api("listarRegioes",{cidade:user.cidade});
+    if(!rr.ok||!rr.regioes?.length){
+      loading(false);
+      return alert("As regiões desta cidade ainda não foram configuradas.");
+    }
+    regioesCache=rr.regioes;
+  }
 
   try{
     await loadLeaflet();
@@ -305,11 +372,11 @@ async function openRegionPicker(tipo){
     return alert(e.message);
   }
 
-  $("regionPickerTitle").textContent=tipo==="origem"?"Onde vamos te buscar?":"Onde você quer ir?";
-  $("regionPickerSub").textContent=`${user.cidade} • ${regiao.regiao}`;
+  $("regionPickerTitle").textContent=tipo==="origem"?"Confirme sua região":"Confirme a região de destino";
+  $("regionPickerSub").textContent=`${user.cidade} • posicione a tachinha aproximadamente no local`;
   $("regionPicker").classList.remove("hidden");
 
-  setTimeout(()=>{
+  setTimeout(async()=>{
     if(regionMap){
       regionMap.remove();
       regionMap=null;
@@ -322,87 +389,44 @@ async function openRegionPicker(tipo){
       inertia:true,
       bounceAtZoomLimits:false,
       maxBoundsViscosity:1.0,
-      minZoom:15
+      minZoom:13
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
       maxZoom:19,
-      minZoom:15,
+      minZoom:13,
       attribution:'&copy; OpenStreetMap'
     }).addTo(regionMap);
 
-    /*
-      A região é tratada como uma área URBANA da cidade.
-      O mapa não usa toda a caixa cadastrada de forma solta:
-      ele cria uma caixa interna menor ao redor do centro da região
-      para evitar mostrar área rural ou fora da cidade.
-    */
-    const norte=Number(regiao.norteLat);
-    const sul=Number(regiao.sulLat);
-    const leste=Number(regiao.lesteLng);
-    const oeste=Number(regiao.oesteLng);
-    const centroLat=Number(regiao.centroLat);
-    const centroLng=Number(regiao.centroLng);
+    const norte=Math.max(...regioesCache.map(r=>Number(r.norteLat)));
+    const sul=Math.min(...regioesCache.map(r=>Number(r.sulLat)));
+    const leste=Math.max(...regioesCache.map(r=>Number(r.lesteLng)));
+    const oeste=Math.min(...regioesCache.map(r=>Number(r.oesteLng)));
 
-    const altura=Math.abs(norte-sul);
-    const largura=Math.abs(leste-oeste);
-
-    // Mantém só 72% da área cadastrada em torno do centro.
-    // Assim a região continua precisa, mas visualmente dentro da malha urbana.
-    const meiaAltura=(altura*0.72)/2;
-    const meiaLargura=(largura*0.72)/2;
-
-    const urbanoNorte=Math.min(norte,centroLat+meiaAltura);
-    const urbanoSul=Math.max(sul,centroLat-meiaAltura);
-    const urbanoLeste=Math.min(leste,centroLng+meiaLargura);
-    const urbanoOeste=Math.max(oeste,centroLng-meiaLargura);
-
-    const bounds=L.latLngBounds(
-      [urbanoSul,urbanoOeste],
-      [urbanoNorte,urbanoLeste]
-    );
-
-    // Trava total: não deixa arrastar para fora da região urbana.
-    regionMap.setMaxBounds(bounds);
-    regionMap.fitBounds(bounds,{
-      padding:[28,28],
-      maxZoom:Number(regiao.zoom)||16
-    });
+    const cityBounds=L.latLngBounds([sul,oeste],[norte,leste]);
+    regionMap.setMaxBounds(cityBounds.pad(.03));
+    regionMap.fitBounds(cityBounds,{padding:[22,22],maxZoom:14});
 
     const savedLat=tipo==="origem"?origemLat:destinoLat;
     const savedLng=tipo==="origem"?origemLng:destinoLng;
 
-    if(
-      savedLat!==null &&
-      savedLng!==null &&
-      savedLat<=urbanoNorte &&
-      savedLat>=urbanoSul &&
-      savedLng<=urbanoLeste &&
-      savedLng>=urbanoOeste
-    ){
-      regionMap.setView(
-        [savedLat,savedLng],
-        Math.max(Number(regiao.zoom)||16,16)
-      );
-    }else{
-      regionMap.setView(
-        [centroLat,centroLng],
-        Math.max(Number(regiao.zoom)||16,16)
+    if(savedLat!==null&&savedLng!==null){
+      regionMap.setView([savedLat,savedLng],16);
+    }else if(tipo==="origem"&&navigator.geolocation){
+      // Tenta abrir já próximo de onde a pessoa está. Se falhar, mantém a cidade.
+      navigator.geolocation.getCurrentPosition(
+        pos=>{
+          const lat=pos.coords.latitude,lng=pos.coords.longitude;
+          if(lat<=norte&&lat>=sul&&lng<=leste&&lng>=oeste){
+            regionMap.setView([lat,lng],16);
+          }
+        },
+        ()=>{},
+        {enableHighAccuracy:true,timeout:4500,maximumAge:60000}
       );
     }
 
-    // Guarda os limites urbanos efetivos para validação do ponto.
-    regionMap._motocasUrbanBounds={
-      norte:urbanoNorte,
-      sul:urbanoSul,
-      leste:urbanoLeste,
-      oeste:urbanoOeste
-    };
-
-    regionMap.on("drag",()=>{
-      regionMap.panInsideBounds(bounds,{animate:false});
-    });
-
+    regionMap._motocasCityBounds={norte,sul,leste,oeste};
     regionMap.on("move",updateRegionPickerStatus);
     regionMap.on("moveend",updateRegionPickerStatus);
 
@@ -414,60 +438,54 @@ async function openRegionPicker(tipo){
 function updateRegionPickerStatus(){
   if(!regionMap||!regionPickerType)return;
 
-  const regiao=getSelectedRegion(regionPickerType);
   const c=regionMap.getCenter();
-  const ub=regionMap._motocasUrbanBounds;
+  const regiao=regioesCache
+    .filter(r=>
+      c.lat<=Number(r.norteLat)&&
+      c.lat>=Number(r.sulLat)&&
+      c.lng<=Number(r.lesteLng)&&
+      c.lng>=Number(r.oesteLng)
+    )
+    .sort((a,b)=>{
+      const da=Math.pow(c.lat-Number(a.centroLat),2)+Math.pow(c.lng-Number(a.centroLng),2);
+      const db=Math.pow(c.lat-Number(b.centroLat),2)+Math.pow(c.lng-Number(b.centroLng),2);
+      return da-db;
+    })[0]||null;
 
-  const ok=ub
-    ? (
-        c.lat<=ub.norte &&
-        c.lat>=ub.sul &&
-        c.lng<=ub.leste &&
-        c.lng>=ub.oeste
-      )
-    : pontoDentroDaRegiao(regiao,c.lat,c.lng);
+  regionMap._motocasDetectedRegion=regiao;
 
   const el=$("regionPickerStatus");
-  el.classList.toggle("ok",ok);
-  el.classList.toggle("bad",!ok);
+  el.classList.toggle("ok",!!regiao);
+  el.classList.toggle("bad",!regiao);
 
-  el.innerHTML=ok
-    ? `<i class="fa-solid fa-circle-check"></i> Ponto dentro da região ${esc(regiao.regiao)} de ${esc(user.cidade)}`
-    : `<i class="fa-solid fa-triangle-exclamation"></i> Mantenha o ponto dentro da região ${esc(regiao.regiao)} de ${esc(user.cidade)}`;
+  el.innerHTML=regiao
+    ? `<i class="fa-solid fa-circle-check"></i> Região identificada: <strong>${esc(regiao.regiao)}</strong>`
+    : `<i class="fa-solid fa-triangle-exclamation"></i> Posicione a tachinha dentro de uma região atendida de ${esc(user.cidade)}`;
 }
 
 function confirmRegionPoint(){
   if(!regionMap||!regionPickerType)return;
 
-  const regiao=getSelectedRegion(regionPickerType);
   const c=regionMap.getCenter();
-  const ub=regionMap._motocasUrbanBounds;
+  const regiao=regionMap._motocasDetectedRegion;
 
-  const ok=ub
-    ? (
-        c.lat<=ub.norte &&
-        c.lat>=ub.sul &&
-        c.lng<=ub.leste &&
-        c.lng>=ub.oeste
-      )
-    : pontoDentroDaRegiao(regiao,c.lat,c.lng);
-
-  if(!ok){
-    return alert(`Ajuste a tachinha para um ponto dentro da região ${regiao.regiao} de ${user.cidade}.`);
+  if(!regiao){
+    return alert("Posicione a tachinha dentro de uma região atendida da cidade.");
   }
 
   if(regionPickerType==="origem"){
     origemLat=Number(c.lat.toFixed(7));
     origemLng=Number(c.lng.toFixed(7));
-    const note=$("origemBairroPointNote");
-    if(note)note.classList.add("show");
+    origemRegiao=regiao.regiao;
+    if($("origemBairro"))$("origemBairro").value=origemRegiao;
   }else{
     destinoLat=Number(c.lat.toFixed(7));
     destinoLng=Number(c.lng.toFixed(7));
-    const note=$("destinoBairroPointNote");
-    if(note)note.classList.add("show");
+    destinoRegiao=regiao.regiao;
+    if($("destinoBairro"))$("destinoBairro").value=destinoRegiao;
   }
 
+  updateMapConfirmButton(regionPickerType);
   closeRegionPicker();
 }
 
@@ -534,53 +552,92 @@ async function loadNeighborhoods(){
 
   regioesCache=Array.isArray(r.regioes)?r.regioes:[];
 
-  if(!regioesCache.length){
-    // Compatibilidade: se a cidade ainda não tiver regiões, usa os bairros antigos.
-    const old=await api("listarBairros",{cidade:user.cidade});
-    if(!old.ok)return;
-    const o='<option value="">Selecionar bairro</option>'+old.bairros.map(b=>`<option>${esc(b)}</option>`).join("");
-    $("origemBairro").innerHTML=o;
-    $("destinoBairro").innerHTML=o;
-    return;
+  // Mantém os selects existentes escondidos apenas para compatibilidade com o HTML antigo.
+  if($("origemBairro")){
+    $("origemBairro").innerHTML='<option value=""></option>'+
+      regioesCache.map(x=>`<option value="${esc(x.regiao)}">${esc(x.regiao)}</option>`).join("");
+  }
+  if($("destinoBairro")){
+    $("destinoBairro").innerHTML='<option value=""></option>'+
+      regioesCache.map(x=>`<option value="${esc(x.regiao)}">${esc(x.regiao)}</option>`).join("");
   }
 
-  const o='<option value="">Selecionar região</option>'+
-    regioesCache.map(r=>`<option value="${esc(r.regiao)}">${esc(r.regiao)}</option>`).join("");
-
-  $("origemBairro").innerHTML=o;
-  $("destinoBairro").innerHTML=o;
-
-  $("origemBairro").onchange=()=>onRegionChanged("origem");
-  $("destinoBairro").onchange=()=>onRegionChanged("destino");
-
-  applyMotocasMapAndSelectStyle();
+  ensureConfirmMapButtons();
+  updateMapConfirmButton("origem");
+  updateMapConfirmButton("destino");
 }
-function nextStep(n){if(n>step&&!valid(step))return;step=n;["step1","step2","step3","step4","step5"].forEach((x,i)=>$(x).classList.toggle("hidden",i+1!==step));["p1","p2","p3","p4","p5"].forEach((x,i)=>$(x).classList.toggle("on",i<step));const t={1:"Onde você está?",2:"Detalhes da origem",3:"Para onde você vai?",4:"Detalhes do destino",5:"Confira e solicite"};$("sheetTitle").textContent=t[step];$("stepLabel").textContent=`ETAPA ${step} DE 5`;if(step===5)calculateFare()}
+function nextStep(n){
+  if(n>step&&!valid(step))return;
+  step=n;
+
+  ["step1","step2","step3","step4","step5"].forEach((x,i)=>{
+    $(x).classList.toggle("hidden",i+1!==step);
+  });
+
+  ["p1","p2","p3","p4","p5"].forEach((x,i)=>{
+    $(x).classList.toggle("on",i<step);
+  });
+
+  const t={
+    1:"Informe sua origem",
+    2:"Confirme sua região",
+    3:"Informe seu destino",
+    4:"Confirme a região de destino",
+    5:"Confira e solicite"
+  };
+
+  $("sheetTitle").textContent=t[step];
+  $("stepLabel").textContent=`ETAPA ${step} DE 5`;
+
+  ensureConfirmMapButtons();
+
+  if(step===2&&origemLat===null){
+    setTimeout(()=>openRegionPicker("origem"),80);
+  }
+  if(step===4&&destinoLat===null){
+    setTimeout(()=>openRegionPicker("destino"),80);
+  }
+  if(step===5)calculateFare();
+}
 function valid(s){
-  const usandoRegioes=regioesCache.length>0;
-
-  if(s===1&&!val("origemBairro"))
-    return alert(usandoRegioes?"Selecione a região de origem.":"Selecione o bairro de origem."),false;
-
-  if(s===1&&usandoRegioes&&(origemLat===null||origemLng===null))
-    return alert("Confirme o local de origem no mapa."),false;
-
-  if(s===2&&!val("origemLogradouro"))
+  if(s===1&&!val("origemLogradouro"))
     return alert("Informe a rua/avenida de origem."),false;
 
-  if(s===3&&!val("destinoBairro"))
-    return alert(usandoRegioes?"Selecione a região de destino.":"Selecione o bairro de destino."),false;
+  if(s===2&&(origemLat===null||origemLng===null||!origemRegiao))
+    return alert("Confirme a região da origem no mapa."),false;
 
-  if(s===3&&usandoRegioes&&(destinoLat===null||destinoLng===null))
-    return alert("Confirme o local de destino no mapa."),false;
-
-  if(s===4&&!val("destinoLogradouro"))
+  if(s===3&&!val("destinoLogradouro"))
     return alert("Informe a rua/avenida de destino."),false;
+
+  if(s===4&&(destinoLat===null||destinoLng===null||!destinoRegiao))
+    return alert("Confirme a região do destino no mapa."),false;
 
   return true;
 }
 
-async function calculateFare(){loading(true,"Calculando...");const r=await api("calcularTarifa",{cidade:user.cidade,origem:val("origemBairro"),destino:val("destinoBairro")});loading(false);if(!r.ok)return alert(r.message);fare=r.valor;$("fareValue").textContent=money(fare)}
+async function calculateFare(){
+  if(origemLat===null||origemLng===null||destinoLat===null||destinoLng===null){
+    return alert("Confirme origem e destino no mapa.");
+  }
+
+  loading(true,"Calculando...");
+  const r=await api("calcularTarifa",{
+    cidade:user.cidade,
+    origemLat,
+    origemLng,
+    destinoLat,
+    destinoLng
+  });
+  loading(false);
+
+  if(!r.ok)return alert(r.message);
+
+  fare=r.valor;
+  origemRegiao=r.origemRegiao||origemRegiao;
+  destinoRegiao=r.destinoRegiao||destinoRegiao;
+
+  $("fareValue").textContent=money(fare);
+}
 async function requestRide(){
   ensureAudio();
   loading(true,"Solicitando...");
@@ -591,18 +648,14 @@ async function requestRide(){
     passageiroTelefone:user.telefone,
     cidade:user.cidade,
 
-    // O campo mantém o mesmo nome por compatibilidade,
-    // mas nas cidades migradas ele representa a REGIÃO.
-    origemBairro:val("origemBairro"),
-    origemLat:origemLat,
-    origemLng:origemLng,
+    origemLat,
+    origemLng,
     origemLogradouro:val("origemLogradouro"),
     origemNumero:val("origemNumero")||"0",
     origemReferencia:val("origemReferencia"),
 
-    destinoBairro:val("destinoBairro"),
-    destinoLat:destinoLat,
-    destinoLng:destinoLng,
+    destinoLat,
+    destinoLng,
     destinoLogradouro:val("destinoLogradouro"),
     destinoNumero:val("destinoNumero")||"0",
     destinoReferencia:val("destinoReferencia"),
@@ -613,8 +666,11 @@ async function requestRide(){
   loading(false);
   if(!r.ok)return alert(r.message);
 
+  origemRegiao=r.origemRegiao||origemRegiao;
+  destinoRegiao=r.destinoRegiao||destinoRegiao;
   activeRideId=r.corridaId;
   lastStatus="PENDENTE";
+
   $("stepContent").classList.add("hidden");
   $("searchState").classList.remove("hidden");
 }
@@ -699,10 +755,14 @@ function resetSheet(){
   $("destinoNumero").value="";
   $("destinoReferencia").value="";
 
-  origemLat=null;origemLng=null;destinoLat=null;destinoLng=null;
-  const n1=$("origemBairroPointNote"),n2=$("destinoBairroPointNote");
-  if(n1)n1.classList.remove("show");
-  if(n2)n2.classList.remove("show");
+  origemLat=null;origemLng=null;origemRegiao="";
+  destinoLat=null;destinoLng=null;destinoRegiao="";
+
+  if($("origemBairro"))$("origemBairro").value="";
+  if($("destinoBairro"))$("destinoBairro").value="";
+
+  updateMapConfirmButton("origem");
+  updateMapConfirmButton("destino");
 
   closeChat();
   step=1;
