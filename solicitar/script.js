@@ -3,7 +3,7 @@ let user=null,fare=null,step=1,pollTimer=null,lastStatus=null,activeRideId=null,
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 function loading(on,text="Carregando..."){$("loadingText").textContent=text;$("loading").classList.toggle("hidden",!on)}
 async function api(action,data={}){try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,data})});return await r.json()}catch(e){return{ok:false,message:"Falha de conexão."}}}
-document.addEventListener("DOMContentLoaded",async()=>{bind();renderStars();await loadCities();const s=localStorage.getItem("motocas_passageiro");if(s){user=JSON.parse(s);openApp()}});
+document.addEventListener("DOMContentLoaded",async()=>{applyMotocasMapAndSelectStyle();bind();renderStars();await loadCities();const s=localStorage.getItem("motocas_passageiro");if(s){user=JSON.parse(s);openApp()}});
 function bind(){
 $("loginForm").onsubmit=async e=>{e.preventDefault();loading(true,"Entrando...");const r=await api("loginPassageiro",{email:val("loginEmail"),senha:val("loginSenha")});loading(false);if(!r.ok)return msg("loginMsg",r.message,true);user=r.user;localStorage.setItem("motocas_passageiro",JSON.stringify(user));openApp()};
 $("cadForm").onsubmit=async e=>{
@@ -69,19 +69,144 @@ function toggleMenu(force){
 }
 function mode(m){["loginForm","cadForm","forgotForm"].forEach(x=>$(x).classList.add("hidden"));$("tabLogin").classList.toggle("active",m==="login");$("tabCad").classList.toggle("active",m==="cad");if(m==="login")$("loginForm").classList.remove("hidden");if(m==="cad")$("cadForm").classList.remove("hidden");if(m==="forgot")$("forgotForm").classList.remove("hidden")}
 async function loadCities(){const r=await api("listarCidades");if(r.ok)$("cidade").innerHTML='<option value="">Selecione</option>'+r.cidades.map(c=>`<option>${esc(c)}</option>`).join("")}
+
+function applyMotocasMapAndSelectStyle(){
+  if(document.getElementById("motocasMapSelectStyle"))return;
+
+  const style=document.createElement("style");
+  style.id="motocasMapSelectStyle";
+  style.textContent=`
+    /* MAPA LIMPO */
+    #cityMap{
+      width:calc(100% + 110px)!important;
+      height:calc(100% + 110px)!important;
+      min-height:360px!important;
+      border:0!important;
+      position:absolute!important;
+      left:-55px!important;
+      top:-55px!important;
+      display:block!important;
+      background:#e9ecef;
+    }
+
+    .map-area,
+    .map-wrap,
+    .map-container,
+    .map-box,
+    .city-map,
+    .map-stage{
+      overflow:hidden!important;
+      position:relative!important;
+      border-radius:0!important;
+    }
+
+    /* SELECTS DOS BAIRROS */
+    #origemBairro,
+    #destinoBairro{
+      -webkit-appearance:none!important;
+      appearance:none!important;
+      width:100%!important;
+      min-height:52px!important;
+      border:1px solid #dbe1e4!important;
+      border-radius:17px!important;
+      padding:0 48px 0 46px!important;
+      background:
+        linear-gradient(45deg,transparent 50%,#001219 50%) calc(100% - 22px) 23px/6px 6px no-repeat,
+        linear-gradient(135deg,#001219 50%,transparent 50%) calc(100% - 16px) 23px/6px 6px no-repeat,
+        linear-gradient(#fff,#fff)!important;
+      color:#001219!important;
+      font-weight:800!important;
+      font-size:12px!important;
+      box-shadow:0 8px 24px rgba(0,18,25,.08)!important;
+      outline:none!important;
+      cursor:pointer!important;
+      transition:.18s ease!important;
+    }
+
+    #origemBairro:focus,
+    #destinoBairro:focus{
+      border-color:#ee9b00!important;
+      box-shadow:0 0 0 4px rgba(238,155,0,.13),0 10px 28px rgba(0,18,25,.10)!important;
+    }
+
+    #origemBairro:hover,
+    #destinoBairro:hover{
+      border-color:#ee9b00!important;
+    }
+
+    /* ícone visual inserido ao redor do select */
+    .motocas-select-wrap{
+      position:relative!important;
+      width:100%!important;
+    }
+
+    .motocas-select-wrap::before{
+      content:"\\f3c5";
+      font-family:"Font Awesome 6 Free";
+      font-weight:900;
+      position:absolute;
+      left:17px;
+      top:50%;
+      transform:translateY(-50%);
+      z-index:2;
+      pointer-events:none;
+      color:#ee9b00;
+      font-size:15px;
+    }
+
+    @media(max-width:640px){
+      #cityMap{
+        width:calc(100% + 150px)!important;
+        height:calc(100% + 150px)!important;
+        left:-75px!important;
+        top:-75px!important;
+        min-height:390px!important;
+      }
+
+      .map-area,
+      .map-wrap,
+      .map-container,
+      .map-box,
+      .city-map,
+      .map-stage{
+        overflow:hidden!important;
+      }
+
+      #origemBairro,
+      #destinoBairro{
+        min-height:54px!important;
+        border-radius:18px!important;
+        font-size:12px!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  ["origemBairro","destinoBairro"].forEach(id=>{
+    const el=$(id);
+    if(!el||el.parentElement.classList.contains("motocas-select-wrap"))return;
+    const wrap=document.createElement("div");
+    wrap.className="motocas-select-wrap";
+    el.parentNode.insertBefore(wrap,el);
+    wrap.appendChild(el);
+  });
+}
+
 function loadCityMap(city){
   const mapa=$("cityMap");
   if(!mapa)return;
 
   const cidade=String(city||"Brasil").trim();
+  const q=encodeURIComponent(cidade+", Brasil");
 
-  // Mantém um mapa incorporado limpo, sem o card branco do Google Maps.
-  // O OpenStreetMap permite exibir o mapa sem aquela caixa de
-  // nome/endereço/"Ver mapa ampliado".
-  const busca=encodeURIComponent(cidade+", Brasil");
-  mapa.src="https://www.openstreetmap.org/export/embed.html?search="+busca;
+  /*
+    O iframe fica maior que a área visível e é deslocado para fora das bordas.
+    Assim aparecem apenas as ruas/mapa no centro e os elementos de interface
+    que o provedor coloca nos cantos ficam fora da área visível.
+  */
+  mapa.src=`https://maps.google.com/maps?q=${q}&z=14&output=embed`;
   mapa.setAttribute("loading","lazy");
-  mapa.setAttribute("referrerpolicy","no-referrer");
+  mapa.setAttribute("referrerpolicy","no-referrer-when-downgrade");
 }
 async function openApp(){
   $("auth").classList.add("hidden");
@@ -102,7 +227,14 @@ async function openApp(){
   clearInterval(pollTimer);
   pollTimer=setInterval(()=>{refreshRide();pollPassengerChatBadge()},900);
 }
-async function loadNeighborhoods(){const r=await api("listarBairros",{cidade:user.cidade});if(!r.ok)return;const o='<option value="">Selecionar bairro</option>'+r.bairros.map(b=>`<option>${esc(b)}</option>`).join("");$("origemBairro").innerHTML=o;$("destinoBairro").innerHTML=o}
+async function loadNeighborhoods(){
+  const r=await api("listarBairros",{cidade:user.cidade});
+  if(!r.ok)return;
+  const o='<option value="">Selecionar bairro</option>'+r.bairros.map(b=>`<option>${esc(b)}</option>`).join("");
+  $("origemBairro").innerHTML=o;
+  $("destinoBairro").innerHTML=o;
+  applyMotocasMapAndSelectStyle();
+}
 function nextStep(n){if(n>step&&!valid(step))return;step=n;["step1","step2","step3","step4","step5"].forEach((x,i)=>$(x).classList.toggle("hidden",i+1!==step));["p1","p2","p3","p4","p5"].forEach((x,i)=>$(x).classList.toggle("on",i<step));const t={1:"Onde você está?",2:"Detalhes da origem",3:"Para onde você vai?",4:"Detalhes do destino",5:"Confira e solicite"};$("sheetTitle").textContent=t[step];$("stepLabel").textContent=`ETAPA ${step} DE 5`;if(step===5)calculateFare()}
 function valid(s){
   if(s===1&&!val("origemBairro"))return alert("Selecione o bairro de origem."),false;
