@@ -1,9 +1,18 @@
-const API="https://script.google.com/macros/s/AKfycbxYv4UOTDPWrr7Kdpu-oZdgQqGyGc8ZX-0OOBk6vFrwENvlBcjyDrCNBhyF3MxvS_8GsA/exec";
+const API="https://script.google.com/macros/s/AKfycbxxFkN-A0lMj8de0A4BCSADiMxgWSruDAAyLGscp5Z1HwyxV9N8pzvXzqSgDunO8SbGwQ/exec";
 let user=null,fare=null,step=1,pollTimer=null,lastStatus=null,activeRideId=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",ratingRideId=null,ratingValue=0,currentDriverPhoto="",reportRideId=null,reportMotocaId=null,chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnread=0,chatKnownCount=0,chatBusy=false,chatPendingRefresh=false,ratingCheckBusy=false;
+let regioesCache=[],origemLat=null,origemLng=null,destinoLat=null,destinoLng=null,regionMap=null,regionPickerType=null,regionMapReady=false;
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 function loading(on,text="Carregando..."){$("loadingText").textContent=text;$("loading").classList.toggle("hidden",!on)}
 async function api(action,data={}){try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,data})});return await r.json()}catch(e){return{ok:false,message:"Falha de conexão."}}}
-document.addEventListener("DOMContentLoaded",async()=>{applyMotocasMapAndSelectStyle();bind();renderStars();await loadCities();const s=localStorage.getItem("motocas_passageiro");if(s){user=JSON.parse(s);openApp()}});
+document.addEventListener("DOMContentLoaded",async()=>{
+  applyMotocasMapAndSelectStyle();
+  buildRegionPicker();
+  bind();
+  renderStars();
+  await loadCities();
+  const s=localStorage.getItem("motocas_passageiro");
+  if(s){user=JSON.parse(s);openApp()}
+});
 function bind(){
 $("loginForm").onsubmit=async e=>{e.preventDefault();loading(true,"Entrando...");const r=await api("loginPassageiro",{email:val("loginEmail"),senha:val("loginSenha")});loading(false);if(!r.ok)return msg("loginMsg",r.message,true);user=r.user;localStorage.setItem("motocas_passageiro",JSON.stringify(user));openApp()};
 $("cadForm").onsubmit=async e=>{
@@ -76,7 +85,6 @@ function applyMotocasMapAndSelectStyle(){
   const style=document.createElement("style");
   style.id="motocasMapSelectStyle";
   style.textContent=`
-    /* MAPA LIMPO */
     #cityMap{
       width:calc(100% + 110px)!important;
       height:calc(100% + 110px)!important;
@@ -89,57 +97,36 @@ function applyMotocasMapAndSelectStyle(){
       background:#e9ecef;
     }
 
-    .map-area,
-    .map-wrap,
-    .map-container,
-    .map-box,
-    .city-map,
-    .map-stage{
+    .map-area,.map-wrap,.map-container,.map-box,.city-map,.map-stage{
       overflow:hidden!important;
       position:relative!important;
-      border-radius:0!important;
     }
 
-    /* SELECTS DOS BAIRROS */
-    #origemBairro,
-    #destinoBairro{
+    #origemBairro,#destinoBairro{
       -webkit-appearance:none!important;
       appearance:none!important;
       width:100%!important;
-      min-height:52px!important;
+      min-height:54px!important;
       border:1px solid #dbe1e4!important;
-      border-radius:17px!important;
+      border-radius:18px!important;
       padding:0 48px 0 46px!important;
       background:
-        linear-gradient(45deg,transparent 50%,#001219 50%) calc(100% - 22px) 23px/6px 6px no-repeat,
-        linear-gradient(135deg,#001219 50%,transparent 50%) calc(100% - 16px) 23px/6px 6px no-repeat,
+        linear-gradient(45deg,transparent 50%,#001219 50%) calc(100% - 22px) 24px/6px 6px no-repeat,
+        linear-gradient(135deg,#001219 50%,transparent 50%) calc(100% - 16px) 24px/6px 6px no-repeat,
         linear-gradient(#fff,#fff)!important;
       color:#001219!important;
       font-weight:800!important;
       font-size:12px!important;
       box-shadow:0 8px 24px rgba(0,18,25,.08)!important;
       outline:none!important;
-      cursor:pointer!important;
-      transition:.18s ease!important;
     }
 
-    #origemBairro:focus,
-    #destinoBairro:focus{
+    #origemBairro:focus,#destinoBairro:focus{
       border-color:#ee9b00!important;
       box-shadow:0 0 0 4px rgba(238,155,0,.13),0 10px 28px rgba(0,18,25,.10)!important;
     }
 
-    #origemBairro:hover,
-    #destinoBairro:hover{
-      border-color:#ee9b00!important;
-    }
-
-    /* ícone visual inserido ao redor do select */
-    .motocas-select-wrap{
-      position:relative!important;
-      width:100%!important;
-    }
-
+    .motocas-select-wrap{position:relative!important;width:100%!important}
     .motocas-select-wrap::before{
       content:"\\f3c5";
       font-family:"Font Awesome 6 Free";
@@ -154,30 +141,61 @@ function applyMotocasMapAndSelectStyle(){
       font-size:15px;
     }
 
+    .region-picker{
+      position:fixed;inset:0;z-index:1200;background:#001219;
+      display:flex;flex-direction:column;
+    }
+    .region-picker.hidden{display:none!important}
+    .region-picker-top{
+      padding:calc(12px + env(safe-area-inset-top)) 14px 12px;
+      background:#001219;color:#fff;display:flex;align-items:center;gap:12px;
+    }
+    .region-picker-close{
+      width:40px;height:40px;border:0;border-radius:50%;background:#ffffff14;color:#fff;font-size:17px;
+    }
+    .region-picker-title{font-size:13px;font-weight:900}
+    .region-picker-sub{font-size:9px;color:#afbdc2;margin-top:2px}
+    .region-map-wrap{position:relative;flex:1;min-height:320px;overflow:hidden;background:#e9ecef}
+    #regionPickerMap{position:absolute;inset:0}
+    .region-center-pin{
+      position:absolute;left:50%;top:50%;z-index:800;transform:translate(-50%,-100%);
+      pointer-events:none;filter:drop-shadow(0 5px 5px #0005);
+    }
+    .region-center-pin i{font-size:39px;color:#ee9b00;-webkit-text-stroke:2px #001219}
+    .region-center-dot{
+      position:absolute;left:50%;top:50%;z-index:799;width:10px;height:5px;border-radius:50%;
+      background:#00121944;transform:translate(-50%,5px);pointer-events:none
+    }
+    .region-picker-bottom{
+      background:#fff;padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+      border-radius:22px 22px 0 0;margin-top:-18px;z-index:900;box-shadow:0 -10px 30px #0002;
+    }
+    .region-picker-status{
+      padding:10px 12px;border-radius:13px;background:#f4f6f7;font-size:10px;font-weight:800;margin-bottom:10px;
+    }
+    .region-picker-status.ok{background:#e9f8ef;color:#14864e}
+    .region-picker-status.bad{background:#fff0f0;color:#c83c3c}
+    .region-confirm-btn{
+      width:100%;border:0;border-radius:16px;background:#ee9b00;color:#001219;
+      min-height:52px;font-weight:900;font-size:11px;
+    }
+    .region-selected-note{
+      display:none;margin-top:8px;padding:9px 11px;border-radius:12px;background:#e9f8ef;
+      color:#14864e;font-size:9px;font-weight:800;
+    }
+    .region-selected-note.show{display:block}
+
+    .leaflet-control-attribution{font-size:7px!important;opacity:.65}
+    .leaflet-control-zoom{display:none!important}
+
     @media(max-width:640px){
       #cityMap{
         width:calc(100% + 150px)!important;
         height:calc(100% + 150px)!important;
-        left:-75px!important;
-        top:-75px!important;
-        min-height:390px!important;
+        left:-75px!important;top:-75px!important;min-height:390px!important;
       }
-
-      .map-area,
-      .map-wrap,
-      .map-container,
-      .map-box,
-      .city-map,
-      .map-stage{
-        overflow:hidden!important;
-      }
-
-      #origemBairro,
-      #destinoBairro{
-        min-height:54px!important;
-        border-radius:18px!important;
-        font-size:12px!important;
-      }
+      .region-picker-top{padding-left:12px;padding-right:12px}
+      .region-picker-bottom{padding-left:12px;padding-right:12px}
     }
   `;
   document.head.appendChild(style);
@@ -189,7 +207,208 @@ function applyMotocasMapAndSelectStyle(){
     wrap.className="motocas-select-wrap";
     el.parentNode.insertBefore(wrap,el);
     wrap.appendChild(el);
+
+    const note=document.createElement("div");
+    note.id=id+"PointNote";
+    note.className="region-selected-note";
+    note.innerHTML='<i class="fa-solid fa-location-dot"></i> Local confirmado no mapa';
+    wrap.appendChild(note);
   });
+}
+
+
+function buildRegionPicker(){
+  if($("regionPicker"))return;
+
+  const el=document.createElement("div");
+  el.id="regionPicker";
+  el.className="region-picker hidden";
+  el.innerHTML=`
+    <div class="region-picker-top">
+      <button type="button" class="region-picker-close" onclick="closeRegionPicker()">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <div>
+        <div id="regionPickerTitle" class="region-picker-title">Escolha o local</div>
+        <div id="regionPickerSub" class="region-picker-sub"></div>
+      </div>
+    </div>
+    <div class="region-map-wrap">
+      <div id="regionPickerMap"></div>
+      <div class="region-center-pin"><i class="fa-solid fa-location-dot"></i></div>
+      <div class="region-center-dot"></div>
+    </div>
+    <div class="region-picker-bottom">
+      <div id="regionPickerStatus" class="region-picker-status">
+        Mova o mapa para posicionar a tachinha.
+      </div>
+      <button type="button" class="region-confirm-btn" onclick="confirmRegionPoint()">
+        <i class="fa-solid fa-check"></i> CONFIRMAR ESTE LOCAL
+      </button>
+    </div>
+  `;
+  document.body.appendChild(el);
+}
+
+function loadLeaflet(){
+  return new Promise((resolve,reject)=>{
+    if(window.L)return resolve();
+
+    if(!document.getElementById("leafletCss")){
+      const css=document.createElement("link");
+      css.id="leafletCss";
+      css.rel="stylesheet";
+      css.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(css);
+    }
+
+    const existing=document.getElementById("leafletJs");
+    if(existing){
+      existing.addEventListener("load",()=>resolve(),{once:true});
+      existing.addEventListener("error",()=>reject(new Error("Não foi possível carregar o mapa.")),{once:true});
+      return;
+    }
+
+    const js=document.createElement("script");
+    js.id="leafletJs";
+    js.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    js.onload=()=>resolve();
+    js.onerror=()=>reject(new Error("Não foi possível carregar o mapa."));
+    document.head.appendChild(js);
+  });
+}
+
+function getSelectedRegion(tipo){
+  const nome=tipo==="origem"?val("origemBairro"):val("destinoBairro");
+  return regioesCache.find(r=>r.regiao===nome)||null;
+}
+
+function pontoDentroDaRegiao(regiao,lat,lng){
+  if(!regiao)return false;
+  return lat<=Number(regiao.norteLat) &&
+         lat>=Number(regiao.sulLat) &&
+         lng<=Number(regiao.lesteLng) &&
+         lng>=Number(regiao.oesteLng);
+}
+
+async function openRegionPicker(tipo){
+  const regiao=getSelectedRegion(tipo);
+  if(!regiao)return alert("Selecione uma região primeiro.");
+
+  regionPickerType=tipo;
+  loading(true,"Abrindo região...");
+
+  try{
+    await loadLeaflet();
+  }catch(e){
+    loading(false);
+    return alert(e.message);
+  }
+
+  $("regionPickerTitle").textContent=tipo==="origem"?"Onde vamos te buscar?":"Onde você quer ir?";
+  $("regionPickerSub").textContent=`${user.cidade} • ${regiao.regiao}`;
+  $("regionPicker").classList.remove("hidden");
+
+  setTimeout(()=>{
+    if(regionMap){
+      regionMap.remove();
+      regionMap=null;
+    }
+
+    regionMap=L.map("regionPickerMap",{
+      zoomControl:false,
+      attributionControl:true,
+      preferCanvas:true,
+      inertia:true,
+      maxBoundsViscosity:1.0
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      maxZoom:19,
+      attribution:'&copy; OpenStreetMap'
+    }).addTo(regionMap);
+
+    const bounds=L.latLngBounds(
+      [Number(regiao.sulLat),Number(regiao.oesteLng)],
+      [Number(regiao.norteLat),Number(regiao.lesteLng)]
+    );
+
+    regionMap.setMaxBounds(bounds.pad(.05));
+    regionMap.fitBounds(bounds,{padding:[20,20]});
+
+    const savedLat=tipo==="origem"?origemLat:destinoLat;
+    const savedLng=tipo==="origem"?origemLng:destinoLng;
+    if(savedLat!==null&&savedLng!==null&&pontoDentroDaRegiao(regiao,savedLat,savedLng)){
+      regionMap.setView([savedLat,savedLng],Math.max(Number(regiao.zoom)||15,15));
+    }else{
+      regionMap.setView([Number(regiao.centroLat),Number(regiao.centroLng)],Number(regiao.zoom)||15);
+    }
+
+    regionMap.on("move",updateRegionPickerStatus);
+    regionMap.on("moveend",updateRegionPickerStatus);
+    updateRegionPickerStatus();
+    loading(false);
+  },80);
+}
+
+function updateRegionPickerStatus(){
+  if(!regionMap||!regionPickerType)return;
+  const regiao=getSelectedRegion(regionPickerType);
+  const c=regionMap.getCenter();
+  const ok=pontoDentroDaRegiao(regiao,c.lat,c.lng);
+  const el=$("regionPickerStatus");
+
+  el.classList.toggle("ok",ok);
+  el.classList.toggle("bad",!ok);
+  el.innerHTML=ok
+    ? `<i class="fa-solid fa-circle-check"></i> Ponto dentro da região ${esc(regiao.regiao)}`
+    : `<i class="fa-solid fa-triangle-exclamation"></i> Este ponto está fora da região ${esc(regiao.regiao)}`;
+}
+
+function confirmRegionPoint(){
+  if(!regionMap||!regionPickerType)return;
+  const regiao=getSelectedRegion(regionPickerType);
+  const c=regionMap.getCenter();
+
+  if(!pontoDentroDaRegiao(regiao,c.lat,c.lng)){
+    return alert("Ajuste a tachinha para um ponto dentro da região selecionada.");
+  }
+
+  if(regionPickerType==="origem"){
+    origemLat=Number(c.lat.toFixed(7));
+    origemLng=Number(c.lng.toFixed(7));
+    const note=$("origemBairroPointNote");
+    if(note)note.classList.add("show");
+  }else{
+    destinoLat=Number(c.lat.toFixed(7));
+    destinoLng=Number(c.lng.toFixed(7));
+    const note=$("destinoBairroPointNote");
+    if(note)note.classList.add("show");
+  }
+
+  closeRegionPicker();
+}
+
+function closeRegionPicker(){
+  $("regionPicker").classList.add("hidden");
+  if(regionMap){
+    regionMap.remove();
+    regionMap=null;
+  }
+  regionPickerType=null;
+}
+
+function onRegionChanged(tipo){
+  if(tipo==="origem"){
+    origemLat=null;origemLng=null;
+    const n=$("origemBairroPointNote");if(n)n.classList.remove("show");
+  }else{
+    destinoLat=null;destinoLng=null;
+    const n=$("destinoBairroPointNote");if(n)n.classList.remove("show");
+  }
+
+  const id=tipo==="origem"?"origemBairro":"destinoBairro";
+  if(val(id))openRegionPicker(tipo);
 }
 
 function loadCityMap(city){
@@ -228,43 +447,90 @@ async function openApp(){
   pollTimer=setInterval(()=>{refreshRide();pollPassengerChatBadge()},900);
 }
 async function loadNeighborhoods(){
-  const r=await api("listarBairros",{cidade:user.cidade});
-  if(!r.ok)return;
-  const o='<option value="">Selecionar bairro</option>'+r.bairros.map(b=>`<option>${esc(b)}</option>`).join("");
+  const r=await api("listarRegioes",{cidade:user.cidade});
+  if(!r.ok)return alert(r.message);
+
+  regioesCache=Array.isArray(r.regioes)?r.regioes:[];
+
+  if(!regioesCache.length){
+    // Compatibilidade: se a cidade ainda não tiver regiões, usa os bairros antigos.
+    const old=await api("listarBairros",{cidade:user.cidade});
+    if(!old.ok)return;
+    const o='<option value="">Selecionar bairro</option>'+old.bairros.map(b=>`<option>${esc(b)}</option>`).join("");
+    $("origemBairro").innerHTML=o;
+    $("destinoBairro").innerHTML=o;
+    return;
+  }
+
+  const o='<option value="">Selecionar região</option>'+
+    regioesCache.map(r=>`<option value="${esc(r.regiao)}">${esc(r.regiao)}</option>`).join("");
+
   $("origemBairro").innerHTML=o;
   $("destinoBairro").innerHTML=o;
+
+  $("origemBairro").onchange=()=>onRegionChanged("origem");
+  $("destinoBairro").onchange=()=>onRegionChanged("destino");
+
   applyMotocasMapAndSelectStyle();
 }
 function nextStep(n){if(n>step&&!valid(step))return;step=n;["step1","step2","step3","step4","step5"].forEach((x,i)=>$(x).classList.toggle("hidden",i+1!==step));["p1","p2","p3","p4","p5"].forEach((x,i)=>$(x).classList.toggle("on",i<step));const t={1:"Onde você está?",2:"Detalhes da origem",3:"Para onde você vai?",4:"Detalhes do destino",5:"Confira e solicite"};$("sheetTitle").textContent=t[step];$("stepLabel").textContent=`ETAPA ${step} DE 5`;if(step===5)calculateFare()}
 function valid(s){
-  if(s===1&&!val("origemBairro"))return alert("Selecione o bairro de origem."),false;
-  if(s===2&&!val("origemLogradouro"))return alert("Informe a rua/avenida de origem."),false;
-  if(s===3&&!val("destinoBairro"))return alert("Selecione o bairro de destino."),false;
-  if(s===4&&!val("destinoLogradouro"))return alert("Informe a rua/avenida de destino."),false;
-  return true
+  const usandoRegioes=regioesCache.length>0;
+
+  if(s===1&&!val("origemBairro"))
+    return alert(usandoRegioes?"Selecione a região de origem.":"Selecione o bairro de origem."),false;
+
+  if(s===1&&usandoRegioes&&(origemLat===null||origemLng===null))
+    return alert("Confirme o local de origem no mapa."),false;
+
+  if(s===2&&!val("origemLogradouro"))
+    return alert("Informe a rua/avenida de origem."),false;
+
+  if(s===3&&!val("destinoBairro"))
+    return alert(usandoRegioes?"Selecione a região de destino.":"Selecione o bairro de destino."),false;
+
+  if(s===3&&usandoRegioes&&(destinoLat===null||destinoLng===null))
+    return alert("Confirme o local de destino no mapa."),false;
+
+  if(s===4&&!val("destinoLogradouro"))
+    return alert("Informe a rua/avenida de destino."),false;
+
+  return true;
 }
 
 async function calculateFare(){loading(true,"Calculando...");const r=await api("calcularTarifa",{cidade:user.cidade,origem:val("origemBairro"),destino:val("destinoBairro")});loading(false);if(!r.ok)return alert(r.message);fare=r.valor;$("fareValue").textContent=money(fare)}
 async function requestRide(){
   ensureAudio();
   loading(true,"Solicitando...");
+
   const r=await api("criarCorrida",{
     passageiroId:user.id,
     passageiroNome:user.nome,
     passageiroTelefone:user.telefone,
     cidade:user.cidade,
+
+    // O campo mantém o mesmo nome por compatibilidade,
+    // mas nas cidades migradas ele representa a REGIÃO.
     origemBairro:val("origemBairro"),
+    origemLat:origemLat,
+    origemLng:origemLng,
     origemLogradouro:val("origemLogradouro"),
     origemNumero:val("origemNumero")||"0",
     origemReferencia:val("origemReferencia"),
+
     destinoBairro:val("destinoBairro"),
+    destinoLat:destinoLat,
+    destinoLng:destinoLng,
     destinoLogradouro:val("destinoLogradouro"),
     destinoNumero:val("destinoNumero")||"0",
     destinoReferencia:val("destinoReferencia"),
+
     pagamento:val("pagamento")
   });
+
   loading(false);
   if(!r.ok)return alert(r.message);
+
   activeRideId=r.corridaId;
   lastStatus="PENDENTE";
   $("stepContent").classList.add("hidden");
@@ -343,10 +609,22 @@ function resetSheet(){
   $("stepContent").classList.remove("hidden");
   $("searchState").classList.add("hidden");
   $("acceptedState").classList.add("hidden");
-  $("origemLogradouro").value="";$("origemNumero").value="";$("origemReferencia").value="";
-  $("destinoLogradouro").value="";$("destinoNumero").value="";$("destinoReferencia").value="";
+
+  $("origemLogradouro").value="";
+  $("origemNumero").value="";
+  $("origemReferencia").value="";
+  $("destinoLogradouro").value="";
+  $("destinoNumero").value="";
+  $("destinoReferencia").value="";
+
+  origemLat=null;origemLng=null;destinoLat=null;destinoLng=null;
+  const n1=$("origemBairroPointNote"),n2=$("destinoBairroPointNote");
+  if(n1)n1.classList.remove("show");
+  if(n2)n2.classList.remove("show");
+
   closeChat();
-  step=1;nextStep(1);
+  step=1;
+  nextStep(1);
 }
 async function cancelActiveRide(){if(!activeRideId)return;if(!confirm("Deseja cancelar esta corrida?"))return;loading(true,"Cancelando...");const r=await api("cancelarCorridaPassageiro",{corridaId:activeRideId,passageiroId:user.id});loading(false);if(!r.ok)return alert(r.message);lastStatus=null;activeRideId=null;resetSheet()}
 function showView(v){["home","trips","profile"].forEach(x=>{$(x+"View").classList.toggle("active",x===v);$("nav"+cap(x)).classList.toggle("active",x===v)});if(v==="trips")loadTrips();if(v==="profile")loadProfile()}
