@@ -3,7 +3,32 @@ let user=null,fare=null,step=1,pollTimer=null,lastStatus=null,activeRideId=null,
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 function loading(on,text="Carregando..."){$("loadingText").textContent=text;$("loading").classList.toggle("hidden",!on)}
 async function api(action,data={}){try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,data})});return await r.json()}catch(e){return{ok:false,message:"Falha de conexão."}}}
-document.addEventListener("DOMContentLoaded",async()=>{applyMotocasMapAndSelectStyle();bind();renderStars();await loadCities();const s=localStorage.getItem("motocas_passageiro");if(s){user=JSON.parse(s);openApp()}});
+document.addEventListener("DOMContentLoaded",async()=>{
+  applyMotocasMapAndSelectStyle();
+  bind();
+  renderStars();
+
+  const s=localStorage.getItem("motocas_passageiro");
+
+  // Se já existe sessão salva, mostra imediatamente que o app está entrando.
+  if(s) loading(true,"Entrando...");
+
+  await loadCities();
+
+  if(s){
+    try{
+      user=JSON.parse(s);
+      await openApp();
+    }catch(e){
+      localStorage.removeItem("motocas_passageiro");
+      user=null;
+      $("auth").classList.remove("hidden");
+      mode("login");
+    }finally{
+      loading(false);
+    }
+  }
+});
 function bind(){
 $("loginForm").onsubmit=async e=>{e.preventDefault();loading(true,"Entrando...");const r=await api("loginPassageiro",{email:val("loginEmail"),senha:val("loginSenha")});loading(false);if(!r.ok)return msg("loginMsg",r.message,true);user=r.user;localStorage.setItem("motocas_passageiro",JSON.stringify(user));openApp()};
 $("cadForm").onsubmit=async e=>{
@@ -55,11 +80,7 @@ function openSupportWhatsApp(){
 }
 
 function requestAccountDeletion(){
-  const nome=user&&user.nome||"";
-  const email=user&&user.email||"";
-  const msg=`Olá! Quero solicitar a exclusão definitiva da minha conta de Passageiro no Motocas App.\n\nNome: ${nome}\nE-mail: ${email}`;
-  const url="https://wa.me/5589994029572?text="+encodeURIComponent(msg);
-  window.open(url,"_blank");
+  window.open("https://pegaelevadelivery.com.br/excluirconta/","_blank","noopener,noreferrer");
 }
 
 function toggleMenu(force){
