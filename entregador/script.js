@@ -1,4 +1,4 @@
-const API="https://script.google.com/macros/s/AKfycbxYv4UOTDPWrr7Kdpu-oZdgQqGyGc8ZX-0OOBk6vFrwENvlBcjyDrCNBhyF3MxvS_8GsA/exec";
+const API="https://script.google.com/macros/s/AKfycbwpwDab2NCpnSdx5Hg0ZZDmN4k2_ta7BIGXzDtvDrAFtfjHSWtJN-4OJzZyuU10yXrMcw/exec";
 let motoca=null,online=false,pollTimer=null,lastOfferId=null,currentOffer=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",waitRideId=null,paymentRideId=null,paymentMethod=null,photoToOpen="",waitIntervals={},chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnreadByRide={},chatBusy=false,chatPendingRefresh=false,lastActiveStatuses={},activeRidesBusy=false,offerBusy=false,tripsBusy=false,paymentBusy=false,rideStateRestored=false,activeRidesCache=[];
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 let balanceVisible=true,balanceRealValue=0;
