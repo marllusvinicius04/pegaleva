@@ -1,107 +1,72 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Solicitação de Exclusão de Conta | Pega e Leva Delivery</title>
-  <meta name="description" content="Solicite a exclusão da sua conta e dos seus dados pessoais da plataforma Pega e Leva Delivery.">
-  <meta name="theme-color" content="#0029ff">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <header class="topo">
-    <div class="topo__conteudo">
-      <span class="topo__marca">Pega e Leva Delivery</span>
-      <h1>Solicitação de Exclusão de Conta</h1>
-      <p>Preencha o formulário abaixo para solicitar a exclusão da sua conta e dos seus dados pessoais.</p>
+<section class="card">
+  <h2>Formulário de solicitação</h2>
+  <p class="descricao">Após preencher os dados, você será direcionado ao WhatsApp do Motocas com uma mensagem pronta para envio.</p>
+
+  <form id="formExclusao" novalidate>
+    <div class="campo">
+      <label for="nome">Nome completo *</label>
+      <input type="text" id="nome" name="nome" autocomplete="name" placeholder="Digite seu nome completo" required>
+      <small class="erro" id="erroNome"></small>
     </div>
-  </header>
 
-  <main class="pagina">
-    <section class="card informacoes">
-      <h2>Antes de solicitar</h2>
-      <p>Ao solicitar a exclusão, sua conta poderá ser desativada e os dados associados serão excluídos ou anonimizados, quando aplicável.</p>
-      <p>Algumas informações poderão permanecer armazenadas pelo período necessário para cumprimento de obrigações legais, regulatórias, fiscais, prevenção de fraudes e exercício regular de direitos.</p>
-    </section>
+    <div class="grade">
+      <div class="campo">
+        <label for="telefone">Telefone cadastrado *</label>
+        <input type="tel" id="telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(89) 99999-9999" maxlength="15" required>
+        <small class="erro" id="erroTelefone"></small>
+      </div>
 
-    <section class="card">
-      <h2>Formulário de solicitação</h2>
-      <p class="descricao">Após preencher os dados, você será direcionado ao WhatsApp da Pega e Leva Delivery com uma mensagem pronta para envio.</p>
+      <div class="campo">
+        <label for="email">E-mail cadastrado</label>
+        <input type="email" id="email" name="email" autocomplete="email" placeholder="seuemail@exemplo.com">
+        <small class="erro" id="erroEmail"></small>
+      </div>
+    </div>
 
-      <form id="formExclusao" novalidate>
-        <div class="campo">
-          <label for="nome">Nome completo *</label>
-          <input type="text" id="nome" name="nome" autocomplete="name" placeholder="Digite seu nome completo" required>
-          <small class="erro" id="erroNome"></small>
-        </div>
+    <div class="campo">
+      <label for="tipoConta">Tipo de conta *</label>
+      <select id="tipoConta" name="tipoConta" required>
+        <option value="">Selecione uma opção</option>
+        <option value="Cliente">Cliente</option>
+        <option value="Entregador">Entregador</option>
+        <option value="Estabelecimento parceiro">Estabelecimento parceiro</option>
+        <option value="Outro">Outro</option>
+      </select>
+      <small class="erro" id="erroTipoConta"></small>
+    </div>
 
-        <div class="grade">
-          <div class="campo">
-            <label for="telefone">Telefone cadastrado *</label>
-            <input type="tel" id="telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(89) 99999-9999" maxlength="15" required>
-            <small class="erro" id="erroTelefone"></small>
-          </div>
+    <div class="campo">
+      <label for="motivo">Motivo da exclusão</label>
+      <select id="motivo" name="motivo">
+        <option value="Não informado">Prefiro não informar</option>
+        <option value="Não utilizo mais o serviço">Não utilizo mais o serviço</option>
+        <option value="Criei outra conta">Criei outra conta</option>
+        <option value="Problemas com o aplicativo">Problemas com o aplicativo</option>
+        <option value="Preocupação com privacidade">Preocupação com privacidade</option>
+        <option value="Outro motivo">Outro motivo</option>
+      </select>
+    </div>
 
-          <div class="campo">
-            <label for="email">E-mail cadastrado</label>
-            <input type="email" id="email" name="email" autocomplete="email" placeholder="seuemail@exemplo.com">
-            <small class="erro" id="erroEmail"></small>
-          </div>
-        </div>
+    <div class="campo">
+      <label for="observacoes">Observações</label>
+      <textarea id="observacoes" name="observacoes" rows="5" maxlength="500" placeholder="Adicione alguma informação que ajude a localizar sua conta."></textarea>
+      <div class="contador"><span id="quantidadeCaracteres">0</span>/500</div>
+    </div>
 
-        <div class="campo">
-          <label for="tipoConta">Tipo de conta *</label>
-          <select id="tipoConta" name="tipoConta" required>
-            <option value="">Selecione uma opção</option>
-            <option value="Cliente">Cliente</option>
-            <option value="Entregador">Entregador</option>
-            <option value="Estabelecimento parceiro">Estabelecimento parceiro</option>
-            <option value="Outro">Outro</option>
-          </select>
-          <small class="erro" id="erroTipoConta"></small>
-        </div>
+    <label class="confirmacao">
+      <input type="checkbox" id="confirmar" required>
+      <span>Confirmo que sou o titular da conta e desejo solicitar sua exclusão. Estou ciente de que o Motocas poderá entrar em contato para confirmar minha identidade.</span>
+    </label>
+    <small class="erro erro-confirmacao" id="erroConfirmacao"></small>
 
-        <div class="campo">
-          <label for="motivo">Motivo da exclusão</label>
-          <select id="motivo" name="motivo">
-            <option value="Não informado">Prefiro não informar</option>
-            <option value="Não utilizo mais o serviço">Não utilizo mais o serviço</option>
-            <option value="Criei outra conta">Criei outra conta</option>
-            <option value="Problemas com o aplicativo">Problemas com o aplicativo</option>
-            <option value="Preocupação com privacidade">Preocupação com privacidade</option>
-            <option value="Outro motivo">Outro motivo</option>
-          </select>
-        </div>
+    <button type="submit" class="botao-whatsapp">Enviar solicitação pelo WhatsApp</button>
 
-        <div class="campo">
-          <label for="observacoes">Observações</label>
-          <textarea id="observacoes" name="observacoes" rows="5" maxlength="500" placeholder="Adicione alguma informação que ajude a localizar sua conta."></textarea>
-          <div class="contador"><span id="quantidadeCaracteres">0</span>/500</div>
-        </div>
+    <p class="aviso">Este formulário não envia nem armazena seus dados neste site. As informações preenchidas serão incluídas na mensagem aberta no WhatsApp.</p>
+  </form>
+</section>
 
-        <label class="confirmacao">
-          <input type="checkbox" id="confirmar" required>
-          <span>Confirmo que sou o titular da conta e desejo solicitar sua exclusão. Estou ciente de que a Pega e Leva Delivery poderá entrar em contato para confirmar minha identidade.</span>
-        </label>
-        <small class="erro erro-confirmacao" id="erroConfirmacao"></small>
-
-        <button type="submit" class="botao-whatsapp">Enviar solicitação pelo WhatsApp</button>
-
-        <p class="aviso">Este formulário não envia nem armazena seus dados neste site. As informações preenchidas serão incluídas na mensagem aberta no WhatsApp.</p>
-      </form>
-    </section>
-
-    <section class="card contato">
-      <h2>Canal de atendimento</h2>
-      <p>WhatsApp: <a href="https://wa.me/5589994029572" target="_blank" rel="noopener noreferrer">(89) 99402-9572</a></p>
-      <p>E-mail: <a href="mailto:marllusvinicius04@gmail.com">marllusvinicius04@gmail.com</a></p>
-    </section>
-  </main>
-
-  <footer class="rodape">
-    <p>© <span id="anoAtual"></span> Pega e Leva Delivery. Todos os direitos reservados.</p>
-  </footer>
-
-  <script src="script.js"></script>
-</body>
-</html>
+<section class="card contato">
+  <h2>Canal de atendimento</h2>
+  <p>WhatsApp: <a href="https://wa.me/5589994029572" target="_blank" rel="noopener noreferrer">(89) 99402-9572</a></p>
+  <p>E-mail: <a href="mailto:marllusvinicius04@gmail.com">marllusvinicius04@gmail.com</a></p>
+</section>
