@@ -1,4 +1,4 @@
-const API="https://script.google.com/macros/s/AKfycby4Z9ug9kghxAF-yHT8nHB6yimXsJOE9V29-W-Fbuxm08aWm0HHWPGRBrus5pNRtW-G/exec";
+const API="https://script.google.com/macros/s/AKfycbwpwDab2NCpnSdx5Hg0ZZDmN4k2_ta7BIGXzDtvDrAFtfjHSWtJN-4OJzZyuU10yXrMcw/exec";
 let user=null,fare=null,step=1,pollTimer=null,lastStatus=null,activeRideId=null,audioCtx=null,pendingPhotoBase64="",pendingPhotoMime="",ratingRideId=null,ratingValue=0,currentDriverPhoto="",reportRideId=null,reportMotocaId=null,chatRideId=null,chatTimer=null,chatLastCount=-1,chatUnread=0,chatKnownCount=0,chatBusy=false,chatPendingRefresh=false,ratingCheckBusy=false;
 const $=id=>document.getElementById(id),val=id=>$(id).value.trim();
 function loading(on,text="Carregando..."){$("loadingText").textContent=text;$("loading").classList.toggle("hidden",!on)}
